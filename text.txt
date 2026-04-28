@@ -1,0 +1,2 @@
+1) You browser is not maximised and our extension highlights a field, now when you maximise it the screen turns half dim and half white. 
+
