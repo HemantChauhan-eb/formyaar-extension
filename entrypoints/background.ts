@@ -42,6 +42,7 @@ export default defineBackground(() => {
       return true;
     }
     if (message.type === "OPEN_RAZORPAY") {
+      const originTabId = sender.tab?.id;
       const paymentUrl = `https://formyaar.pages.dev/pay?order_id=${message.order_id}&amount=${message.amount}`;
       browser.tabs.create({ url: paymentUrl });
 
@@ -64,21 +65,17 @@ export default defineBackground(() => {
 
           if (data.paid) {
             clearInterval(poll);
-            // Tell all active tabs to start guide
-            browser.tabs.query({ active: true }, (tabs) => {
-              tabs.forEach((tab) => {
-                if (tab.id) {
-                  browser.tabs.sendMessage(tab.id, {
-                    type: "PAYMENT_VERIFIED",
-                  });
-                }
+            // Send to the original tab that initiated payment
+            if (originTabId) {
+              browser.tabs.sendMessage(originTabId, {
+                type: "PAYMENT_VERIFIED",
               });
-            });
+            }
           }
         } catch (err) {
           console.error("Poll error:", err);
         }
-      }, 5000); // check every 5 seconds
+      }, 5000);
 
       sendResponse({ success: true });
       return true;
