@@ -1,40 +1,30 @@
 import "./App.css";
 
 function App() {
-  async function startGuide(form: string) {
-    const [tab] = await browser.tabs.query({
+  async function openPanel() {
+    const tabs = await browser.tabs.query({
       active: true,
       currentWindow: true,
     });
+    const tab = tabs[0];
     if (!tab?.id) return;
-    await browser.tabs.sendMessage(tab.id, { type: "START_GUIDE", form });
+    await browser.tabs.sendMessage(tab.id, { type: "OPEN_PANEL" });
     window.close();
   }
 
   return (
     <div className="popup">
       <div className="header">
-        <h1>FormYaar</h1>
-        <p>Your friend who fills government forms with you</p>
+        <h1>
+          <span className="form">Form</span>
+          <span className="dot">·</span>
+          <span className="yaar">Yaar</span>
+        </h1>
+        <p>Your dost for every sarkari kaam</p>
       </div>
-      <div className="form-list">
-        <p className="section-title">SELECT A FORM</p>
-        <button
-          className="form-btn active"
-          onClick={() => startGuide("pan_card")}
-        >
-          🪪 PAN Card
-          <span className="badge">Available</span>
-        </button>
-        <button className="form-btn" disabled>
-          🚗 Driving License
-          <span className="coming-soon">Coming Soon</span>
-        </button>
-        <button className="form-btn" disabled>
-          📘 Passport
-          <span className="coming-soon">Coming Soon</span>
-        </button>
-      </div>
+      <button className="open-btn" onClick={openPanel}>
+        Open FormYaar
+      </button>
       <div className="footer">
         <p>v0.1.0 — Beta</p>
       </div>
