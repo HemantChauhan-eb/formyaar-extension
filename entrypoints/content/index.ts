@@ -47,6 +47,15 @@ export default defineContentScript({
         stopGuide();
         stopOverlay();
       }
+      if (message.type === "PAYMENT_VERIFIED") {
+        const panel = document.getElementById("formyaar-panel");
+        if (panel) panel.style.right = "-400px";
+        setTimeout(() => {
+          panel?.remove();
+          document.getElementById("formyaar-tab")?.remove();
+          beginGuide();
+        }, 300);
+      }
     });
     // Watch for page navigation
     let lastUrl = window.location.href;
@@ -1124,61 +1133,16 @@ function showContextualBanner() {
       return;
     }
 
-    // Load Razorpay script dynamically
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    document.head.appendChild(script);
+    await browser.runtime.sendMessage({
+      type: "OPEN_RAZORPAY",
+      order_id: orderRes.order_id,
+      amount: orderRes.amount,
+    });
 
-    script.onload = () => {
-      const options = {
-        key: "rzp_test_SjDubVNVTRrJHI",
-        amount: orderRes.amount,
-        currency: "INR",
-        name: "FormYaar",
-        description: "PAN Card Form Assistance",
-        order_id: orderRes.order_id,
-        theme: { color: "#000080" },
-        handler: async (response: any) => {
-          // Verify payment
-          const verifyRes = await browser.runtime.sendMessage({
-            type: "VERIFY_PAYMENT",
-            payload: {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            },
-          });
-
-          if (verifyRes?.success) {
-            // Show success then start guide
-            document.getElementById("fy-payment")!.style.display = "none";
-            document.getElementById("fy-success")!.style.display = "flex";
-
-            setTimeout(() => {
-              const panel = document.getElementById("formyaar-panel");
-              if (panel) panel.style.right = "-400px";
-              setTimeout(() => {
-                panel?.remove();
-                document.getElementById("formyaar-tab")?.remove();
-                beginGuide();
-              }, 300);
-            }, 3000);
-          } else {
-            alert("Payment verification failed. Please contact support.");
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg> Pay ₹107 Securely`;
-            btn.style.opacity = "1";
-            btn.style.cursor = "pointer";
-          },
-        },
-      };
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
-    };
+    // Reset button
+    btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg> Pay ₹107 Securely`;
+    btn.style.opacity = "1";
+    btn.style.cursor = "pointer";
   });
   // Back to home from success
   document.getElementById("fy-back-home")?.addEventListener("click", () => {
