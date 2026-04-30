@@ -133,9 +133,15 @@ function handlePageChange() {
     }
   }, 1000);
 }
-async function beginGuide(form: string = "pan_card") {
-  const guide = (await fetchGuide(form)) ?? TEST_GUIDE;
+async function beginGuide(form = "pan_card") {
+  const guide = await fetchGuide(form);
 
+  if (!guide || guide.fields.length === 0) {
+    showErrorMessage(
+      "Couldn't load the form guide. Please refresh and try again.",
+    );
+    return;
+  }
   startGuide(
     guide,
     (field: Field) =>
@@ -1203,6 +1209,31 @@ function showResumeButton() {
     if (field)
       startOverlay(field.selector, field.explanation, field.required ?? true);
   });
+}
+function showErrorMessage(message: string) {
+  const existing = document.getElementById("fy-error-msg");
+  if (existing) existing.remove();
+
+  const msg = document.createElement("div");
+  msg.id = "fy-error-msg";
+  msg.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ff4444;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 2147483647;
+    font-family: 'DM Sans', sans-serif;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  `;
+  msg.textContent = message;
+  document.body.appendChild(msg);
+  setTimeout(() => msg.remove(), 5000);
 }
 function showCompletionMessage() {
   // Make sure tab is visible

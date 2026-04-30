@@ -1,124 +1,117 @@
+const BACKEND = "https://formyaar-backend-production.up.railway.app";
+const POLL_INTERVAL_MINUTES = 0.1; // ~6 seconds
+const MAX_ATTEMPTS = 60; // 5 minutes max
+
 export default defineBackground(() => {
+  // Re-register alarm listener every time SW starts (MV3 requirement)
+  browser.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name !== "paymentPoll") return;
+
+    const result = await browser.storage.session.get("pendingPayment");
+    const pending = result.pendingPayment as {
+      orderId: string;
+      originTabId: number;
+      attempts: number;
+    } | null;
+
+    if (!pending) {
+      browser.alarms.clear("paymentPoll");
+      return;
+    }
+
+    const { orderId, originTabId, attempts } = pending;
+
+    if (attempts >= MAX_ATTEMPTS) {
+      console.warn("FormYaar: payment poll timed out");
+      await browser.storage.session.remove("pendingPayment");
+      browser.alarms.clear("paymentPoll");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${BACKEND}/payment/status/${orderId}`);
+      const data = await res.json();
+
+      if (data.paid) {
+        // Payment confirmed — notify original tab
+        await browser.storage.session.remove("pendingPayment");
+        browser.alarms.clear("paymentPoll");
+        browser.tabs.sendMessage(originTabId, { type: "PAYMENT_VERIFIED" });
+      } else {
+        // Not yet paid — increment attempts
+        await browser.storage.session.set({
+          pendingPayment: { orderId, originTabId, attempts: attempts + 1 },
+        });
+      }
+    } catch (err) {
+      console.error("FormYaar: poll error:", err);
+      await browser.storage.session.set({
+        pendingPayment: { orderId, originTabId, attempts: attempts + 1 },
+      });
+    }
+  });
+
+  // Message handler
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === "AI_CHAT") {
-      fetch("https://formyaar-backend-production.up.railway.app/ai/chat", {
+      fetch(`${BACKEND}/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          fieldId: message.fieldId,
           fieldExplanation: message.fieldExplanation,
           userMessage: message.userMessage,
         }),
       })
         .then((res) => res.json())
-        .then((data) => {
-          console.log("FormYaar AI response:", data);
-          sendResponse({ success: true, response: data.response });
-        })
-        .catch((err) => {
-          console.error("FormYaar fetch error:", err);
-          sendResponse({ success: false });
-        });
-
-      return true;
-    }
-    if (message.type === "CREATE_PAYMENT") {
-      fetch(
-        "https://formyaar-backend-production.up.railway.app/payment/create-order",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ form: message.form }),
-        },
-      )
-        .then((res) => res.json())
-        .then((data) =>
+        .then((data) => sendResponse({ response: data.response }))
+        .catch(() =>
           sendResponse({
-            success: true,
-            order_id: data.order_id,
-            amount: data.amount,
+            response: "Sorry, couldn't get help right now. Please try again.",
           }),
-        )
-        .catch(() => sendResponse({ success: false }));
+        );
       return true;
     }
+
+    if (message.type === "CREATE_PAYMENT") {
+      fetch(`${BACKEND}/payment/create-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ form: message.form || "pan_card" }),
+      })
+        .then((res) => res.json())
+        .then((data) => sendResponse(data))
+        .catch(() => sendResponse({ success: false, error: "Network error" }));
+      return true;
+    }
+
     if (message.type === "OPEN_RAZORPAY") {
       const originTabId = sender.tab?.id;
-      const paymentUrl = `https://formyaar.pages.dev/pay?order_id=${message.order_id}&amount=${message.amount}`;
+      if (!originTabId) {
+        sendResponse({ success: false });
+        return true;
+      }
+
+      const paymentUrl = `https://formyaar.pages.dev/pay?order_id=${message.order_id}`;
       browser.tabs.create({ url: paymentUrl });
 
-      // Start polling for payment status
-      let attempts = 0;
-      const maxAttempts = 60; // 5 minutes max
-
-      const poll = setInterval(async () => {
-        attempts++;
-        if (attempts > maxAttempts) {
-          clearInterval(poll);
-          return;
-        }
-
-        try {
-          const res = await fetch(
-            `https://formyaar-backend-production.up.railway.app/payment/status/${message.order_id}`,
-          );
-          const data = await res.json();
-
-          if (data.paid) {
-            clearInterval(poll);
-            // Send to the original tab that initiated payment
-            if (originTabId) {
-              browser.tabs.sendMessage(originTabId, {
-                type: "PAYMENT_VERIFIED",
-              });
-            }
-          }
-        } catch (err) {
-          console.error("Poll error:", err);
-        }
-      }, 5000);
+      // Store pending payment and start alarm
+      browser.storage.session
+        .set({
+          pendingPayment: {
+            orderId: message.order_id,
+            originTabId,
+            attempts: 0,
+          },
+        })
+        .then(() => {
+          browser.alarms.create("paymentPoll", {
+            periodInMinutes: POLL_INTERVAL_MINUTES,
+          });
+        });
 
       sendResponse({ success: true });
       return true;
-    }
-    if (message.type === "VERIFY_PAYMENT") {
-      fetch(
-        "https://formyaar-backend-production.up.railway.app/payment/verify",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(message.payload),
-        },
-      )
-        .then((res) => res.json())
-        .then((data) => sendResponse({ success: data.success }))
-        .catch(() => sendResponse({ success: false }));
-      return true;
-    }
-    if (message.type === "PAYMENT_SUCCESS") {
-      // Verify and notify content script
-      fetch(
-        "https://formyaar-backend-production.up.railway.app/payment/verify",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(message.payload),
-        },
-      )
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            // Tell content script to start guide
-            browser.tabs.query({ active: true }, (tabs) => {
-              tabs.forEach((tab) => {
-                if (tab.id) {
-                  browser.tabs.sendMessage(tab.id, {
-                    type: "PAYMENT_VERIFIED",
-                  });
-                }
-              });
-            });
-          }
-        });
     }
   });
 });
