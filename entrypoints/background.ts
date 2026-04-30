@@ -1,6 +1,7 @@
 const BACKEND = "https://formyaar-backend-production.up.railway.app";
 const POLL_INTERVAL_MINUTES = 0.1; // ~6 seconds
 const MAX_ATTEMPTS = 60; // 5 minutes max
+import type { ExtensionMessage } from "./content/types";
 
 export default defineBackground(() => {
   // Re-register alarm listener every time SW starts (MV3 requirement)
@@ -52,66 +53,70 @@ export default defineBackground(() => {
   });
 
   // Message handler
-  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === "AI_CHAT") {
-      fetch(`${BACKEND}/ai/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fieldId: message.fieldId,
-          fieldExplanation: message.fieldExplanation,
-          userMessage: message.userMessage,
-        }),
-      })
-        .then((res) => res.json())
-        .then((data) => sendResponse({ response: data.response }))
-        .catch(() =>
-          sendResponse({
-            response: "Sorry, couldn't get help right now. Please try again.",
+  browser.runtime.onMessage.addListener(
+    (message: ExtensionMessage, sender, sendResponse) => {
+      if (message.type === "AI_CHAT") {
+        fetch(`${BACKEND}/ai/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fieldId: message.fieldId,
+            fieldExplanation: message.fieldExplanation,
+            userMessage: message.userMessage,
           }),
-        );
-      return true;
-    }
-
-    if (message.type === "CREATE_PAYMENT") {
-      fetch(`${BACKEND}/payment/create-order`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ form: message.form || "pan_card" }),
-      })
-        .then((res) => res.json())
-        .then((data) => sendResponse(data))
-        .catch(() => sendResponse({ success: false, error: "Network error" }));
-      return true;
-    }
-
-    if (message.type === "OPEN_RAZORPAY") {
-      const originTabId = sender.tab?.id;
-      if (!originTabId) {
-        sendResponse({ success: false });
+        })
+          .then((res) => res.json())
+          .then((data) => sendResponse({ response: data.response }))
+          .catch(() =>
+            sendResponse({
+              response: "Sorry, couldn't get help right now. Please try again.",
+            }),
+          );
         return true;
       }
 
-      const paymentUrl = `https://formyaar.pages.dev/pay?order_id=${message.order_id}`;
-      browser.tabs.create({ url: paymentUrl });
-
-      // Store pending payment and start alarm
-      browser.storage.session
-        .set({
-          pendingPayment: {
-            orderId: message.order_id,
-            originTabId,
-            attempts: 0,
-          },
+      if (message.type === "CREATE_PAYMENT") {
+        fetch(`${BACKEND}/payment/create-order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ form: message.form || "pan_card" }),
         })
-        .then(() => {
-          browser.alarms.create("paymentPoll", {
-            periodInMinutes: POLL_INTERVAL_MINUTES,
-          });
-        });
+          .then((res) => res.json())
+          .then((data) => sendResponse(data))
+          .catch(() =>
+            sendResponse({ success: false, error: "Network error" }),
+          );
+        return true;
+      }
 
-      sendResponse({ success: true });
-      return true;
-    }
-  });
+      if (message.type === "OPEN_RAZORPAY") {
+        const originTabId = sender.tab?.id;
+        if (!originTabId) {
+          sendResponse({ success: false });
+          return true;
+        }
+
+        const paymentUrl = `https://formyaar.pages.dev/pay?order_id=${message.order_id}`;
+        browser.tabs.create({ url: paymentUrl });
+
+        // Store pending payment and start alarm
+        browser.storage.session
+          .set({
+            pendingPayment: {
+              orderId: message.order_id,
+              originTabId,
+              attempts: 0,
+            },
+          })
+          .then(() => {
+            browser.alarms.create("paymentPoll", {
+              periodInMinutes: POLL_INTERVAL_MINUTES,
+            });
+          });
+
+        sendResponse({ success: true });
+        return true;
+      }
+    },
+  );
 });

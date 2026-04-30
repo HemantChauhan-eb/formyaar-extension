@@ -1,21 +1,10 @@
 1) You browser is not maximised and our extension highlights a field, now when you maximise it the screen turns half dim and half white. 
 
-🔴 P0 — This session
- S2 — Rate limit + input validation on /ai/chat
-
 🟠 P1 — This week
 
  A1 — Refactor content/index.ts into modules
- A4 + A5 — Shared types + typed messages
- R7 — Store active guide at module scope, use in handlePageChange + showResumeButton
- R8 — Use page_pattern to filter fields per URL
- R9 — Handle Select2 dropdowns correctly
- R4 — Fix pulse interval leak on tab removal
- R5 — Fix multiple click listeners accumulating
- R6 — Debounce MutationObserver
  Q1 — strict: true in backend tsconfig
  Q6 — Fix Google Fonts loading via <head> injection
- U1 — Don't skip <select> with "none" value
  S6 — Tighten host_permissions in WXT config
 
 🟡 P2 — This month
@@ -25,8 +14,6 @@
  Q7 — Guard console.logs behind DEV flag
  P1/P2 — Cache config reads, throttle scroll listener
  B1 — Add structured logging
- B2 — Graceful shutdown on SIGTERM
- B3 — Add helmet middleware
  E2 — Keyboard accessibility (Esc to close, focus trap)
  E4 — Build out popup with status + history
  E5 — Anonymous telemetry

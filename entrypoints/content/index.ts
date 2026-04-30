@@ -7,38 +7,41 @@ import {
   type Field,
   type Guide,
 } from "./guide";
-
-const TEST_GUIDE: Guide = {
-  form: "test",
-  fields: [
-    {
-      id: "field_1",
-      selector: 'input[type="text"]',
-      explanation:
-        "Enter your full name exactly as it appears on your Aadhaar card. Do not use short forms or initials.",
-      required: true,
-    },
-    {
-      id: "field_2",
-      selector: 'input[type="tel"]',
-      explanation:
-        "Enter your 10-digit mobile number. You will receive an OTP on this number.",
-      required: true,
-    },
-    {
-      id: "field_3",
-      selector: 'input[type="email"]',
-      explanation:
-        "Enter your email address. A confirmation will be sent here. You can skip this if you do not have one.",
-      required: false,
-    },
-  ],
+import type { FormConfig, ExtensionMessage } from "./types";
+let activeGuide: Guide | null = null;
+let currentClickHandler: ((e: MouseEvent) => void) | null = null;
+const BACKEND_URL = "https://formyaar-backend-production.up.railway.app";
+const PANEL_WIDTH = 400;
+const PANEL_TRANSITION_MS = 300;
+const BANNER_DELAY_MS = 1500;
+const PULSE_INITIAL_DELAY_MS = 5000;
+const PULSE_INTERVAL_MS = 25000;
+const OVERLAY_SCROLL_PAD = 8;
+const OVERLAY_TRANSITION_MS = 400;
+const SKIP_FLASH_DURATION_MS = 400;
+const SKIP_ADVANCE_DELAY_MS = 600;
+const COMPLETION_AUTO_DISMISS_MS = 10000;
+const SELECT_POLL_INTERVAL_MS = 300;
+const Z_INDEX = {
+  BARS: 999997,
+  SPOTLIGHT: 999998,
+  TOOLTIP: 999999,
+  PANEL: 2147483647,
 };
-
+function ensureFontsLoaded() {
+  if (document.getElementById("fy-fonts")) return;
+  const link = document.createElement("link");
+  link.id = "fy-fonts";
+  link.rel = "stylesheet";
+  link.href =
+    "https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Plus+Jakarta+Sans:wght@200;400;700;800&display=swap";
+  document.head.appendChild(link);
+}
 export default defineContentScript({
   matches: ["*://*/*"],
   async main() {
-    console.log("FormYaar loaded on:", window.location.href);
+    if (import.meta.env.DEV)
+      console.log("FormYaar loaded on:", window.location.href);
     browser.runtime.onMessage.addListener((message) => {
       if (message.type === "START_GUIDE")
         beginGuide(message.form ?? "pan_card");
@@ -49,28 +52,33 @@ export default defineContentScript({
       }
       if (message.type === "PAYMENT_VERIFIED") {
         const panel = document.getElementById("formyaar-panel");
-        if (panel) panel.style.right = "-400px";
+        if (panel) panel.style.right = `-${PANEL_WIDTH}px`;
         setTimeout(() => {
           panel?.remove();
-          document.getElementById("formyaar-tab")?.remove();
+          removeTab();
           beginGuide();
         }, 300);
       }
     });
     // Watch for page navigation
     let lastUrl = window.location.href;
+    let urlCheckScheduled = false;
+
     const navigationObserver = new MutationObserver(() => {
-      if (window.location.href !== lastUrl) {
-        lastUrl = window.location.href;
-        console.log("FormYaar: page changed to", lastUrl);
-        handlePageChange();
-      }
+      if (urlCheckScheduled) return;
+      urlCheckScheduled = true;
+      queueMicrotask(() => {
+        urlCheckScheduled = false;
+        if (window.location.href !== lastUrl) {
+          lastUrl = window.location.href;
+          handlePageChange();
+        }
+      });
     });
     navigationObserver.observe(document.body, {
       childList: true,
       subtree: true,
     });
-
     // Also handle back/forward
     window.addEventListener("popstate", () => {
       handlePageChange();
@@ -78,37 +86,35 @@ export default defineContentScript({
     // Show contextual banner on supported sites
     const hostname = window.location.hostname;
     if (SITE_CONFIGS[hostname]) {
-      setTimeout(() => showContextualBanner(), 1500);
+      setTimeout(() => showContextualBanner(), BANNER_DELAY_MS);
     }
   },
 });
 async function fetchGuide(form: string): Promise<Guide | null> {
   try {
-    const res = await fetch(
-      `https://formyaar-backend-production.up.railway.app/configs/${form}/latest`,
-    );
+    const res = await fetch(`${BACKEND_URL}/configs/${form}/latest`);
     if (!res.ok) return null;
-    const config = await res.json();
+    const config: FormConfig = await res.json();
 
-    // Convert backend config format to Guide format
-    const fields: Field[] = [];
-    for (const step of config.steps) {
-      for (const field of step.fields) {
-        fields.push({
-          id: field.field_id,
-          selector: field.selectors?.[0]?.value ?? field.selector,
-          explanation: field.explanation,
-          required: field.required ?? true,
-        });
-      }
-    }
+    // Find the step matching the current page URL
+    const currentPath = window.location.pathname + window.location.search;
+    const matchingStep =
+      config.steps.find((step) =>
+        new RegExp(step.page_pattern).test(currentPath),
+      ) ?? config.steps[0]; // fallback to first step if no pattern matches
+
+    if (!matchingStep || !matchingStep.fields?.length) return null;
+
+    const fields: Field[] = matchingStep.fields.map((field) => ({
+      id: field.field_id,
+      selector: field.selectors?.[0]?.value ?? "",
+      explanation: field.explanation,
+      required: field.required ?? true,
+    }));
 
     return { form: config.form, fields };
   } catch (err) {
-    console.warn(
-      "FormYaar: could not fetch config, falling back to test guide",
-      err,
-    );
+    console.warn("FormYaar: could not fetch config:", err);
     return null;
   }
 }
@@ -121,7 +127,7 @@ function handlePageChange() {
 
   // Small delay to let new page DOM load
   setTimeout(() => {
-    const field = TEST_GUIDE.fields[currentGuideIndex];
+    const field = activeGuide?.fields[getCurrentIndex()];
     if (!field) return;
 
     // Try to find the current field on new page
@@ -142,12 +148,14 @@ async function beginGuide(form = "pan_card") {
     );
     return;
   }
+
+  activeGuide = guide;
   startGuide(
     guide,
-    (field: Field) =>
-      startOverlay(field.selector, field.explanation, field.required ?? true),
+    (field) => {
+      startOverlay(field.selector, field.explanation, field.required ?? true);
+    },
     () => {
-      stopOverlay();
       showCompletionMessage();
     },
   );
@@ -176,10 +184,11 @@ function startOverlay(
 
   // Check if already filled — skip with checkmark
   const currentValue = (target as HTMLInputElement).value?.trim();
-  const isRequired = required;
-  if (currentValue && currentValue.length > 0) {
+  const emptyValues = ["", "none", "----Please Select------"];
+  const isFilled = currentValue && !emptyValues.includes(currentValue);
+  if (isFilled) {
     showSkipFlash(target);
-    setTimeout(() => nextField(), 600);
+    setTimeout(() => nextField(), SKIP_ADVANCE_DELAY_MS);
     return;
   }
 
@@ -191,7 +200,7 @@ function startOverlay(
     resizeListener = () => repositionOverlay(target);
     window.addEventListener("scroll", scrollListener, true);
     window.addEventListener("resize", resizeListener);
-  }, 400);
+  }, OVERLAY_TRANSITION_MS);
 }
 
 function createBar(id: string): HTMLElement {
@@ -200,7 +209,7 @@ function createBar(id: string): HTMLElement {
   bar.style.cssText = `
     position: fixed;
     background: rgba(0, 0, 0, 0.55);
-    z-index: 999997;
+    z-index: ${Z_INDEX.BARS};
     pointer-events: none;
     transition: all 0.08s ease;
   `;
@@ -213,7 +222,7 @@ function drawOverlay(
   required: boolean,
 ) {
   const rect = target.getBoundingClientRect();
-  const pad = 8;
+  const pad = OVERLAY_SCROLL_PAD;
   const top = rect.top - pad;
   const left = rect.left - pad;
   const right = rect.right + pad;
@@ -241,7 +250,7 @@ function drawOverlay(
     border-radius: 6px;
    border: 2.5px solid #000080;
     box-shadow: 0 0 0 4px rgba(0,0,128,0.08);
-    z-index: 999998;
+    z-index: ${Z_INDEX.SPOTLIGHT};
     pointer-events: none;
     transition: all 0.08s ease;
   `;
@@ -258,7 +267,7 @@ function drawOverlay(
     top: ${tTop}px;
     left: ${tLeft}px;
     width: 340px;
-    z-index: 999999;
+    z-index: ${Z_INDEX.TOOLTIP};
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 6px 28px rgba(0,0,0,0.18);
@@ -470,9 +479,34 @@ function drawOverlay(
     if ((e as KeyboardEvent).key === "Enter") sendHelpMessage(explanation);
   });
   // Watch for input to enable Next button
+  // Watch for input to enable Next button
   if (required) {
     target.addEventListener("input", onInputChange);
     target.addEventListener("keyup", onInputChange);
+    target.addEventListener("change", onInputChange);
+
+    // Select2 updates the underlying <select> value but doesn't fire native input events
+    // Poll as fallback for custom dropdowns
+    if (target.tagName === "SELECT") {
+      const selectPollInterval = setInterval(() => {
+        const val = (target as HTMLSelectElement).value;
+        const isEmpty =
+          !val || val === "none" || val === "----Please Select------";
+        const btn = document.getElementById(
+          "formyaar-next-btn",
+        ) as HTMLButtonElement;
+        if (!btn) {
+          clearInterval(selectPollInterval);
+          return;
+        }
+        if (!isEmpty && btn.dataset.disabled === "true") {
+          onInputChange({ target } as unknown as Event);
+        }
+      }, SELECT_POLL_INTERVAL_MS);
+
+      // Store interval so stopOverlay can clean it up
+      (target as any)._selectPollInterval = selectPollInterval;
+    }
   }
 }
 
@@ -508,7 +542,7 @@ function repositionOverlay(target: HTMLElement) {
     return;
 
   const rect = target.getBoundingClientRect();
-  const pad = 8;
+  const pad = OVERLAY_SCROLL_PAD;
   const top = rect.top - pad;
   const left = rect.left - pad;
   const right = rect.right + pad;
@@ -556,8 +590,13 @@ function stopOverlay() {
   if (scrollListener)
     window.removeEventListener("scroll", scrollListener, true);
   if (resizeListener) window.removeEventListener("resize", resizeListener);
-  if (activeTarget) activeTarget.removeEventListener("input", onInputChange);
-  if (activeTarget) activeTarget.removeEventListener("keyup", onInputChange);
+  if (activeTarget) {
+    activeTarget.removeEventListener("input", onInputChange);
+    activeTarget.removeEventListener("keyup", onInputChange);
+    activeTarget.removeEventListener("change", onInputChange);
+    const pollId = (activeTarget as any)._selectPollInterval;
+    if (pollId) clearInterval(pollId);
+  }
   scrollListener = null;
   resizeListener = null;
   activeTarget = null;
@@ -617,26 +656,21 @@ const SITE_CONFIGS: Record<string, { title: string; form: string }> = {
     title: "Looks like you're on the Driving License portal.",
     form: "driving_license",
   },
-  "trimzy.in": {
-    title: "Testing FormYaar banner.",
-    form: "test",
-  },
 };
 
 function showContextualBanner() {
-  if (sessionStorage.getItem("formyaar-dismissed")) return;
+  ensureFontsLoaded();
   if (document.getElementById("formyaar-panel")) return;
-
   const panel = document.createElement("div");
   panel.id = "formyaar-panel";
   panel.style.cssText = `
     position: fixed;
     top: 0;
-    right: -400px;
-    width: 400px;
+    right: -${PANEL_WIDTH}px;
+    width: ${PANEL_WIDTH}px;
     height: 100vh;
     background: #ffffff;
-    z-index: 2147483647;
+    z-index: ${Z_INDEX.PANEL};
     font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     box-shadow: -4px 0 32px rgba(0,0,0,0.18);
     transition: right 0.3s ease;
@@ -646,7 +680,6 @@ function showContextualBanner() {
   `;
 
   panel.innerHTML = `
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@200;400;800&display=swap" rel="stylesheet">
     <style>
       #formyaar-panel * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'DM Sans', -apple-system, sans-serif; }
       #formyaar-panel input { font-family: inherit; }
@@ -968,7 +1001,7 @@ function showContextualBanner() {
     font-weight: 800;
     letter-spacing: 1.5px;
     cursor: pointer;
-    z-index: 999998;
+    z-index: ${Z_INDEX.SPOTLIGHT};
     border-radius: 8px 0 0 8px;
     box-shadow: -2px 0 12px rgba(0,0,0,0.15);
     font-family: 'DM Sans', sans-serif;
@@ -1018,14 +1051,17 @@ function showContextualBanner() {
   };
 
   // First pulse after 5 seconds, then every 25 seconds
-  setTimeout(pulseTab, 5000);
-  const pulseInterval = setInterval(pulseTab, 25000);
+  setTimeout(pulseTab, PULSE_INITIAL_DELAY_MS);
+  const pulseInterval = setInterval(pulseTab, PULSE_INTERVAL_MS);
 
   // Store interval ID so we can clear it if tab is removed
   (tab as any)._pulseInterval = pulseInterval;
   document.body.appendChild(tab);
 
-  document.addEventListener("click", (e) => {
+  if (currentClickHandler) {
+    document.removeEventListener("click", currentClickHandler);
+  }
+  currentClickHandler = (e: MouseEvent) => {
     const p = document.getElementById("formyaar-panel");
     const t = document.getElementById("formyaar-tab");
     if (!p || !t) return;
@@ -1034,13 +1070,15 @@ function showContextualBanner() {
       !p.contains(e.target as Node) &&
       !t.contains(e.target as Node)
     ) {
-      p.style.right = "-400px";
+      p.style.right = `-${PANEL_WIDTH}px`;
     }
-  });
+  };
+  document.addEventListener("click", currentClickHandler);
 
   tab.addEventListener("click", () => {
     const p = document.getElementById("formyaar-panel");
-    if (p) p.style.right = p.style.right === "0px" ? "-400px" : "0px";
+    if (p)
+      p.style.right = p.style.right === "0px" ? `-${PANEL_WIDTH}px` : "0px";
   });
 
   // PAN Card click → show payment
@@ -1096,6 +1134,13 @@ function showContextualBanner() {
     document.getElementById("fy-home")!.style.display = "flex";
   });
 }
+function removeTab() {
+  const t = document.getElementById("formyaar-tab");
+  if (!t) return;
+  const id = (t as any)._pulseInterval;
+  if (id) clearInterval(id);
+  t.remove();
+}
 function showSkipFlash(target: HTMLElement) {
   const rect = target.getBoundingClientRect();
   const flash = document.createElement("div");
@@ -1107,7 +1152,7 @@ function showSkipFlash(target: HTMLElement) {
     height: ${rect.height + 8}px;
     border: 2.5px solid #4ade80;
     border-radius: 6px;
-    z-index: 999999;
+    z-index: ${Z_INDEX.TOOLTIP};
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1129,7 +1174,7 @@ function showSkipFlash(target: HTMLElement) {
   setTimeout(() => {
     flash.style.opacity = "0";
     setTimeout(() => flash.remove(), 300);
-  }, 400);
+  }, SKIP_FLASH_DURATION_MS);
 }
 
 function showResumeButton() {
@@ -1142,7 +1187,7 @@ function showResumeButton() {
     right: 0;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 999999;
+    z-index: ${Z_INDEX.TOOLTIP};
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -1205,9 +1250,9 @@ function showResumeButton() {
       if (el) el.style.display = "block";
     });
     // Redraw tooltip since we removed it
-    const field = TEST_GUIDE.fields[getCurrentIndex()];
-    if (field)
-      startOverlay(field.selector, field.explanation, field.required ?? true);
+    const field = activeGuide?.fields[getCurrentIndex()];
+    if (!field) return;
+    startOverlay(field.selector, field.explanation, field.required ?? true);
   });
 }
 function showErrorMessage(message: string) {
@@ -1227,7 +1272,7 @@ function showErrorMessage(message: string) {
     border-radius: 10px;
     font-size: 13px;
     font-weight: 600;
-    z-index: 2147483647;
+    z-index: ${Z_INDEX.PANEL};
     font-family: 'DM Sans', sans-serif;
     box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   `;
@@ -1254,7 +1299,7 @@ function showCompletionMessage() {
       font-weight: 800;
       letter-spacing: 1.5px;
       cursor: pointer;
-      z-index: 999998;
+      z-index: ${Z_INDEX.SPOTLIGHT};
       border-radius: 8px 0 0 8px;
       box-shadow: -2px 0 12px rgba(0,0,0,0.15);
       font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
@@ -1302,5 +1347,5 @@ function showCompletionMessage() {
     msg.remove();
   });
 
-  setTimeout(() => msg?.remove(), 10000);
+  setTimeout(() => msg?.remove(), COMPLETION_AUTO_DISMISS_MS);
 }
