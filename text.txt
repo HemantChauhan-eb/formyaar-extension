@@ -2,7 +2,6 @@
 
 🟠 P1 — This week
 
- A1 — Refactor content/index.ts into modules
  Q1 — strict: true in backend tsconfig
  Q6 — Fix Google Fonts loading via <head> injection
  S6 — Tighten host_permissions in WXT config
@@ -10,13 +9,7 @@
 🟡 P2 — This month
 
  Q3 — Extract magic numbers into constants
- Q5 — Unify CSS prefix (fy- everywhere)
  Q7 — Guard console.logs behind DEV flag
  P1/P2 — Cache config reads, throttle scroll listener
- B1 — Add structured logging
- E2 — Keyboard accessibility (Esc to close, focus trap)
- E4 — Build out popup with status + history
- E5 — Anonymous telemetry
- U2 — Show toast when field not found instead of silent skip
- U3 — Remove input listeners on pause
- U4 — Extend completion message dismiss to 30s
+ 
+ 
