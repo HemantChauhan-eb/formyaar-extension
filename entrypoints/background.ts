@@ -4,6 +4,11 @@ const MAX_ATTEMPTS = 60; // 5 minutes max
 import type { ExtensionMessage } from "./content/types";
 
 export default defineBackground(() => {
+  // Allow content scripts to read/write session storage
+  browser.storage.session.setAccessLevel({
+    accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS",
+  });
+
   // Re-register alarm listener every time SW starts (MV3 requirement)
   browser.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name !== "paymentPoll") return;

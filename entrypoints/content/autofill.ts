@@ -5,13 +5,13 @@ import {
   showVerifyScreen,
   updateFillProgress,
 } from "./panel";
-
+import { getUserData, type UserData } from "./userData";
 // ─── Types matching pan_card.json schema v2 ──────────────────────────
 interface FieldConfig {
   field_id: string;
-  type: "text" | "select" | "checkbox" | "date";
+  type: "text" | "select" | "checkbox" | "date" | "radio" | "button_click";
   selector: string;
-  value_source: string; // "user.X" or "static"
+  value_source: string;
   static_value?: string | boolean;
   match_by?: "value" | "text";
   format?: string;
@@ -32,19 +32,9 @@ interface FormConfig {
   steps: StepConfig[];
 }
 
-// ─── Hardcoded test user data ────────────────────────────────────────
-// TODO: Replace with data collection screen output later
-const TEST_USER_DATA: Record<string, string> = {
-  first_name: "HEMANT",
-  middle_name: "",
-  last_name: "CHAUHAN",
-  date_of_birth: "15/08/2007",
-  email: "test@formyaar.in",
-  mobile: "9876543210",
-};
-
 // ─── Field-friendly labels (used in progress UI) ─────────────────────
 const FIELD_LABELS: Record<string, string> = {
+  // Step 1
   application_type: "Application type",
   applicant_category: "Applicant category",
   first_name: "First name",
@@ -54,6 +44,30 @@ const FIELD_LABELS: Record<string, string> = {
   email: "Email",
   mobile: "Mobile number",
   consent: "Consent",
+  // Step 2-5
+  submission_mode_ekyc: "Submission mode (eKYC)",
+  ekyc_photo_consent: "Aadhaar photo consent",
+  epan_option: "PAN delivery option",
+  aadhaar_last_4: "Aadhaar (last 4)",
+  first_name_step2: "First name",
+  middle_name_step2: "Middle name",
+  last_name_step2: "Last name",
+  gender: "Gender",
+  father_first_name: "Father's first name",
+  father_middle_name: "Father's middle name",
+  father_last_name: "Father's last name",
+  mother_first_name: "Mother's first name",
+  mother_middle_name: "Mother's middle name",
+  mother_last_name: "Mother's last name",
+  parent_on_card_father: "Father's name on card",
+  parent_on_card_mother: "Mother's name on card",
+  isd_code: "Country code",
+  residential_status_resident: "Residential status",
+  aadhaar_pin_code: "PIN code (Aadhaar)",
+  ao_indian_citizen: "AO category",
+  capacity_verifier: "Declaration capacity",
+  place: "Place",
+  ao_fetch_btn: "Fetch AO code",
 };
 
 // ─── Main entry point ────────────────────────────────────────────────
@@ -61,6 +75,7 @@ export async function runAutofill(form: string = "pan_card") {
   showFillingScreen();
 
   const config = await fetchConfig(form);
+  const userData = await getUserData();
   if (!config) {
     updateFillProgress([
       { label: "Could not load form config", status: "active" },
@@ -76,6 +91,12 @@ export async function runAutofill(form: string = "pan_card") {
 
   trackEvent("guide_started", form);
 
+  // If this is the last step we have a config for, clear the active flag
+  // so autofill doesn't re-trigger on future visits
+  const isLastStep = step.step === config.steps[config.steps.length - 1].step;
+  if (isLastStep) {
+    await browser.storage.session.remove("autofillActive");
+  }
   // Initial progress: all pending
   const progress = step.fields.map((f) => ({
     label: FIELD_LABELS[f.field_id] ?? f.field_id,
@@ -88,12 +109,11 @@ export async function runAutofill(form: string = "pan_card") {
     progress[i].status = "active";
     updateFillProgress([...progress]);
 
-    await sleep(150);
-
     const field = step.fields[i];
-    const value = resolveValue(field);
+    const value = resolveValue(field, userData);
     const ok = fillField(field, value);
-
+    const delay = field.type === "button_click" ? 2500 : 150;
+    await sleep(delay);
     progress[i].status = ok ? "done" : "done"; // mark done either way; missing fields aren't fatal
     updateFillProgress([...progress]);
   }
@@ -128,7 +148,10 @@ function matchStep(config: FormConfig): StepConfig | null {
 }
 
 // ─── Resolve "user.first_name" or "static" to actual value ───────────
-function resolveValue(field: FieldConfig): string | boolean {
+function resolveValue(
+  field: FieldConfig,
+  userData: UserData,
+): string | boolean {
   if (!field.value_source) {
     console.warn(`FormYaar: missing value_source on ${field.field_id}`);
     return "";
@@ -137,8 +160,9 @@ function resolveValue(field: FieldConfig): string | boolean {
     return field.static_value ?? "";
   }
   if (field.value_source.startsWith("user.")) {
-    const key = field.value_source.slice(5);
-    return TEST_USER_DATA[key] ?? "";
+    const key = field.value_source.slice(5) as keyof UserData;
+    const v = userData[key];
+    return v !== undefined ? v : "";
   }
   return "";
 }
@@ -148,6 +172,13 @@ function fillField(field: FieldConfig, value: string | boolean): boolean {
   const el = document.querySelector(field.selector) as HTMLElement | null;
   if (!el) {
     console.warn(`FormYaar: field not found ${field.selector}`);
+    return false;
+  }
+
+  // Skip disabled or hidden fields — site logic may have disabled them
+  // (e.g. eKYC mode disables Residence Address fields)
+  if ((el as HTMLInputElement).disabled) {
+    console.log(`FormYaar: skipping disabled field ${field.selector}`);
     return false;
   }
 
@@ -163,11 +194,14 @@ function fillField(field: FieldConfig, value: string | boolean): boolean {
       );
     case "checkbox":
       return fillCheckbox(el as HTMLInputElement, Boolean(value));
+    case "radio":
+      return fillRadio(el as HTMLInputElement, Boolean(value));
+    case "button_click":
+      return clickButton(el);
     default:
       return false;
   }
 }
-
 function fillText(input: HTMLInputElement, value: string): boolean {
   // Use native setter to bypass framework value-tracking (React, etc.)
   const setter = Object.getOwnPropertyDescriptor(
@@ -221,7 +255,21 @@ function fillCheckbox(input: HTMLInputElement, checked: boolean): boolean {
   input.dispatchEvent(new Event("click", { bubbles: true }));
   return true;
 }
-
+function fillRadio(input: HTMLInputElement, shouldSelect: boolean): boolean {
+  // Radios use a "select this one" semantic. If value is true, click it.
+  // If false, leave it alone — another radio in the group should be selected instead.
+  if (!shouldSelect) return true;
+  if (input.checked) return true;
+  input.checked = true;
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  input.dispatchEvent(new Event("click", { bubbles: true }));
+  return true;
+}
+function clickButton(el: HTMLElement): boolean {
+  el.click();
+  el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  return true;
+}
 // ─── Utility ─────────────────────────────────────────────────────────
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

@@ -6,6 +6,12 @@ import {
   Z_INDEX,
 } from "./constants";
 import { trackEvent } from "./telemetry";
+import {
+  getUserData,
+  saveUserData,
+  validateUserData,
+  type UserData,
+} from "./userData";
 let currentClickHandler: ((e: MouseEvent) => void) | null = null;
 
 export function removeTab() {
@@ -63,6 +69,187 @@ function renderPanelHTML(): string {
       .fy-card-hover:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(130,28,255,0.18) !important; }
       .fy-screen { animation: fy-fadeIn 0.2s ease; }
       .fy-pay-btn:hover { opacity: 0.92; }
+      /* ===== User data collection form ===== */
+.fy-userform {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+}
+.fy-userform-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.fy-userform-back {
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #475569;
+  flex-shrink: 0;
+}
+.fy-userform-back:hover { background: #f8fafc; }
+.fy-userform-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+  line-height: 1.3;
+}
+.fy-userform-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.fy-userform-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+.fy-userform-section {
+  margin-bottom: 24px;
+}
+.fy-userform-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.fy-userform-field {
+  display: block;
+  margin-bottom: 14px;
+}
+.fy-userform-field > span {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+  margin-bottom: 6px;
+}
+.fy-userform-field em {
+  color: #ef4444;
+  font-style: normal;
+  margin-left: 2px;
+}
+.fy-userform-field input[type="text"],
+.fy-userform-field input[type="email"],
+.fy-userform-field input[type="tel"] {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+.fy-userform-field input:focus {
+  outline: none;
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+}
+.fy-userform-field input.fy-error {
+  border-color: #ef4444;
+}
+.fy-userform-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.fy-userform-row .fy-userform-field {
+  margin-bottom: 0;
+}
+.fy-userform-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fy-userform-radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #334155;
+  transition: all 0.15s;
+}
+.fy-userform-radio:has(input:checked) {
+  border-color: #1e3a8a;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-weight: 500;
+}
+.fy-userform-radio input {
+  margin: 0;
+  accent-color: #1e3a8a;
+}
+.fy-userform-hint {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+.fy-userform-errors {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #991b1b;
+}
+.fy-userform-errors ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.fy-userform-errors li { margin-bottom: 2px; }
+.fy-userform-footer {
+  padding: 14px 20px 18px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+.fy-userform-submit {
+  width: 100%;
+  padding: 12px;
+  background: #1e3a8a;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.fy-userform-submit:hover { background: #1e40af; }
+.fy-userform-submit:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+.fy-userform-privacy {
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 8px;
+}
     </style>
    ${renderHomeScreen()}
     ${renderPaymentScreen()}
@@ -304,6 +491,172 @@ function renderPaymentScreen(): string {
     </div>
   `;
 }
+function renderUserFormScreen(form: string, data: UserData): string {
+  const formLabel = form === "pan_card" ? "PAN Card" : form;
+
+  return `
+    <div class="fy-userform">
+      <div class="fy-userform-header">
+        <button class="fy-userform-back" id="fy-userform-back" aria-label="Back">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div>
+          <div class="fy-userform-title">Your details for ${formLabel}</div>
+          <div class="fy-userform-subtitle">We'll use this to auto-fill the form. Saved locally on your device.</div>
+        </div>
+      </div>
+
+      <div class="fy-userform-body">
+        <div class="fy-userform-section">
+          <div class="fy-userform-section-title">About you</div>
+
+          <div class="fy-userform-row">
+            <label class="fy-userform-field">
+              <span>First name <em>*</em></span>
+              <input type="text" data-field="first_name" value="${escapeHtml(data.first_name)}" placeholder="HEMANT" autocomplete="off">
+            </label>
+            <label class="fy-userform-field">
+              <span>Middle name</span>
+              <input type="text" data-field="middle_name" value="${escapeHtml(data.middle_name)}" placeholder="(optional)" autocomplete="off">
+            </label>
+          </div>
+
+          <label class="fy-userform-field">
+            <span>Last name <em>*</em></span>
+            <input type="text" data-field="last_name" value="${escapeHtml(data.last_name)}" placeholder="CHAUHAN" autocomplete="off">
+          </label>
+
+          <label class="fy-userform-field">
+            <span>Date of birth <em>*</em></span>
+            <input type="text" data-field="date_of_birth" value="${escapeHtml(data.date_of_birth)}" placeholder="DD/MM/YYYY" autocomplete="off" inputmode="numeric">
+          </label>
+
+          <label class="fy-userform-field">
+            <span>Gender <em>*</em></span>
+            <div class="fy-userform-radios">
+              <label class="fy-userform-radio">
+                <input type="radio" name="gender" data-field="gender" value="M" ${data.gender === "M" ? "checked" : ""}>
+                <span>Male</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="gender" data-field="gender" value="F" ${data.gender === "F" ? "checked" : ""}>
+                <span>Female</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="gender" data-field="gender" value="T" ${data.gender === "T" ? "checked" : ""}>
+                <span>Transgender</span>
+              </label>
+            </div>
+          </label>
+
+          <label class="fy-userform-field">
+            <span>Email <em>*</em></span>
+            <input type="email" data-field="email" value="${escapeHtml(data.email)}" placeholder="you@example.com" autocomplete="off">
+          </label>
+
+          <label class="fy-userform-field">
+            <span>Mobile number <em>*</em></span>
+            <input type="tel" data-field="mobile" value="${escapeHtml(data.mobile)}" placeholder="9876543210" autocomplete="off" inputmode="numeric" maxlength="10">
+          </label>
+        </div>
+
+        <div class="fy-userform-section">
+          <div class="fy-userform-section-title">Aadhaar</div>
+
+          <label class="fy-userform-field">
+            <span>Last 4 digits of Aadhaar <em>*</em></span>
+            <input type="text" data-field="aadhaar_last_4" value="${escapeHtml(data.aadhaar_last_4)}" placeholder="1234" autocomplete="off" inputmode="numeric" maxlength="4">
+          </label>
+
+          <label class="fy-userform-field">
+            <span>PIN code as per Aadhaar <em>*</em></span>
+            <input type="text" data-field="aadhaar_pin_code" value="${escapeHtml(data.aadhaar_pin_code)}" placeholder="243001" autocomplete="off" inputmode="numeric" maxlength="6">
+          </label>
+        </div>
+
+        <div class="fy-userform-section">
+          <div class="fy-userform-section-title">Family</div>
+
+          <div class="fy-userform-row">
+            <label class="fy-userform-field">
+              <span>Father's first name <em>*</em></span>
+              <input type="text" data-field="father_first_name" value="${escapeHtml(data.father_first_name)}" placeholder="RAMESH" autocomplete="off">
+            </label>
+            <label class="fy-userform-field">
+              <span>Middle</span>
+              <input type="text" data-field="father_middle_name" value="${escapeHtml(data.father_middle_name)}" placeholder="(optional)" autocomplete="off">
+            </label>
+          </div>
+
+          <label class="fy-userform-field">
+            <span>Father's last name <em>*</em></span>
+            <input type="text" data-field="father_last_name" value="${escapeHtml(data.father_last_name)}" placeholder="CHAUHAN" autocomplete="off">
+          </label>
+
+          <div class="fy-userform-row">
+            <label class="fy-userform-field">
+              <span>Mother's first name</span>
+              <input type="text" data-field="mother_first_name" value="${escapeHtml(data.mother_first_name)}" placeholder="(optional)" autocomplete="off">
+            </label>
+            <label class="fy-userform-field">
+              <span>Middle</span>
+              <input type="text" data-field="mother_middle_name" value="${escapeHtml(data.mother_middle_name)}" placeholder="(optional)" autocomplete="off">
+            </label>
+          </div>
+
+          <label class="fy-userform-field">
+            <span>Mother's last name</span>
+            <input type="text" data-field="mother_last_name" value="${escapeHtml(data.mother_last_name)}" placeholder="(optional)" autocomplete="off">
+          </label>
+
+          <label class="fy-userform-field">
+            <span>Whose name to print on PAN card? <em>*</em></span>
+            <div class="fy-userform-radios">
+              <label class="fy-userform-radio">
+                <input type="radio" name="parent_on_card" data-field="parent_on_card" value="father" ${data.parent_on_card_is_father ? "checked" : ""}>
+                <span>Father's name</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="parent_on_card" data-field="parent_on_card" value="mother" ${data.parent_on_card_is_mother ? "checked" : ""}>
+                <span>Mother's name</span>
+              </label>
+            </div>
+          </label>
+        </div>
+
+        <div class="fy-userform-section">
+          <div class="fy-userform-section-title">Verification</div>
+
+          <label class="fy-userform-field">
+            <span>Place (city) <em>*</em></span>
+            <input type="text" data-field="place" value="${escapeHtml(data.place)}" placeholder="BAREILLY" autocomplete="off">
+            <small class="fy-userform-hint">The city where you're filing this application</small>
+          </label>
+        </div>
+
+        <div class="fy-userform-errors" id="fy-userform-errors" hidden></div>
+      </div>
+
+      <div class="fy-userform-footer">
+        <button class="fy-userform-submit" id="fy-userform-submit">
+          Continue to Pay ₹29
+        </button>
+        <div class="fy-userform-privacy">🔒 Saved on your device. Never sent to our servers.</div>
+      </div>
+    </div>
+  `;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 function renderFillingScreen(): string {
   return `
     <div id="fy-filling" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
@@ -485,8 +838,7 @@ function attachClickOutsideHandler() {
 function attachPanelEventHandlers() {
   document.getElementById("fy-pan-card")?.addEventListener("click", () => {
     trackEvent("panel_opened", "pan_card");
-    document.getElementById("fy-home")!.style.display = "none";
-    document.getElementById("fy-payment")!.style.display = "flex";
+    showUserForm("pan_card");
   });
 
   document.getElementById("fy-back-btn")?.addEventListener("click", () => {
@@ -543,7 +895,137 @@ export function showVerifyScreen() {
   const p = document.getElementById("formyaar-panel");
   if (p) p.style.right = "0px";
 }
+function showUserForm(form: string): void {
+  // Hide all other screens
+  const screens = ["fy-home", "fy-payment", "fy-filling", "fy-verify"];
+  screens.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
 
+  // Remove any existing form (in case user clicks again)
+  const existing = document.getElementById("fy-userform-screen");
+  if (existing) existing.remove();
+
+  // Render the form
+  getUserData().then((data) => {
+    const panel = document.getElementById("formyaar-panel");
+    if (!panel) return;
+
+    const wrapper = document.createElement("div");
+    wrapper.id = "fy-userform-screen";
+    wrapper.className = "fy-screen";
+    wrapper.style.cssText =
+      "display:flex;flex-direction:column;height:100%;animation:fy-fadeIn 0.2s ease;";
+    wrapper.innerHTML = renderUserFormScreen(form, data);
+    panel.appendChild(wrapper);
+
+    attachUserFormHandlers(
+      form,
+      // onSubmit: data is saved, now go to payment
+      () => {
+        wrapper.remove();
+        document.getElementById("fy-payment")!.style.display = "flex";
+      },
+      // onBack: go back to home
+      () => {
+        wrapper.remove();
+        document.getElementById("fy-home")!.style.display = "flex";
+      },
+    );
+
+    // Open panel if collapsed
+    panel.style.right = "0px";
+  });
+}
+function attachUserFormHandlers(
+  form: string,
+  onSubmit: () => void,
+  onBack: () => void,
+): void {
+  const back = document.getElementById("fy-userform-back");
+  const submit = document.getElementById("fy-userform-submit");
+  const errorBox = document.getElementById("fy-userform-errors");
+
+  if (back) back.addEventListener("click", onBack);
+
+  if (submit) {
+    submit.addEventListener("click", async () => {
+      const data = collectFormData();
+      const errors = validateUserData(data);
+
+      // Clear previous error highlights
+      document
+        .querySelectorAll(".fy-userform input.fy-error")
+        .forEach((el) => el.classList.remove("fy-error"));
+
+      if (errors.length > 0) {
+        if (errorBox) {
+          errorBox.hidden = false;
+          errorBox.innerHTML = `<ul>${errors
+            .map((e) => `<li>${e.message}</li>`)
+            .join("")}</ul>`;
+        }
+        // Highlight first error field and scroll to it
+        const firstError = errors[0];
+        const firstField = document.querySelector(
+          `[data-field="${firstError.field}"]`,
+        ) as HTMLElement | null;
+        if (firstField) {
+          firstField.classList.add("fy-error");
+          firstField.scrollIntoView({ behavior: "smooth", block: "center" });
+          firstField.focus();
+        }
+        return;
+      }
+
+      if (errorBox) errorBox.hidden = true;
+
+      // Save data and continue
+      await saveUserData(data);
+      onSubmit();
+    });
+  }
+}
+
+function collectFormData(): UserData {
+  const get = (field: string): string => {
+    const el = document.querySelector(
+      `[data-field="${field}"]`,
+    ) as HTMLInputElement | null;
+    return el ? el.value.trim() : "";
+  };
+
+  const getRadio = (name: string): string => {
+    const el = document.querySelector(
+      `input[name="${name}"]:checked`,
+    ) as HTMLInputElement | null;
+    return el ? el.value : "";
+  };
+
+  const parentOnCard = getRadio("parent_on_card");
+
+  return {
+    first_name: get("first_name").toUpperCase(),
+    middle_name: get("middle_name").toUpperCase(),
+    last_name: get("last_name").toUpperCase(),
+    date_of_birth: get("date_of_birth"),
+    email: get("email"),
+    mobile: get("mobile"),
+    aadhaar_last_4: get("aadhaar_last_4"),
+    gender: getRadio("gender") as "M" | "F" | "T" | "",
+    father_first_name: get("father_first_name").toUpperCase(),
+    father_middle_name: get("father_middle_name").toUpperCase(),
+    father_last_name: get("father_last_name").toUpperCase(),
+    mother_first_name: get("mother_first_name").toUpperCase(),
+    mother_middle_name: get("mother_middle_name").toUpperCase(),
+    mother_last_name: get("mother_last_name").toUpperCase(),
+    parent_on_card_is_father: parentOnCard === "father",
+    parent_on_card_is_mother: parentOnCard === "mother",
+    aadhaar_pin_code: get("aadhaar_pin_code"),
+    place: get("place").toUpperCase(),
+  };
+}
 export function updateFillProgress(
   items: { label: string; status: "done" | "active" | "pending" }[],
 ) {
