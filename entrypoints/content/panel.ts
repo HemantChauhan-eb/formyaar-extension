@@ -64,9 +64,10 @@ function renderPanelHTML(): string {
       .fy-screen { animation: fy-fadeIn 0.2s ease; }
       .fy-pay-btn:hover { opacity: 0.92; }
     </style>
-    ${renderHomeScreen()}
+   ${renderHomeScreen()}
     ${renderPaymentScreen()}
-    ${renderSuccessScreen()}
+    ${renderFillingScreen()}
+    ${renderVerifyScreen()}
   `;
 }
 
@@ -278,7 +279,7 @@ function renderPaymentScreen(): string {
               <svg width="90" height="90" viewBox="0 0 90 90"><circle cx="45" cy="45" r="41" fill="none" stroke="white" stroke-width="5.4"/><circle cx="45" cy="45" r="10.8" fill="white"/></svg>
             </div>
             <div style="font-size:11px;opacity:0.8;font-weight:500;letter-spacing:0.3px;">PAN CARD — NEW APPLICATION</div>
-            <div style="font-size:36px;font-weight:800;margin-top:6px;letter-spacing:-0.5px;">₹107</div>
+            <div style="font-size:36px;font-weight:800;margin-top:6px;letter-spacing:-0.5px;">₹29</div>
             <div style="font-size:10.5px;opacity:0.72;margin-top:6px;">Govt. fee ₹93 + Service fee ₹14 (incl. GST)</div>
             <div style="margin-top:12px;display:flex;gap:10px;">
               <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.15);border-radius:20px;padding:4px 10px;">
@@ -293,7 +294,7 @@ function renderPaymentScreen(): string {
           <p style="font-size:12.5px;color:#50507a;text-align:center;margin-bottom:16px;">You will be redirected to a secure Razorpay page to complete payment.</p>
           <button id="fy-pay-btn" class="fy-pay-btn" style="width:100%;padding:14px;background:#000080;color:#fff;border:none;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 5px 20px rgba(0,0,128,0.27);transition:all 0.2s ease;letter-spacing:0.3px;display:flex;align-items:center;justify-content:center;gap:8px;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-            Pay ₹107 Securely
+            Pay ₹29 Securely
           </button>
           <div style="text-align:center;margin-top:10px;font-size:10.5px;color:#aaa;font-weight:500;">
             By paying you agree to FormYaar's Terms &amp; Privacy Policy
@@ -303,35 +304,80 @@ function renderPaymentScreen(): string {
     </div>
   `;
 }
-
-function renderSuccessScreen(): string {
+function renderFillingScreen(): string {
   return `
-    <div id="fy-success" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
+    <div id="fy-filling" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
       <div style="position:relative;background:#000080;overflow:hidden;flex-shrink:0;">
         <div style="padding:13px 16px;display:flex;align-items:center;gap:10px;position:relative;z-index:1;">
           <div style="flex:1;text-align:center;">
             <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;line-height:1.2;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
               <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;font-weight:800;">·</span><span style="font-weight:800;color:#ffffff;">Yaar</span>
             </div>
-            <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Application Submitted</div>
+            <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Filling your form...</div>
           </div>
         </div>
         <div style="height:3px;display:flex;"><div style="flex:1;background:#FF9933;"></div><div style="flex:1;background:#ffffff;"></div><div style="flex:1;background:#138808;"></div></div>
       </div>
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 32px;gap:0;">
-        <div id="fy-success-icon" style="width:68px;height:68px;border-radius:50%;background:#22c55e;display:flex;align-items:center;justify-content:center;animation:fy-successPop 0.5s ease forwards;box-shadow:0 8px 24px rgba(34,197,94,0.27);">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <div style="flex:1;overflow-y:auto;padding:24px 20px;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="width:56px;height:56px;border-radius:50%;background:rgba(130,28,255,0.1);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;">
+            <div style="width:28px;height:28px;border:3px solid rgba(130,28,255,0.2);border-top-color:#821cff;border-radius:50%;animation:fy-spin 0.8s linear infinite;"></div>
+          </div>
+          <div style="font-size:18px;font-weight:800;color:#0a0a2e;">Filling your PAN form</div>
+          <div style="margin-top:6px;font-size:12.5px;color:#50507a;">Please don't close this tab</div>
         </div>
-        <div style="margin-top:20px;font-size:20px;font-weight:800;color:#0a0a2e;text-align:center;">Payment Successful!</div>
-        <div style="margin-top:8px;font-size:13px;color:#50507a;text-align:center;line-height:1.6;max-width:260px;">Your PAN Card application has been submitted and is being processed.</div>
-        <div style="margin-top:6px;font-size:12.5px;color:#821cff;font-weight:700;">Expected: 7–10 working days</div>
-        <div style="margin-top:24px;background:#f0f8ff;border:1px solid #bfd4ec;border-radius:10px;padding:10px 16px;font-size:11px;color:#50507a;text-align:center;">A confirmation has been sent to your registered email.</div>
-        <button id="fy-back-home" style="margin-top:20px;background:#821cff;color:#fff;border:none;border-radius:11px;padding:12px 36px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 16px rgba(130,28,255,0.27);">Back to Home</button>
+        <div style="background:#f8f9fc;border:1px solid #e8e8f0;border-radius:12px;padding:14px 16px;">
+          <div id="fy-fill-progress-label" style="font-size:11px;color:#50507a;font-weight:600;margin-bottom:10px;letter-spacing:0.3px;text-transform:uppercase;">Progress</div>
+          <div id="fy-fill-progress-list" style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:#50507a;">
+            <div style="opacity:0.6;">Preparing...</div>
+          </div>
+        </div>
       </div>
     </div>
   `;
 }
 
+function renderVerifyScreen(): string {
+  return `
+    <div id="fy-verify" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
+      <div style="position:relative;background:#000080;overflow:hidden;flex-shrink:0;">
+        <div style="padding:13px 16px;display:flex;align-items:center;gap:10px;position:relative;z-index:1;">
+          <div style="flex:1;text-align:center;">
+            <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;line-height:1.2;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
+              <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;font-weight:800;">·</span><span style="font-weight:800;color:#ffffff;">Yaar</span>
+            </div>
+            <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Almost done</div>
+          </div>
+        </div>
+        <div style="height:3px;display:flex;"><div style="flex:1;background:#FF9933;"></div><div style="flex:1;background:#ffffff;"></div><div style="flex:1;background:#138808;"></div></div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:24px 20px;">
+        <div style="text-align:center;margin-bottom:18px;">
+          <div style="width:60px;height:60px;border-radius:50%;background:#22c55e;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;animation:fy-successPop 0.5s ease forwards;box-shadow:0 8px 20px rgba(34,197,94,0.27);">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div style="font-size:19px;font-weight:800;color:#0a0a2e;">All filled in!</div>
+          <div style="margin-top:6px;font-size:12.5px;color:#50507a;line-height:1.5;">We've auto-filled this page with your information.</div>
+        </div>
+        <div style="background:#fff8eb;border:1.5px solid #f5d27a;border-radius:12px;padding:14px 16px;margin-bottom:14px;">
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+            <div>
+              <div style="font-size:13px;color:#7a5a00;font-weight:700;margin-bottom:4px;">Two more steps</div>
+              <div style="font-size:12px;color:#7a5a00;line-height:1.5;">
+                <strong>1.</strong> Solve the reCAPTCHA at the bottom of the page<br>
+                <strong>2.</strong> Click the <strong>Submit</strong> button
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#f0f8ff;border:1px solid #bfd4ec;border-radius:10px;padding:11px 14px;font-size:12px;color:#50507a;line-height:1.5;">
+          The information has been verified, but a quick review never hurts. If anything looks off, just edit it directly on the page.
+        </div>
+      </div>
+    </div>
+  `;
+}
 function createTab() {
   const tab = document.createElement("div");
   tab.id = "fy-tab";
@@ -460,7 +506,7 @@ function attachPanelEventHandlers() {
     });
 
     if (!orderRes?.success) {
-      btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg> Pay ₹107 Securely`;
+      btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg> Pay ₹29 Securely`;
       btn.style.opacity = "1";
       btn.style.cursor = "pointer";
       alert("Could not initiate payment. Please try again.");
@@ -473,13 +519,58 @@ function attachPanelEventHandlers() {
       amount: orderRes.amount,
     });
 
-    btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg> Pay ₹107 Securely`;
+    btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg> Pay ₹29 Securely`;
     btn.style.opacity = "1";
     btn.style.cursor = "pointer";
   });
+} // Public helpers for autofill engine to drive panel state
 
-  document.getElementById("fy-back-home")?.addEventListener("click", () => {
-    document.getElementById("fy-success")!.style.display = "none";
-    document.getElementById("fy-home")!.style.display = "flex";
-  });
+export function showFillingScreen() {
+  document.getElementById("fy-payment")!.style.display = "none";
+  document.getElementById("fy-home")!.style.display = "none";
+  document.getElementById("fy-verify")!.style.display = "none";
+  document.getElementById("fy-filling")!.style.display = "flex";
+
+  // Open the panel if it's collapsed
+  const p = document.getElementById("formyaar-panel");
+  if (p) p.style.right = "0px";
+}
+
+export function showVerifyScreen() {
+  document.getElementById("fy-filling")!.style.display = "none";
+  document.getElementById("fy-verify")!.style.display = "flex";
+
+  const p = document.getElementById("formyaar-panel");
+  if (p) p.style.right = "0px";
+}
+
+export function updateFillProgress(
+  items: { label: string; status: "done" | "active" | "pending" }[],
+) {
+  const list = document.getElementById("fy-fill-progress-list");
+  if (!list) return;
+
+  list.innerHTML = items
+    .map((item) => {
+      if (item.status === "done") {
+        return `
+          <div style="display:flex;align-items:center;gap:8px;color:#22c55e;font-weight:600;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>${item.label}</span>
+          </div>`;
+      }
+      if (item.status === "active") {
+        return `
+          <div style="display:flex;align-items:center;gap:8px;color:#821cff;font-weight:700;">
+            <div style="width:12px;height:12px;border:2px solid rgba(130,28,255,0.25);border-top-color:#821cff;border-radius:50%;animation:fy-spin 0.7s linear infinite;"></div>
+            <span>${item.label}</span>
+          </div>`;
+      }
+      return `
+        <div style="display:flex;align-items:center;gap:8px;color:#aaa;">
+          <div style="width:12px;height:12px;border:2px solid #ddd;border-radius:50%;"></div>
+          <span>${item.label}</span>
+        </div>`;
+    })
+    .join("");
 }
