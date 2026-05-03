@@ -634,6 +634,48 @@ function renderUserFormScreen(form: string, data: UserData): string {
             <input type="text" data-field="place" value="${escapeHtml(data.place)}" placeholder="BAREILLY" autocomplete="off">
             <small class="fy-userform-hint">The city where you're filing this application</small>
           </label>
+
+          <label class="fy-userform-field">
+            <span>Proof of date of birth <em>*</em></span>
+            <select data-field="proof_of_dob" style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;color:#0f172a;background:#fff;">
+              <option value="">-- Select --</option>
+              <option value="Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate" ${data.proof_of_dob === "Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate" ? "selected" : ""}>Birth Certificate</option>
+              <option value="Matriculation certificate" ${data.proof_of_dob === "Matriculation certificate" ? "selected" : ""}>Matriculation Certificate</option>
+              <option value="Matriculation Marksheet of recognised board" ${data.proof_of_dob === "Matriculation Marksheet of recognised board" ? "selected" : ""}>Matriculation Marksheet</option>
+              <option value="Driving License" ${data.proof_of_dob === "Driving License" ? "selected" : ""}>Driving License</option>
+              <option value="Passport" ${data.proof_of_dob === "Passport" ? "selected" : ""}>Passport</option>
+              <option value="Elector's photo identity card" ${data.proof_of_dob === "Elector's photo identity card" ? "selected" : ""}>Voter ID</option>
+              <option value="Pension payment order" ${data.proof_of_dob === "Pension payment order" ? "selected" : ""}>Pension Payment Order</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="fy-userform-section">
+          <div class="fy-userform-section-title">Additional Details</div>
+
+          <label class="fy-userform-field">
+            <span>Are you a defence personnel?</span>
+            <div class="fy-userform-radios">
+              <label class="fy-userform-radio">
+                <input type="radio" name="is_defence" data-field="is_defence" value="false" ${!data.is_defence ? "checked" : ""}>
+                <span>No</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="is_defence" data-field="is_defence" value="true" ${data.is_defence ? "checked" : ""}>
+                <span>Yes</span>
+              </label>
+            </div>
+          </label>
+
+          <label class="fy-userform-field">
+            <span>Passport number</span>
+            <input type="text" data-field="passport_number" value="${escapeHtml(data.passport_number)}" placeholder="(optional)" autocomplete="off">
+          </label>
+
+          <label class="fy-userform-field">
+            <span>TIN number</span>
+            <input type="text" data-field="tin_number" value="${escapeHtml(data.tin_number)}" placeholder="(optional)" autocomplete="off">
+          </label>
         </div>
 
         <div class="fy-userform-errors" id="fy-userform-errors" hidden></div>
@@ -1024,6 +1066,10 @@ function collectFormData(): UserData {
     parent_on_card_is_mother: parentOnCard === "mother",
     aadhaar_pin_code: get("aadhaar_pin_code"),
     place: get("place").toUpperCase(),
+    is_defence: getRadio("is_defence") === "true",
+    passport_number: get("passport_number"),
+    tin_number: get("tin_number"),
+    proof_of_dob: get("proof_of_dob"),
   };
 }
 export function updateFillProgress(

@@ -1,10 +1,12 @@
 // User data collection — types, storage, defaults
 
+const STORAGE_KEY = "fy_user_data";
+
 export interface UserData {
   first_name: string;
   middle_name: string;
   last_name: string;
-  date_of_birth: string; // DD/MM/YYYY
+  date_of_birth: string;
   email: string;
   mobile: string;
   aadhaar_last_4: string;
@@ -19,9 +21,11 @@ export interface UserData {
   parent_on_card_is_mother: boolean;
   aadhaar_pin_code: string;
   place: string;
+  is_defence: boolean;
+  passport_number: string;
+  tin_number: string;
+  proof_of_dob: string;
 }
-
-const STORAGE_KEY = "fy_user_data";
 
 export const EMPTY_USER_DATA: UserData = {
   first_name: "",
@@ -42,8 +46,11 @@ export const EMPTY_USER_DATA: UserData = {
   parent_on_card_is_mother: false,
   aadhaar_pin_code: "",
   place: "",
+  is_defence: false,
+  passport_number: "",
+  tin_number: "",
+  proof_of_dob: "",
 };
-
 export async function getUserData(): Promise<UserData> {
   try {
     const result = await browser.storage.local.get(STORAGE_KEY);
@@ -123,5 +130,10 @@ export function validateUserData(data: UserData): ValidationError[] {
   if (!data.place.trim())
     errors.push({ field: "place", message: "Enter your city" });
 
+  if (!data.proof_of_dob)
+    errors.push({
+      field: "proof_of_dob",
+      message: "Select your proof of date of birth",
+    });
   return errors;
 }

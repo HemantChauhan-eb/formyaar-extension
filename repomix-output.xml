@@ -52,6 +52,7 @@ entrypoints/content/panel.ts
 entrypoints/content/telemetry.ts
 entrypoints/content/toasts.ts
 entrypoints/content/types.ts
+entrypoints/content/userData.ts
 entrypoints/popup/App.css
 entrypoints/popup/App.tsx
 entrypoints/popup/index.html
@@ -164,297 +165,6 @@ export function handlePageChange() {
       startOverlay(field.selector, field.explanation, field.required ?? true);
     }
   }, 1000);
-}
-</file>
-
-<file path="entrypoints/content/autofill.ts">
-import { BACKEND_URL } from "./constants";
-import { trackEvent } from "./telemetry";
-import {
-  showFillingScreen,
-  showVerifyScreen,
-  updateFillProgress,
-} from "./panel";
-
-// ─── Types matching pan_card.json schema v2 ──────────────────────────
-interface FieldConfig {
-  field_id: string;
-  type: "text" | "select" | "checkbox" | "date" | "radio";
-  selector: string;
-  value_source: string;
-  static_value?: string | boolean;
-  match_by?: "value" | "text";
-  format?: string;
-  explanation: string;
-}
-
-interface StepConfig {
-  step: number;
-  page_pattern: string;
-  stop_message: string;
-  fields: FieldConfig[];
-}
-
-interface FormConfig {
-  form: string;
-  version: number;
-  site: string;
-  steps: StepConfig[];
-}
-
-// ─── Hardcoded test user data ────────────────────────────────────────
-// TODO: Replace with data collection screen output later
-const TEST_USER_DATA: Record<string, string | boolean> = {
-  first_name: "HEMANT",
-  middle_name: "",
-  last_name: "CHAUHAN",
-  date_of_birth: "15/08/2007",
-  email: "test@formyaar.in",
-  mobile: "9876543210",
-  aadhaar_last_4: "1234",
-  gender: "M",
-  father_first_name: "RAMESH",
-  father_middle_name: "",
-  father_last_name: "CHAUHAN",
-  mother_first_name: "",
-  mother_middle_name: "",
-  mother_last_name: "",
-  parent_on_card_is_father: true,
-  parent_on_card_is_mother: false,
-  aadhaar_pin_code: "243001",
-  place: "BAREILLY",
-};
-
-// ─── Field-friendly labels (used in progress UI) ─────────────────────
-const FIELD_LABELS: Record<string, string> = {
-  // Step 1
-  application_type: "Application type",
-  applicant_category: "Applicant category",
-  first_name: "First name",
-  middle_name: "Middle name",
-  last_name: "Last name",
-  date_of_birth: "Date of birth",
-  email: "Email",
-  mobile: "Mobile number",
-  consent: "Consent",
-  // Step 2-5
-  submission_mode_ekyc: "Submission mode (eKYC)",
-  ekyc_photo_consent: "Aadhaar photo consent",
-  epan_option: "PAN delivery option",
-  aadhaar_last_4: "Aadhaar (last 4)",
-  first_name_step2: "First name",
-  middle_name_step2: "Middle name",
-  last_name_step2: "Last name",
-  gender: "Gender",
-  father_first_name: "Father's first name",
-  father_middle_name: "Father's middle name",
-  father_last_name: "Father's last name",
-  mother_first_name: "Mother's first name",
-  mother_middle_name: "Mother's middle name",
-  mother_last_name: "Mother's last name",
-  parent_on_card_father: "Father's name on card",
-  parent_on_card_mother: "Mother's name on card",
-  isd_code: "Country code",
-  residential_status_resident: "Residential status",
-  aadhaar_pin_code: "PIN code (Aadhaar)",
-  ao_indian_citizen: "AO category",
-  capacity_verifier: "Declaration capacity",
-  place: "Place",
-};
-
-// ─── Main entry point ────────────────────────────────────────────────
-export async function runAutofill(form: string = "pan_card") {
-  showFillingScreen();
-
-  const config = await fetchConfig(form);
-  if (!config) {
-    updateFillProgress([
-      { label: "Could not load form config", status: "active" },
-    ]);
-    return;
-  }
-
-  const step = matchStep(config);
-  if (!step) {
-    updateFillProgress([{ label: "Page not recognized", status: "active" }]);
-    return;
-  }
-
-  trackEvent("guide_started", form);
-
-  // If this is the last step we have a config for, clear the active flag
-  // so autofill doesn't re-trigger on future visits
-  const isLastStep = step.step === config.steps[config.steps.length - 1].step;
-  if (isLastStep) {
-    await browser.storage.session.remove("autofillActive");
-  }
-  // Initial progress: all pending
-  const progress = step.fields.map((f) => ({
-    label: FIELD_LABELS[f.field_id] ?? f.field_id,
-    status: "pending" as "done" | "active" | "pending",
-  }));
-  updateFillProgress(progress);
-
-  // Fill each field with delay
-  for (let i = 0; i < step.fields.length; i++) {
-    progress[i].status = "active";
-    updateFillProgress([...progress]);
-
-    await sleep(150);
-
-    const field = step.fields[i];
-    const value = resolveValue(field);
-    const ok = fillField(field, value);
-
-    progress[i].status = ok ? "done" : "done"; // mark done either way; missing fields aren't fatal
-    updateFillProgress([...progress]);
-  }
-
-  trackEvent("guide_completed", form);
-
-  // Tiny pause so the user sees the last checkmark before screen flips
-  await sleep(400);
-  showVerifyScreen();
-}
-
-// ─── Fetch config from backend ───────────────────────────────────────
-async function fetchConfig(form: string): Promise<FormConfig | null> {
-  try {
-    const res = await fetch(`${BACKEND_URL}/configs/${form}/latest`);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (err) {
-    console.warn("FormYaar: config fetch failed", err);
-    return null;
-  }
-}
-
-// ─── Match the current page to a step in the config ──────────────────
-function matchStep(config: FormConfig): StepConfig | null {
-  const url = window.location.pathname + window.location.search;
-  return (
-    config.steps.find((s) => url.includes(s.page_pattern)) ??
-    config.steps[0] ??
-    null
-  );
-}
-
-// ─── Resolve "user.first_name" or "static" to actual value ───────────
-function resolveValue(field: FieldConfig): string | boolean {
-  if (!field.value_source) {
-    console.warn(`FormYaar: missing value_source on ${field.field_id}`);
-    return "";
-  }
-  if (field.value_source === "static") {
-    return field.static_value ?? "";
-  }
-  if (field.value_source.startsWith("user.")) {
-    const key = field.value_source.slice(5);
-    const v = TEST_USER_DATA[key];
-    return v !== undefined ? v : "";
-  }
-  return "";
-}
-
-// ─── Fill a single field based on its type ───────────────────────────
-function fillField(field: FieldConfig, value: string | boolean): boolean {
-  const el = document.querySelector(field.selector) as HTMLElement | null;
-  if (!el) {
-    console.warn(`FormYaar: field not found ${field.selector}`);
-    return false;
-  }
-
-  // Skip disabled or hidden fields — site logic may have disabled them
-  // (e.g. eKYC mode disables Residence Address fields)
-  if ((el as HTMLInputElement).disabled) {
-    console.log(`FormYaar: skipping disabled field ${field.selector}`);
-    return false;
-  }
-
-  switch (field.type) {
-    case "text":
-    case "date":
-      return fillText(el as HTMLInputElement, String(value));
-    case "select":
-      return fillSelect(
-        el as HTMLSelectElement,
-        String(value),
-        field.match_by ?? "value",
-      );
-    case "checkbox":
-      return fillCheckbox(el as HTMLInputElement, Boolean(value));
-    case "radio":
-      return fillRadio(el as HTMLInputElement, Boolean(value));
-    default:
-      return false;
-  }
-}
-function fillText(input: HTMLInputElement, value: string): boolean {
-  // Use native setter to bypass framework value-tracking (React, etc.)
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value",
-  )?.set;
-  if (setter) {
-    setter.call(input, value);
-  } else {
-    input.value = value;
-  }
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  input.dispatchEvent(new Event("change", { bubbles: true }));
-  input.dispatchEvent(new Event("blur", { bubbles: true }));
-  return true;
-}
-
-function fillSelect(
-  select: HTMLSelectElement,
-  value: string,
-  matchBy: "value" | "text",
-): boolean {
-  let matched = false;
-  for (let i = 0; i < select.options.length; i++) {
-    const opt = select.options[i];
-    const candidate = matchBy === "text" ? opt.text.trim() : opt.value;
-    if (candidate === value) {
-      select.selectedIndex = i;
-      matched = true;
-      break;
-    }
-  }
-  if (!matched) {
-    console.warn(`FormYaar: no option matches ${value} on ${select.id}`);
-    return false;
-  }
-  select.dispatchEvent(new Event("change", { bubbles: true }));
-
-  // The PAN form uses Select2 — when our native change fires, NSDL's JS
-  // re-renders the visible Select2 widget. If Select2 listens to jQuery
-  // events specifically, we may need to also trigger via jQuery. We try
-  // here without it; if the visible label doesn't update, we'll add a
-  // jQuery trigger fallback in the next iteration.
-  return true;
-}
-
-function fillCheckbox(input: HTMLInputElement, checked: boolean): boolean {
-  if (input.checked === checked) return true;
-  input.checked = checked;
-  input.dispatchEvent(new Event("change", { bubbles: true }));
-  input.dispatchEvent(new Event("click", { bubbles: true }));
-  return true;
-}
-function fillRadio(input: HTMLInputElement, shouldSelect: boolean): boolean {
-  // Radios use a "select this one" semantic. If value is true, click it.
-  // If false, leave it alone — another radio in the group should be selected instead.
-  if (!shouldSelect) return true;
-  if (input.checked) return true;
-  input.checked = true;
-  input.dispatchEvent(new Event("change", { bubbles: true }));
-  input.dispatchEvent(new Event("click", { bubbles: true }));
-  return true;
-}
-// ─── Utility ─────────────────────────────────────────────────────────
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 </file>
 
@@ -676,6 +386,136 @@ export type BackgroundResponse =
   | { success: boolean; order_id?: string; amount?: number; error?: string };
 </file>
 
+<file path="entrypoints/content/userData.ts">
+// User data collection — types, storage, defaults
+
+export interface UserData {
+  first_name: string;
+  middle_name: string;
+  last_name: string;
+  date_of_birth: string; // DD/MM/YYYY
+  email: string;
+  mobile: string;
+  aadhaar_last_4: string;
+  gender: "M" | "F" | "T" | "";
+  father_first_name: string;
+  father_middle_name: string;
+  father_last_name: string;
+  mother_first_name: string;
+  mother_middle_name: string;
+  mother_last_name: string;
+  parent_on_card_is_father: boolean;
+  parent_on_card_is_mother: boolean;
+  aadhaar_pin_code: string;
+  place: string;
+}
+
+const STORAGE_KEY = "fy_user_data";
+
+export const EMPTY_USER_DATA: UserData = {
+  first_name: "",
+  middle_name: "",
+  last_name: "",
+  date_of_birth: "",
+  email: "",
+  mobile: "",
+  aadhaar_last_4: "",
+  gender: "",
+  father_first_name: "",
+  father_middle_name: "",
+  father_last_name: "",
+  mother_first_name: "",
+  mother_middle_name: "",
+  mother_last_name: "",
+  parent_on_card_is_father: true,
+  parent_on_card_is_mother: false,
+  aadhaar_pin_code: "",
+  place: "",
+};
+
+export async function getUserData(): Promise<UserData> {
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEY);
+    const saved = result[STORAGE_KEY] as UserData | undefined;
+    return { ...EMPTY_USER_DATA, ...(saved ?? {}) };
+  } catch {
+    return EMPTY_USER_DATA;
+  }
+}
+
+export async function saveUserData(data: UserData): Promise<void> {
+  await browser.storage.local.set({ [STORAGE_KEY]: data });
+}
+
+export interface ValidationError {
+  field: keyof UserData;
+  message: string;
+}
+
+export function validateUserData(data: UserData): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (!data.first_name.trim())
+    errors.push({ field: "first_name", message: "First name is required" });
+
+  if (!data.last_name.trim())
+    errors.push({ field: "last_name", message: "Last name is required" });
+
+  if (!data.date_of_birth.match(/^\d{2}\/\d{2}\/\d{4}$/))
+    errors.push({
+      field: "date_of_birth",
+      message: "Date must be DD/MM/YYYY",
+    });
+
+  if (!data.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))
+    errors.push({ field: "email", message: "Enter a valid email" });
+
+  if (!data.mobile.match(/^[6-9]\d{9}$/))
+    errors.push({
+      field: "mobile",
+      message: "Enter a valid 10-digit mobile number",
+    });
+
+  if (!data.aadhaar_last_4.match(/^\d{4}$/))
+    errors.push({
+      field: "aadhaar_last_4",
+      message: "Enter the last 4 digits of your Aadhaar",
+    });
+
+  if (!data.gender)
+    errors.push({ field: "gender", message: "Select your gender" });
+
+  if (!data.father_first_name.trim())
+    errors.push({
+      field: "father_first_name",
+      message: "Father's first name is required",
+    });
+
+  if (!data.father_last_name.trim())
+    errors.push({
+      field: "father_last_name",
+      message: "Father's last name is required",
+    });
+
+  if (!data.parent_on_card_is_father && !data.parent_on_card_is_mother)
+    errors.push({
+      field: "parent_on_card_is_father",
+      message: "Choose whose name to print on the PAN card",
+    });
+
+  if (!data.aadhaar_pin_code.match(/^\d{6}$/))
+    errors.push({
+      field: "aadhaar_pin_code",
+      message: "Enter a valid 6-digit PIN code",
+    });
+
+  if (!data.place.trim())
+    errors.push({ field: "place", message: "Enter your city" });
+
+  return errors;
+}
+</file>
+
 <file path="entrypoints/popup/index.html">
 <!doctype html>
 <html lang="en">
@@ -800,6 +640,400 @@ text.txt
 *.sw?
 </file>
 
+<file path="entrypoints/content/autofill.ts">
+import { BACKEND_URL } from "./constants";
+import { trackEvent } from "./telemetry";
+import {
+  showFillingScreen,
+  showVerifyScreen,
+  updateFillProgress,
+} from "./panel";
+import { getUserData, type UserData } from "./userData";
+// ─── Types matching pan_card.json schema v2 ──────────────────────────
+interface FieldConfig {
+  field_id: string;
+  type: "text" | "select" | "checkbox" | "date" | "radio" | "button_click";
+  selector: string;
+  value_source: string;
+  static_value?: string | boolean;
+  match_by?: "value" | "text";
+  format?: string;
+  explanation: string;
+}
+
+interface StepConfig {
+  step: number;
+  page_pattern: string;
+  stop_message: string;
+  fields: FieldConfig[];
+}
+
+interface FormConfig {
+  form: string;
+  version: number;
+  site: string;
+  steps: StepConfig[];
+}
+
+// ─── Field-friendly labels (used in progress UI) ─────────────────────
+const FIELD_LABELS: Record<string, string> = {
+  // Step 1
+  application_type: "Application type",
+  applicant_category: "Applicant category",
+  first_name: "First name",
+  middle_name: "Middle name",
+  last_name: "Last name",
+  date_of_birth: "Date of birth",
+  email: "Email",
+  mobile: "Mobile number",
+  consent: "Consent",
+  // Step 2-5
+  submission_mode_ekyc: "Submission mode (eKYC)",
+  ekyc_photo_consent: "Aadhaar photo consent",
+  epan_option: "PAN delivery option",
+  aadhaar_last_4: "Aadhaar (last 4)",
+  first_name_step2: "First name",
+  middle_name_step2: "Middle name",
+  last_name_step2: "Last name",
+  gender: "Gender",
+  father_first_name: "Father's first name",
+  father_middle_name: "Father's middle name",
+  father_last_name: "Father's last name",
+  mother_first_name: "Mother's first name",
+  mother_middle_name: "Mother's middle name",
+  mother_last_name: "Mother's last name",
+  parent_on_card_father: "Father's name on card",
+  parent_on_card_mother: "Mother's name on card",
+  isd_code: "Country code",
+  residential_status_resident: "Residential status",
+  aadhaar_pin_code: "PIN code (Aadhaar)",
+  ao_indian_citizen: "AO category",
+  capacity_verifier: "Declaration capacity",
+  place: "Place",
+  ao_fetch_btn: "Fetch AO code",
+};
+
+// ─── Main entry point ────────────────────────────────────────────────
+export async function runAutofill(form: string = "pan_card") {
+  showFillingScreen();
+
+  const config = await fetchConfig(form);
+  const userData = await getUserData();
+  if (!config) {
+    updateFillProgress([
+      { label: "Could not load form config", status: "active" },
+    ]);
+    return;
+  }
+
+  const step = matchStep(config);
+  if (!step) {
+    updateFillProgress([{ label: "Page not recognized", status: "active" }]);
+    return;
+  }
+
+  trackEvent("guide_started", form);
+
+  // If this is the last step we have a config for, clear the active flag
+  // so autofill doesn't re-trigger on future visits
+  const isLastStep = step.step === config.steps[config.steps.length - 1].step;
+  if (isLastStep) {
+    await browser.storage.session.remove("autofillActive");
+  }
+  // Initial progress: all pending
+  const progress = step.fields.map((f) => ({
+    label: FIELD_LABELS[f.field_id] ?? f.field_id,
+    status: "pending" as "done" | "active" | "pending",
+  }));
+  updateFillProgress(progress);
+
+  // Fill each field with delay
+  for (let i = 0; i < step.fields.length; i++) {
+    progress[i].status = "active";
+    updateFillProgress([...progress]);
+
+    const field = step.fields[i];
+    const value = resolveValue(field, userData);
+    const ok = fillField(field, value);
+    const delay = field.type === "button_click" ? 2500 : 150;
+    await sleep(delay);
+    progress[i].status = ok ? "done" : "done"; // mark done either way; missing fields aren't fatal
+    updateFillProgress([...progress]);
+  }
+
+  trackEvent("guide_completed", form);
+
+  // Tiny pause so the user sees the last checkmark before screen flips
+  await sleep(400);
+  showVerifyScreen();
+}
+
+// ─── Fetch config from backend ───────────────────────────────────────
+async function fetchConfig(form: string): Promise<FormConfig | null> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/configs/${form}/latest`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("FormYaar: config fetch failed", err);
+    return null;
+  }
+}
+
+// ─── Match the current page to a step in the config ──────────────────
+function matchStep(config: FormConfig): StepConfig | null {
+  const url = window.location.pathname + window.location.search;
+  return (
+    config.steps.find((s) => url.includes(s.page_pattern)) ??
+    config.steps[0] ??
+    null
+  );
+}
+
+// ─── Resolve "user.first_name" or "static" to actual value ───────────
+function resolveValue(
+  field: FieldConfig,
+  userData: UserData,
+): string | boolean {
+  if (!field.value_source) {
+    console.warn(`FormYaar: missing value_source on ${field.field_id}`);
+    return "";
+  }
+  if (field.value_source === "static") {
+    return field.static_value ?? "";
+  }
+  if (field.value_source.startsWith("user.")) {
+    const key = field.value_source.slice(5) as keyof UserData;
+    const v = userData[key];
+    return v !== undefined ? v : "";
+  }
+  return "";
+}
+
+// ─── Fill a single field based on its type ───────────────────────────
+function fillField(field: FieldConfig, value: string | boolean): boolean {
+  const el = document.querySelector(field.selector) as HTMLElement | null;
+  if (!el) {
+    console.warn(`FormYaar: field not found ${field.selector}`);
+    return false;
+  }
+
+  // Skip disabled or hidden fields — site logic may have disabled them
+  // (e.g. eKYC mode disables Residence Address fields)
+  if ((el as HTMLInputElement).disabled) {
+    console.log(`FormYaar: skipping disabled field ${field.selector}`);
+    return false;
+  }
+
+  switch (field.type) {
+    case "text":
+    case "date":
+      return fillText(el as HTMLInputElement, String(value));
+    case "select":
+      return fillSelect(
+        el as HTMLSelectElement,
+        String(value),
+        field.match_by ?? "value",
+      );
+    case "checkbox":
+      return fillCheckbox(el as HTMLInputElement, Boolean(value));
+    case "radio":
+      return fillRadio(el as HTMLInputElement, Boolean(value));
+    case "button_click":
+      return clickButton(el);
+    default:
+      return false;
+  }
+}
+function fillText(input: HTMLInputElement, value: string): boolean {
+  // Use native setter to bypass framework value-tracking (React, etc.)
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "value",
+  )?.set;
+  if (setter) {
+    setter.call(input, value);
+  } else {
+    input.value = value;
+  }
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  input.dispatchEvent(new Event("blur", { bubbles: true }));
+  return true;
+}
+
+function fillSelect(
+  select: HTMLSelectElement,
+  value: string,
+  matchBy: "value" | "text",
+): boolean {
+  let matched = false;
+  for (let i = 0; i < select.options.length; i++) {
+    const opt = select.options[i];
+    const candidate = matchBy === "text" ? opt.text.trim() : opt.value;
+    if (candidate === value) {
+      select.selectedIndex = i;
+      matched = true;
+      break;
+    }
+  }
+  if (!matched) {
+    console.warn(`FormYaar: no option matches ${value} on ${select.id}`);
+    return false;
+  }
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+
+  // The PAN form uses Select2 — when our native change fires, NSDL's JS
+  // re-renders the visible Select2 widget. If Select2 listens to jQuery
+  // events specifically, we may need to also trigger via jQuery. We try
+  // here without it; if the visible label doesn't update, we'll add a
+  // jQuery trigger fallback in the next iteration.
+  return true;
+}
+
+function fillCheckbox(input: HTMLInputElement, checked: boolean): boolean {
+  if (input.checked === checked) return true;
+  input.checked = checked;
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  input.dispatchEvent(new Event("click", { bubbles: true }));
+  return true;
+}
+function fillRadio(input: HTMLInputElement, shouldSelect: boolean): boolean {
+  // Radios use a "select this one" semantic. If value is true, click it.
+  // If false, leave it alone — another radio in the group should be selected instead.
+  if (!shouldSelect) return true;
+  if (input.checked) return true;
+  input.checked = true;
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  input.dispatchEvent(new Event("click", { bubbles: true }));
+  return true;
+}
+function clickButton(el: HTMLElement): boolean {
+  el.click();
+  el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  return true;
+}
+// ─── Utility ─────────────────────────────────────────────────────────
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+</file>
+
+<file path="entrypoints/popup/App.css">
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 280px;
+  font-family:
+    "Plus Jakarta Sans",
+    "DM Sans",
+    -apple-system,
+    sans-serif;
+  background: #ffffff;
+}
+
+.popup {
+  width: 280px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header h1 {
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.header h1 .form {
+  font-weight: 200;
+  color: #001845;
+}
+.header h1 .dot {
+  font-weight: 800;
+  color: #e8930a;
+  margin: 0 1px;
+}
+.header h1 .yaar {
+  font-weight: 800;
+  color: #001845;
+}
+
+.header p {
+  font-size: 11px;
+  color: #888;
+  font-style: italic;
+}
+
+.open-btn {
+  width: 100%;
+  background: #000080;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 11px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.open-btn:hover {
+  background: #000060;
+}
+
+.footer {
+  text-align: center;
+}
+
+.footer p {
+  font-size: 10px;
+  color: #ccc;
+}
+</file>
+
+<file path="entrypoints/popup/style.css">
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-width: 280px;
+  min-height: unset;
+}
+</file>
+
+<file path="wxt.config.ts">
+import { defineConfig } from "wxt";
+
+export default defineConfig({
+  modules: ["@wxt-dev/module-react"],
+  manifest: {
+    name: "FormYaar",
+    description: "Your friend who fills government forms with you",
+    version: "0.1.0",
+    permissions: ["storage", "activeTab", "scripting", "alarms", "tabs"],
+    host_permissions: [
+      "https://onlineservices.proteantech.in/*",
+      "https://onlineservices.nsdl.com/*",
+      "https://www.utiitsl.com/*",
+      "https://passporthub.gov.in/*",
+      "https://sarathi.parivahan.gov.in/*",
+      "https://formyaar.pages.dev/*",
+      "https://formyaar-backend-production.up.railway.app/*",
+    ],
+  },
+});
+</file>
+
 <file path="entrypoints/content/panel.ts">
 import { ensureFontsLoaded } from "./fonts";
 import {
@@ -809,6 +1043,12 @@ import {
   Z_INDEX,
 } from "./constants";
 import { trackEvent } from "./telemetry";
+import {
+  getUserData,
+  saveUserData,
+  validateUserData,
+  type UserData,
+} from "./userData";
 let currentClickHandler: ((e: MouseEvent) => void) | null = null;
 
 export function removeTab() {
@@ -866,6 +1106,187 @@ function renderPanelHTML(): string {
       .fy-card-hover:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(130,28,255,0.18) !important; }
       .fy-screen { animation: fy-fadeIn 0.2s ease; }
       .fy-pay-btn:hover { opacity: 0.92; }
+      /* ===== User data collection form ===== */
+.fy-userform {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+}
+.fy-userform-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.fy-userform-back {
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #475569;
+  flex-shrink: 0;
+}
+.fy-userform-back:hover { background: #f8fafc; }
+.fy-userform-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+  line-height: 1.3;
+}
+.fy-userform-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.fy-userform-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+.fy-userform-section {
+  margin-bottom: 24px;
+}
+.fy-userform-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.fy-userform-field {
+  display: block;
+  margin-bottom: 14px;
+}
+.fy-userform-field > span {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+  margin-bottom: 6px;
+}
+.fy-userform-field em {
+  color: #ef4444;
+  font-style: normal;
+  margin-left: 2px;
+}
+.fy-userform-field input[type="text"],
+.fy-userform-field input[type="email"],
+.fy-userform-field input[type="tel"] {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+.fy-userform-field input:focus {
+  outline: none;
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+}
+.fy-userform-field input.fy-error {
+  border-color: #ef4444;
+}
+.fy-userform-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.fy-userform-row .fy-userform-field {
+  margin-bottom: 0;
+}
+.fy-userform-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fy-userform-radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #334155;
+  transition: all 0.15s;
+}
+.fy-userform-radio:has(input:checked) {
+  border-color: #1e3a8a;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-weight: 500;
+}
+.fy-userform-radio input {
+  margin: 0;
+  accent-color: #1e3a8a;
+}
+.fy-userform-hint {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+.fy-userform-errors {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #991b1b;
+}
+.fy-userform-errors ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.fy-userform-errors li { margin-bottom: 2px; }
+.fy-userform-footer {
+  padding: 14px 20px 18px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+.fy-userform-submit {
+  width: 100%;
+  padding: 12px;
+  background: #1e3a8a;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.fy-userform-submit:hover { background: #1e40af; }
+.fy-userform-submit:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+.fy-userform-privacy {
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 8px;
+}
     </style>
    ${renderHomeScreen()}
     ${renderPaymentScreen()}
@@ -1107,6 +1528,172 @@ function renderPaymentScreen(): string {
     </div>
   `;
 }
+function renderUserFormScreen(form: string, data: UserData): string {
+  const formLabel = form === "pan_card" ? "PAN Card" : form;
+
+  return `
+    <div class="fy-userform">
+      <div class="fy-userform-header">
+        <button class="fy-userform-back" id="fy-userform-back" aria-label="Back">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div>
+          <div class="fy-userform-title">Your details for ${formLabel}</div>
+          <div class="fy-userform-subtitle">We'll use this to auto-fill the form. Saved locally on your device.</div>
+        </div>
+      </div>
+
+      <div class="fy-userform-body">
+        <div class="fy-userform-section">
+          <div class="fy-userform-section-title">About you</div>
+
+          <div class="fy-userform-row">
+            <label class="fy-userform-field">
+              <span>First name <em>*</em></span>
+              <input type="text" data-field="first_name" value="${escapeHtml(data.first_name)}" placeholder="HEMANT" autocomplete="off">
+            </label>
+            <label class="fy-userform-field">
+              <span>Middle name</span>
+              <input type="text" data-field="middle_name" value="${escapeHtml(data.middle_name)}" placeholder="(optional)" autocomplete="off">
+            </label>
+          </div>
+
+          <label class="fy-userform-field">
+            <span>Last name <em>*</em></span>
+            <input type="text" data-field="last_name" value="${escapeHtml(data.last_name)}" placeholder="CHAUHAN" autocomplete="off">
+          </label>
+
+          <label class="fy-userform-field">
+            <span>Date of birth <em>*</em></span>
+            <input type="text" data-field="date_of_birth" value="${escapeHtml(data.date_of_birth)}" placeholder="DD/MM/YYYY" autocomplete="off" inputmode="numeric">
+          </label>
+
+          <label class="fy-userform-field">
+            <span>Gender <em>*</em></span>
+            <div class="fy-userform-radios">
+              <label class="fy-userform-radio">
+                <input type="radio" name="gender" data-field="gender" value="M" ${data.gender === "M" ? "checked" : ""}>
+                <span>Male</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="gender" data-field="gender" value="F" ${data.gender === "F" ? "checked" : ""}>
+                <span>Female</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="gender" data-field="gender" value="T" ${data.gender === "T" ? "checked" : ""}>
+                <span>Transgender</span>
+              </label>
+            </div>
+          </label>
+
+          <label class="fy-userform-field">
+            <span>Email <em>*</em></span>
+            <input type="email" data-field="email" value="${escapeHtml(data.email)}" placeholder="you@example.com" autocomplete="off">
+          </label>
+
+          <label class="fy-userform-field">
+            <span>Mobile number <em>*</em></span>
+            <input type="tel" data-field="mobile" value="${escapeHtml(data.mobile)}" placeholder="9876543210" autocomplete="off" inputmode="numeric" maxlength="10">
+          </label>
+        </div>
+
+        <div class="fy-userform-section">
+          <div class="fy-userform-section-title">Aadhaar</div>
+
+          <label class="fy-userform-field">
+            <span>Last 4 digits of Aadhaar <em>*</em></span>
+            <input type="text" data-field="aadhaar_last_4" value="${escapeHtml(data.aadhaar_last_4)}" placeholder="1234" autocomplete="off" inputmode="numeric" maxlength="4">
+          </label>
+
+          <label class="fy-userform-field">
+            <span>PIN code as per Aadhaar <em>*</em></span>
+            <input type="text" data-field="aadhaar_pin_code" value="${escapeHtml(data.aadhaar_pin_code)}" placeholder="243001" autocomplete="off" inputmode="numeric" maxlength="6">
+          </label>
+        </div>
+
+        <div class="fy-userform-section">
+          <div class="fy-userform-section-title">Family</div>
+
+          <div class="fy-userform-row">
+            <label class="fy-userform-field">
+              <span>Father's first name <em>*</em></span>
+              <input type="text" data-field="father_first_name" value="${escapeHtml(data.father_first_name)}" placeholder="RAMESH" autocomplete="off">
+            </label>
+            <label class="fy-userform-field">
+              <span>Middle</span>
+              <input type="text" data-field="father_middle_name" value="${escapeHtml(data.father_middle_name)}" placeholder="(optional)" autocomplete="off">
+            </label>
+          </div>
+
+          <label class="fy-userform-field">
+            <span>Father's last name <em>*</em></span>
+            <input type="text" data-field="father_last_name" value="${escapeHtml(data.father_last_name)}" placeholder="CHAUHAN" autocomplete="off">
+          </label>
+
+          <div class="fy-userform-row">
+            <label class="fy-userform-field">
+              <span>Mother's first name</span>
+              <input type="text" data-field="mother_first_name" value="${escapeHtml(data.mother_first_name)}" placeholder="(optional)" autocomplete="off">
+            </label>
+            <label class="fy-userform-field">
+              <span>Middle</span>
+              <input type="text" data-field="mother_middle_name" value="${escapeHtml(data.mother_middle_name)}" placeholder="(optional)" autocomplete="off">
+            </label>
+          </div>
+
+          <label class="fy-userform-field">
+            <span>Mother's last name</span>
+            <input type="text" data-field="mother_last_name" value="${escapeHtml(data.mother_last_name)}" placeholder="(optional)" autocomplete="off">
+          </label>
+
+          <label class="fy-userform-field">
+            <span>Whose name to print on PAN card? <em>*</em></span>
+            <div class="fy-userform-radios">
+              <label class="fy-userform-radio">
+                <input type="radio" name="parent_on_card" data-field="parent_on_card" value="father" ${data.parent_on_card_is_father ? "checked" : ""}>
+                <span>Father's name</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="parent_on_card" data-field="parent_on_card" value="mother" ${data.parent_on_card_is_mother ? "checked" : ""}>
+                <span>Mother's name</span>
+              </label>
+            </div>
+          </label>
+        </div>
+
+        <div class="fy-userform-section">
+          <div class="fy-userform-section-title">Verification</div>
+
+          <label class="fy-userform-field">
+            <span>Place (city) <em>*</em></span>
+            <input type="text" data-field="place" value="${escapeHtml(data.place)}" placeholder="BAREILLY" autocomplete="off">
+            <small class="fy-userform-hint">The city where you're filing this application</small>
+          </label>
+        </div>
+
+        <div class="fy-userform-errors" id="fy-userform-errors" hidden></div>
+      </div>
+
+      <div class="fy-userform-footer">
+        <button class="fy-userform-submit" id="fy-userform-submit">
+          Continue to Pay ₹29
+        </button>
+        <div class="fy-userform-privacy">🔒 Saved on your device. Never sent to our servers.</div>
+      </div>
+    </div>
+  `;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 function renderFillingScreen(): string {
   return `
     <div id="fy-filling" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
@@ -1288,8 +1875,7 @@ function attachClickOutsideHandler() {
 function attachPanelEventHandlers() {
   document.getElementById("fy-pan-card")?.addEventListener("click", () => {
     trackEvent("panel_opened", "pan_card");
-    document.getElementById("fy-home")!.style.display = "none";
-    document.getElementById("fy-payment")!.style.display = "flex";
+    showUserForm("pan_card");
   });
 
   document.getElementById("fy-back-btn")?.addEventListener("click", () => {
@@ -1346,7 +1932,137 @@ export function showVerifyScreen() {
   const p = document.getElementById("formyaar-panel");
   if (p) p.style.right = "0px";
 }
+function showUserForm(form: string): void {
+  // Hide all other screens
+  const screens = ["fy-home", "fy-payment", "fy-filling", "fy-verify"];
+  screens.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
 
+  // Remove any existing form (in case user clicks again)
+  const existing = document.getElementById("fy-userform-screen");
+  if (existing) existing.remove();
+
+  // Render the form
+  getUserData().then((data) => {
+    const panel = document.getElementById("formyaar-panel");
+    if (!panel) return;
+
+    const wrapper = document.createElement("div");
+    wrapper.id = "fy-userform-screen";
+    wrapper.className = "fy-screen";
+    wrapper.style.cssText =
+      "display:flex;flex-direction:column;height:100%;animation:fy-fadeIn 0.2s ease;";
+    wrapper.innerHTML = renderUserFormScreen(form, data);
+    panel.appendChild(wrapper);
+
+    attachUserFormHandlers(
+      form,
+      // onSubmit: data is saved, now go to payment
+      () => {
+        wrapper.remove();
+        document.getElementById("fy-payment")!.style.display = "flex";
+      },
+      // onBack: go back to home
+      () => {
+        wrapper.remove();
+        document.getElementById("fy-home")!.style.display = "flex";
+      },
+    );
+
+    // Open panel if collapsed
+    panel.style.right = "0px";
+  });
+}
+function attachUserFormHandlers(
+  form: string,
+  onSubmit: () => void,
+  onBack: () => void,
+): void {
+  const back = document.getElementById("fy-userform-back");
+  const submit = document.getElementById("fy-userform-submit");
+  const errorBox = document.getElementById("fy-userform-errors");
+
+  if (back) back.addEventListener("click", onBack);
+
+  if (submit) {
+    submit.addEventListener("click", async () => {
+      const data = collectFormData();
+      const errors = validateUserData(data);
+
+      // Clear previous error highlights
+      document
+        .querySelectorAll(".fy-userform input.fy-error")
+        .forEach((el) => el.classList.remove("fy-error"));
+
+      if (errors.length > 0) {
+        if (errorBox) {
+          errorBox.hidden = false;
+          errorBox.innerHTML = `<ul>${errors
+            .map((e) => `<li>${e.message}</li>`)
+            .join("")}</ul>`;
+        }
+        // Highlight first error field and scroll to it
+        const firstError = errors[0];
+        const firstField = document.querySelector(
+          `[data-field="${firstError.field}"]`,
+        ) as HTMLElement | null;
+        if (firstField) {
+          firstField.classList.add("fy-error");
+          firstField.scrollIntoView({ behavior: "smooth", block: "center" });
+          firstField.focus();
+        }
+        return;
+      }
+
+      if (errorBox) errorBox.hidden = true;
+
+      // Save data and continue
+      await saveUserData(data);
+      onSubmit();
+    });
+  }
+}
+
+function collectFormData(): UserData {
+  const get = (field: string): string => {
+    const el = document.querySelector(
+      `[data-field="${field}"]`,
+    ) as HTMLInputElement | null;
+    return el ? el.value.trim() : "";
+  };
+
+  const getRadio = (name: string): string => {
+    const el = document.querySelector(
+      `input[name="${name}"]:checked`,
+    ) as HTMLInputElement | null;
+    return el ? el.value : "";
+  };
+
+  const parentOnCard = getRadio("parent_on_card");
+
+  return {
+    first_name: get("first_name").toUpperCase(),
+    middle_name: get("middle_name").toUpperCase(),
+    last_name: get("last_name").toUpperCase(),
+    date_of_birth: get("date_of_birth"),
+    email: get("email"),
+    mobile: get("mobile"),
+    aadhaar_last_4: get("aadhaar_last_4"),
+    gender: getRadio("gender") as "M" | "F" | "T" | "",
+    father_first_name: get("father_first_name").toUpperCase(),
+    father_middle_name: get("father_middle_name").toUpperCase(),
+    father_last_name: get("father_last_name").toUpperCase(),
+    mother_first_name: get("mother_first_name").toUpperCase(),
+    mother_middle_name: get("mother_middle_name").toUpperCase(),
+    mother_last_name: get("mother_last_name").toUpperCase(),
+    parent_on_card_is_father: parentOnCard === "father",
+    parent_on_card_is_mother: parentOnCard === "mother",
+    aadhaar_pin_code: get("aadhaar_pin_code"),
+    place: get("place").toUpperCase(),
+  };
+}
 export function updateFillProgress(
   items: { label: string; status: "done" | "active" | "pending" }[],
 ) {
@@ -1377,121 +2093,6 @@ export function updateFillProgress(
     })
     .join("");
 }
-</file>
-
-<file path="entrypoints/popup/App.css">
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  width: 280px;
-  font-family:
-    "Plus Jakarta Sans",
-    "DM Sans",
-    -apple-system,
-    sans-serif;
-  background: #ffffff;
-}
-
-.popup {
-  width: 280px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.header h1 {
-  font-size: 22px;
-  letter-spacing: -0.5px;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-
-.header h1 .form {
-  font-weight: 200;
-  color: #001845;
-}
-.header h1 .dot {
-  font-weight: 800;
-  color: #e8930a;
-  margin: 0 1px;
-}
-.header h1 .yaar {
-  font-weight: 800;
-  color: #001845;
-}
-
-.header p {
-  font-size: 11px;
-  color: #888;
-  font-style: italic;
-}
-
-.open-btn {
-  width: 100%;
-  background: #000080;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 11px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.open-btn:hover {
-  background: #000060;
-}
-
-.footer {
-  text-align: center;
-}
-
-.footer p {
-  font-size: 10px;
-  color: #ccc;
-}
-</file>
-
-<file path="entrypoints/popup/style.css">
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  min-width: 280px;
-  min-height: unset;
-}
-</file>
-
-<file path="wxt.config.ts">
-import { defineConfig } from "wxt";
-
-export default defineConfig({
-  modules: ["@wxt-dev/module-react"],
-  manifest: {
-    name: "FormYaar",
-    description: "Your friend who fills government forms with you",
-    version: "0.1.0",
-    permissions: ["storage", "activeTab", "scripting", "alarms", "tabs"],
-    host_permissions: [
-      "https://onlineservices.proteantech.in/*",
-      "https://onlineservices.nsdl.com/*",
-      "https://www.utiitsl.com/*",
-      "https://passporthub.gov.in/*",
-      "https://sarathi.parivahan.gov.in/*",
-      "https://formyaar.pages.dev/*",
-      "https://formyaar-backend-production.up.railway.app/*",
-    ],
-  },
-});
 </file>
 
 <file path="entrypoints/popup/App.tsx">
@@ -1761,6 +2362,11 @@ const MAX_ATTEMPTS = 60; // 5 minutes max
 import type { ExtensionMessage } from "./content/types";
 
 export default defineBackground(() => {
+  // Allow content scripts to read/write session storage
+  browser.storage.session.setAccessLevel({
+    accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS",
+  });
+
   // Re-register alarm listener every time SW starts (MV3 requirement)
   browser.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name !== "paymentPoll") return;
@@ -1883,13 +2489,15 @@ export default defineBackground(() => {
 import { SITE_CONFIGS, BANNER_DELAY_MS } from "./constants";
 import { showContextualBanner } from "./panel";
 import { runAutofill } from "./autofill";
+
 export default defineContentScript({
   matches: ["*://*/*"],
   async main() {
     if (import.meta.env.DEV)
       console.log("FormYaar loaded on:", window.location.href);
 
-    // Message listener
+    const hostname = window.location.hostname;
+
     // Message listener
     browser.runtime.onMessage.addListener((message) => {
       if (message.type === "OPEN_PANEL") {
@@ -1897,23 +2505,33 @@ export default defineContentScript({
       }
       if (message.type === "PAYMENT_VERIFIED") {
         // Mark autofill flow as active — survives page navigation
-        browser.storage.session.set({ autofillActive: { form: "pan_card" } });
+        browser.storage.session
+          .set({ autofillActive: { form: "pan_card" } })
+          .catch((err) =>
+            console.warn("FormYaar: could not save autofill state", err),
+          );
         runAutofill("pan_card");
       }
     });
 
     // Show contextual banner on supported sites
-    const hostname = window.location.hostname;
     if (SITE_CONFIGS[hostname]) {
       setTimeout(() => showContextualBanner(), BANNER_DELAY_MS);
     }
 
     // Resume autofill if flow is active (e.g. after navigation to a new page)
-    const result = await browser.storage.session.get("autofillActive");
-    const active = result.autofillActive as { form: string } | undefined;
-    if (active && SITE_CONFIGS[hostname]) {
-      // Small delay to let the page fully render before we start filling
-      setTimeout(() => runAutofill(active.form), 1500);
+    if (SITE_CONFIGS[hostname]) {
+      try {
+        const result = await browser.storage.session.get("autofillActive");
+        const active = result.autofillActive as { form: string } | undefined;
+        if (active) {
+          console.log("FormYaar: resuming autofill for", active.form);
+          // Small delay to let the page fully render before we start filling
+          setTimeout(() => runAutofill(active.form), 1500);
+        }
+      } catch (err) {
+        console.warn("FormYaar: could not check autofill state", err);
+      }
     }
   },
 });

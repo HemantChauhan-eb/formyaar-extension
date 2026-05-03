@@ -25,7 +25,40 @@ export default defineContentScript({
         runAutofill("pan_card");
       }
     });
+    // Re-run autofill when user moves to next step on endUserLogin
+    if (hostname === "onlineservices.proteantech.in") {
+      document.addEventListener("click", async (e) => {
+        const target = e.target as HTMLElement;
+        if (
+          target.classList.contains("button-next") ||
+          target.closest(".button-next")
+        ) {
+          const result = await browser.storage.session.get("autofillActive");
+          const active = result.autofillActive as { form: string } | undefined;
+          if (!active) return;
 
+          // Wait for stepy to show the next fieldset
+          const observer = new MutationObserver(() => {
+            const visible = document.querySelector(
+              '.stepy-step:not([style*="display: none"])',
+            );
+            if (visible) {
+              observer.disconnect();
+              setTimeout(() => runAutofill(active.form), 300);
+            }
+          });
+
+          observer.observe(document.body, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["style"],
+          });
+
+          // Safety fallback — disconnect after 3 seconds if nothing happens
+          setTimeout(() => observer.disconnect(), 3000);
+        }
+      });
+    }
     // Show contextual banner on supported sites
     if (SITE_CONFIGS[hostname]) {
       setTimeout(() => showContextualBanner(), BANNER_DELAY_MS);

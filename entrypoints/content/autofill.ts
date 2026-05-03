@@ -140,11 +140,25 @@ async function fetchConfig(form: string): Promise<FormConfig | null> {
 // ─── Match the current page to a step in the config ──────────────────
 function matchStep(config: FormConfig): StepConfig | null {
   const url = window.location.pathname + window.location.search;
-  return (
-    config.steps.find((s) => url.includes(s.page_pattern)) ??
-    config.steps[0] ??
-    null
-  );
+
+  // Page 1 — registerEndUser, simple URL match
+  if (!url.includes("endUserLogin")) {
+    return config.steps.find((s) => url.includes(s.page_pattern)) ?? null;
+  }
+
+  // Page 3 — endUserLogin, detect which stepy step is visible
+  const fieldsets = document.querySelectorAll(".stepy-step");
+  let visibleIndex = -1;
+  fieldsets.forEach((fs, i) => {
+    if ((fs as HTMLElement).style.display !== "none") {
+      visibleIndex = i;
+    }
+  });
+
+  if (visibleIndex === -1) return null;
+
+  // Match by stepy_index field in config
+  return config.steps.find((s: any) => s.stepy_index === visibleIndex) ?? null;
 }
 
 // ─── Resolve "user.first_name" or "static" to actual value ───────────
@@ -181,7 +195,16 @@ function fillField(field: FieldConfig, value: string | boolean): boolean {
     console.log(`FormYaar: skipping disabled field ${field.selector}`);
     return false;
   }
-
+  if ((field as any).defence_selector) {
+    console.log(
+      "FormYaar defence check:",
+      field.field_id,
+      "value:",
+      value,
+      "type:",
+      typeof value,
+    );
+  }
   switch (field.type) {
     case "text":
     case "date":
@@ -195,6 +218,29 @@ function fillField(field: FieldConfig, value: string | boolean): boolean {
     case "checkbox":
       return fillCheckbox(el as HTMLInputElement, Boolean(value));
     case "radio":
+      if ((field as any).defence_selector) {
+        console.log(
+          "DEFENCE CHECK - value:",
+          value,
+          "type:",
+          typeof value,
+          "=== true:",
+          value === true,
+          "=== 'true':",
+          value === "true",
+        );
+        if (value === true || value === "true") {
+          const defEl = document.querySelector(
+            (field as any).defence_selector,
+          ) as HTMLInputElement | null;
+          console.log("DEFENCE - clicking defence element:", defEl);
+          if (defEl) return fillRadio(defEl, true);
+          return false;
+        } else {
+          console.log("DEFENCE - clicking indian citizens");
+          return fillRadio(el as HTMLInputElement, true);
+        }
+      }
       return fillRadio(el as HTMLInputElement, Boolean(value));
     case "button_click":
       return clickButton(el);
@@ -240,11 +286,16 @@ function fillSelect(
   }
   select.dispatchEvent(new Event("change", { bubbles: true }));
 
-  // The PAN form uses Select2 — when our native change fires, NSDL's JS
-  // re-renders the visible Select2 widget. If Select2 listens to jQuery
-  // events specifically, we may need to also trigger via jQuery. We try
-  // here without it; if the visible label doesn't update, we'll add a
-  // jQuery trigger fallback in the next iteration.
+  // Trigger Select2 update if jQuery and Select2 are available
+  try {
+    const win = window as any;
+    if (win.$ && win.$(select).data("select2")) {
+      win.$(select).trigger("change");
+    }
+  } catch (e) {
+    // Select2 not present, ignore
+  }
+
   return true;
 }
 
