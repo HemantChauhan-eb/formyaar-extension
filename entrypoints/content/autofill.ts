@@ -120,7 +120,15 @@ export async function runAutofill(form: string = "pan_card") {
 
   trackEvent("guide_completed", form);
 
-  // Tiny pause so the user sees the last checkmark before screen flips
+  // Auto select AO code on step 4
+  if ((step as any).stepy_index === 3) {
+    const isDefence =
+      userData.is_defence === true || (userData.is_defence as any) === "true";
+    if (!isDefence) {
+      await autoFillAOCode(userData.aadhaar_pin_code);
+    }
+  }
+
   await sleep(400);
   showVerifyScreen();
 }
@@ -170,6 +178,15 @@ function resolveValue(
     console.warn(`FormYaar: missing value_source on ${field.field_id}`);
     return "";
   }
+  // Special case: checkbox that matches against a user value
+  if (
+    field.value_source.startsWith("user.") &&
+    field.static_value !== undefined
+  ) {
+    const key = field.value_source.slice(5) as keyof UserData;
+    const userVal = userData[key];
+    return userVal === field.static_value;
+  }
   if (field.value_source === "static") {
     return field.static_value ?? "";
   }
@@ -189,22 +206,11 @@ function fillField(field: FieldConfig, value: string | boolean): boolean {
     return false;
   }
 
-  // Skip disabled or hidden fields — site logic may have disabled them
-  // (e.g. eKYC mode disables Residence Address fields)
   if ((el as HTMLInputElement).disabled) {
     console.log(`FormYaar: skipping disabled field ${field.selector}`);
     return false;
   }
-  if ((field as any).defence_selector) {
-    console.log(
-      "FormYaar defence check:",
-      field.field_id,
-      "value:",
-      value,
-      "type:",
-      typeof value,
-    );
-  }
+
   switch (field.type) {
     case "text":
     case "date":
@@ -219,26 +225,14 @@ function fillField(field: FieldConfig, value: string | boolean): boolean {
       return fillCheckbox(el as HTMLInputElement, Boolean(value));
     case "radio":
       if ((field as any).defence_selector) {
-        console.log(
-          "DEFENCE CHECK - value:",
-          value,
-          "type:",
-          typeof value,
-          "=== true:",
-          value === true,
-          "=== 'true':",
-          value === "true",
-        );
         if (value === true || value === "true") {
           const defEl = document.querySelector(
             (field as any).defence_selector,
           ) as HTMLInputElement | null;
-          console.log("DEFENCE - clicking defence element:", defEl);
           if (defEl) return fillRadio(defEl, true);
           return false;
         } else {
-          console.log("DEFENCE - clicking indian citizens");
-          return fillRadio(el as HTMLInputElement, true);
+          return fillRadio(el as HTMLInputElement, true, true);
         }
       }
       return fillRadio(el as HTMLInputElement, Boolean(value));
@@ -306,15 +300,165 @@ function fillCheckbox(input: HTMLInputElement, checked: boolean): boolean {
   input.dispatchEvent(new Event("click", { bubbles: true }));
   return true;
 }
-function fillRadio(input: HTMLInputElement, shouldSelect: boolean): boolean {
-  // Radios use a "select this one" semantic. If value is true, click it.
-  // If false, leave it alone — another radio in the group should be selected instead.
+function fillRadio(
+  input: HTMLInputElement,
+  shouldSelect: boolean,
+  forceClick = false,
+): boolean {
   if (!shouldSelect) return true;
-  if (input.checked) return true;
+  if (input.checked && !forceClick) return true;
   input.checked = true;
   input.dispatchEvent(new Event("change", { bubbles: true }));
   input.dispatchEvent(new Event("click", { bubbles: true }));
   return true;
+}
+async function autoSelectAOCode(): Promise<boolean> {
+  return new Promise((resolve) => {
+    // Wait for table to populate after fetch
+    const observer = new MutationObserver(() => {
+      const table = document.getElementById("table_id");
+      if (!table) return;
+
+      const rows = table.querySelectorAll("tr");
+      if (rows.length <= 1) return; // Only header row, not loaded yet
+
+      observer.disconnect();
+
+      for (const row of rows) {
+        const cells = row.querySelectorAll("td");
+        if (cells.length < 2) continue;
+
+        const description = cells[1]?.textContent?.toUpperCase() || "";
+        const additionalDesc = cells[2]?.textContent?.toUpperCase() || "";
+
+        // Skip exemption and company rows
+        if (description.includes("EXEMPTION")) continue;
+        if (additionalDesc.includes("EXEMPTION")) continue;
+        if (
+          additionalDesc.includes("COMPANY CASES") &&
+          !additionalDesc.includes("NON COMPANY")
+        )
+          continue;
+
+        // Click the radio in first valid row
+        const radio = row.querySelector(
+          "input[type='radio']",
+        ) as HTMLInputElement | null;
+        if (radio) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event("change", { bubbles: true }));
+          radio.dispatchEvent(new Event("click", { bubbles: true }));
+          console.log("FormYaar: AO code selected:", description);
+          resolve(true);
+          return;
+        }
+      }
+
+      resolve(false);
+    });
+
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+    });
+
+    // Safety timeout — 10 seconds
+    setTimeout(() => {
+      observer.disconnect();
+      resolve(false);
+    }, 10000);
+  });
+}
+async function autoFillAOCode(pinCode: string): Promise<boolean> {
+  try {
+    // Step 1: Get state and city from backend
+    const res = await fetch(
+      `https://formyaar-backend-production.up.railway.app/pincode/${pinCode}`,
+    );
+    if (!res.ok) return false;
+    const { state, city } = (await res.json()) as {
+      state: string;
+      city: string;
+    };
+
+    // Step 2: Select state in dropdown
+    const stateSelect = document.getElementById(
+      "state_aoCode",
+    ) as HTMLSelectElement | null;
+    if (!stateSelect) return false;
+
+    const stateOption = Array.from(stateSelect.options).find(
+      (o) => o.text.trim().toUpperCase() === state.toUpperCase(),
+    );
+    if (!stateOption) {
+      console.warn("FormYaar: state not found in dropdown:", state);
+      return false;
+    }
+
+    stateSelect.value = stateOption.value;
+    stateSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    const win = window as any;
+    if (win.$) win.$("#state_aoCode").val(stateOption.value).trigger("change");
+
+    // Step 3: Wait for city dropdown to populate via AJAX
+    await new Promise<void>((resolve) => {
+      const observer = new MutationObserver(() => {
+        const citySelect = document.getElementById(
+          "city_aoCode",
+        ) as HTMLSelectElement | null;
+        if (citySelect && citySelect.options.length > 1) {
+          observer.disconnect();
+          resolve();
+        }
+      });
+      observer.observe(document.body, { subtree: true, childList: true });
+      setTimeout(() => {
+        observer.disconnect();
+        resolve();
+      }, 5000);
+    });
+
+    // Step 4: Select city
+    const citySelect = document.getElementById(
+      "city_aoCode",
+    ) as HTMLSelectElement | null;
+    if (!citySelect) return false;
+
+    const cityOption = Array.from(citySelect.options).find(
+      (o) => o.text.trim().toUpperCase() === city.toUpperCase(),
+    );
+    if (!cityOption) {
+      console.warn("FormYaar: city not found in dropdown:", city);
+      // Try partial match
+      const partial = Array.from(citySelect.options).find(
+        (o) =>
+          o.text.trim().toUpperCase().includes(city.toUpperCase()) ||
+          city.toUpperCase().includes(o.text.trim().toUpperCase()),
+      );
+      if (!partial) return false;
+      citySelect.value = partial.value;
+      citySelect.dispatchEvent(new Event("change", { bubbles: true }));
+      if (win.$) win.$("#city_aoCode").val(partial.value).trigger("change");
+    } else {
+      citySelect.value = cityOption.value;
+      citySelect.dispatchEvent(new Event("change", { bubbles: true }));
+      if (win.$) win.$("#city_aoCode").val(cityOption.value).trigger("change");
+    }
+
+    // Step 5: Click Fetch button
+    await sleep(800);
+    const fetchBtn = document.getElementById(
+      "fetchAOList",
+    ) as HTMLButtonElement | null;
+    if (!fetchBtn) return false;
+    fetchBtn.click();
+
+    // Step 6: Wait for table and auto-select first valid row
+    return await autoSelectAOCode();
+  } catch (err) {
+    console.error("FormYaar: AO code auto-fill failed", err);
+    return false;
+  }
 }
 function clickButton(el: HTMLElement): boolean {
   el.click();

@@ -3,7 +3,14 @@ import { showContextualBanner } from "./panel";
 import { runAutofill } from "./autofill";
 
 export default defineContentScript({
-  matches: ["*://*/*"],
+  matches: [
+    "*://*.proteantech.in/*",
+    "*://*.nsdl.com/*",
+    "*://*.utiitsl.com/*",
+    "*://*.passporthub.gov.in/*",
+    "*://*.sarathi.parivahan.gov.in/*",
+    "*://formyaar.pages.dev/*",
+  ],
   async main() {
     if (import.meta.env.DEV)
       console.log("FormYaar loaded on:", window.location.href);

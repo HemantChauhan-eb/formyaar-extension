@@ -560,6 +560,35 @@ function renderUserFormScreen(form: string, data: UserData): string {
             <span>Mobile number <em>*</em></span>
             <input type="tel" data-field="mobile" value="${escapeHtml(data.mobile)}" placeholder="9876543210" autocomplete="off" inputmode="numeric" maxlength="10">
           </label>
+          <label class="fy-userform-field">
+            <span>Source of income <em>*</em></span>
+            <div class="fy-userform-radios" style="flex-direction:column;gap:6px;">
+              <label class="fy-userform-radio">
+                <input type="radio" name="income_source" data-field="income_source" value="salary" ${data.income_source === "salary" ? "checked" : ""}>
+                <span>Salary</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="income_source" data-field="income_source" value="business" ${data.income_source === "business" ? "checked" : ""}>
+                <span>Business / Profession</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="income_source" data-field="income_source" value="house_property" ${data.income_source === "house_property" ? "checked" : ""}>
+                <span>House property</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="income_source" data-field="income_source" value="other_sources" ${data.income_source === "other_sources" ? "checked" : ""}>
+                <span>Other sources</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="income_source" data-field="income_source" value="capital_gains" ${data.income_source === "capital_gains" ? "checked" : ""}>
+                <span>Capital gains</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="income_source" data-field="income_source" value="no_income" ${data.income_source === "no_income" ? "checked" : ""}>
+                <span>No income</span>
+              </label>
+            </div>
+          </label>
         </div>
 
         <div class="fy-userform-section">
@@ -754,20 +783,29 @@ function renderVerifyScreen(): string {
           <div style="font-size:19px;font-weight:800;color:#0a0a2e;">All filled in!</div>
           <div style="margin-top:6px;font-size:12.5px;color:#50507a;line-height:1.5;">We've auto-filled this page with your information.</div>
         </div>
-        <div style="background:#fff8eb;border:1.5px solid #f5d27a;border-radius:12px;padding:14px 16px;margin-bottom:14px;">
+
+        <div style="background:#fff8eb;border:1.5px solid #f5d27a;border-radius:12px;padding:14px 16px;margin-bottom:12px;">
           <div style="display:flex;gap:10px;align-items:flex-start;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
             <div>
-              <div style="font-size:13px;color:#7a5a00;font-weight:700;margin-bottom:4px;">Two more steps</div>
-              <div style="font-size:12px;color:#7a5a00;line-height:1.5;">
-                <strong>1.</strong> Solve the reCAPTCHA at the bottom of the page<br>
-                <strong>2.</strong> Click the <strong>Submit</strong> button
+              <div style="font-size:13px;color:#7a5a00;font-weight:700;margin-bottom:6px;">Complete these steps manually</div>
+              <div style="font-size:12px;color:#7a5a00;line-height:1.8;">
+                <strong>1.</strong> Upload your <strong>Aadhaar card</strong> as proof of identity &amp; address<br>
+                <strong>2.</strong> Upload your <strong>proof of date of birth</strong> document<br>
+                <strong>3.</strong> Upload your <strong>passport-size photo</strong> and <strong>signature</strong><br>
+                <strong>4.</strong> Solve the <strong>reCAPTCHA</strong> at the bottom<br>
+                <strong>5.</strong> Click the <strong>Submit</strong> button
               </div>
             </div>
           </div>
         </div>
+
         <div style="background:#f0f8ff;border:1px solid #bfd4ec;border-radius:10px;padding:11px 14px;font-size:12px;color:#50507a;line-height:1.5;">
           The information has been verified, but a quick review never hurts. If anything looks off, just edit it directly on the page.
+        </div>
+
+        <div style="margin-top:12px;background:#f0fff4;border:1px solid #86efac;border-radius:10px;padding:11px 14px;font-size:12px;color:#166534;line-height:1.5;">
+          <strong>AO Code</strong> has been auto-selected based on your PIN code. You can change it manually if needed.
         </div>
       </div>
     </div>
@@ -1070,6 +1108,7 @@ function collectFormData(): UserData {
     passport_number: get("passport_number"),
     tin_number: get("tin_number"),
     proof_of_dob: get("proof_of_dob"),
+    income_source: getRadio("income_source") as UserData["income_source"],
   };
 }
 export function updateFillProgress(

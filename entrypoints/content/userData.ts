@@ -25,6 +25,14 @@ export interface UserData {
   passport_number: string;
   tin_number: string;
   proof_of_dob: string;
+  income_source:
+    | "salary"
+    | "business"
+    | "house_property"
+    | "other_sources"
+    | "capital_gains"
+    | "no_income"
+    | "";
 }
 
 export const EMPTY_USER_DATA: UserData = {
@@ -50,6 +58,7 @@ export const EMPTY_USER_DATA: UserData = {
   passport_number: "",
   tin_number: "",
   proof_of_dob: "",
+  income_source: "",
 };
 export async function getUserData(): Promise<UserData> {
   try {
@@ -134,6 +143,12 @@ export function validateUserData(data: UserData): ValidationError[] {
     errors.push({
       field: "proof_of_dob",
       message: "Select your proof of date of birth",
+    });
+
+  if (!data.income_source)
+    errors.push({
+      field: "income_source",
+      message: "Select your source of income",
     });
   return errors;
 }
