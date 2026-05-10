@@ -1,7 +1,8 @@
 import { SITE_CONFIGS, BANNER_DELAY_MS } from "./constants";
 import { showContextualBanner } from "./panel";
 import { runAutofill } from "./autofill";
-
+import { getActiveSession } from "./userData";
+import { showResumeScreen } from "./panel";
 export default defineContentScript({
   matches: [
     "*://*.proteantech.in/*",
@@ -29,6 +30,21 @@ export default defineContentScript({
           .catch((err) =>
             console.warn("FormYaar: could not save autofill state", err),
           );
+
+        // Persist resume session in local storage (survives browser restart)
+        browser.storage.local
+          .set({
+            fy_active_session: {
+              form: "pan_card",
+              order_id: message.order_id ?? "",
+              paid_at: Date.now(),
+              completed: false,
+            },
+          })
+          .catch((err) =>
+            console.warn("FormYaar: could not save resume session", err),
+          );
+
         runAutofill("pan_card");
       }
     });
@@ -80,6 +96,13 @@ export default defineContentScript({
           console.log("FormYaar: resuming autofill for", active.form);
           // Small delay to let the page fully render before we start filling
           setTimeout(() => runAutofill(active.form), 1500);
+        } else {
+          // No active autofill — but check for a paused session (resume case)
+          const session = await getActiveSession();
+          if (session && !session.completed) {
+            // Wait for panel to be in DOM (showContextualBanner runs after BANNER_DELAY_MS)
+            setTimeout(() => showResumeScreen(session), BANNER_DELAY_MS + 300);
+          }
         }
       } catch (err) {
         console.warn("FormYaar: could not check autofill state", err);

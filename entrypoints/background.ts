@@ -42,7 +42,10 @@ export default defineBackground(() => {
         // Payment confirmed — notify original tab
         await browser.storage.session.remove("pendingPayment");
         browser.alarms.clear("paymentPoll");
-        browser.tabs.sendMessage(originTabId, { type: "PAYMENT_VERIFIED" });
+        browser.tabs.sendMessage(originTabId, {
+          type: "PAYMENT_VERIFIED",
+          order_id: orderId,
+        });
       } else {
         // Not yet paid — increment attempts
         await browser.storage.session.set({

@@ -9,6 +9,7 @@ export interface UserData {
   date_of_birth: string;
   email: string;
   mobile: string;
+  aadhaar_number: string;
   aadhaar_last_4: string;
   gender: "M" | "F" | "T" | "";
   father_first_name: string;
@@ -43,6 +44,7 @@ export const EMPTY_USER_DATA: UserData = {
   email: "",
   mobile: "",
   aadhaar_last_4: "",
+  aadhaar_number: "",
   gender: "",
   father_first_name: "",
   father_middle_name: "",
@@ -103,11 +105,13 @@ export function validateUserData(data: UserData): ValidationError[] {
       message: "Enter a valid 10-digit mobile number",
     });
 
-  if (!data.aadhaar_last_4.match(/^\d{4}$/))
+  const aadhaarClean = (data.aadhaar_number ?? "").replace(/\s/g, "");
+  if (!aadhaarClean || !/^\d{12}$/.test(aadhaarClean)) {
     errors.push({
-      field: "aadhaar_last_4",
-      message: "Enter the last 4 digits of your Aadhaar",
+      field: "aadhaar_number",
+      message: "Aadhaar number must be exactly 12 digits",
     });
+  }
 
   if (!data.gender)
     errors.push({ field: "gender", message: "Select your gender" });
@@ -118,12 +122,11 @@ export function validateUserData(data: UserData): ValidationError[] {
       message: "Father's first name is required",
     });
 
-  if (!data.father_last_name.trim())
+  if (!data.mother_first_name.trim())
     errors.push({
-      field: "father_last_name",
-      message: "Father's last name is required",
+      field: "mother_first_name",
+      message: "Mother's first name is required",
     });
-
   if (!data.parent_on_card_is_father && !data.parent_on_card_is_mother)
     errors.push({
       field: "parent_on_card_is_father",
@@ -151,4 +154,37 @@ export function validateUserData(data: UserData): ValidationError[] {
       message: "Select your source of income",
     });
   return errors;
+}
+
+// ─── Active session (resume support) ─────────────────────────────────
+const SESSION_KEY = "fy_active_session";
+
+export interface ActiveSession {
+  form: string;
+  order_id: string;
+  paid_at: number;
+  completed: boolean;
+}
+
+export async function getActiveSession(): Promise<ActiveSession | null> {
+  try {
+    const result = await browser.storage.local.get(SESSION_KEY);
+    return (result[SESSION_KEY] as ActiveSession) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setActiveSession(session: ActiveSession): Promise<void> {
+  await browser.storage.local.set({ [SESSION_KEY]: session });
+}
+
+export async function markSessionCompleted(): Promise<void> {
+  const s = await getActiveSession();
+  if (!s) return;
+  await setActiveSession({ ...s, completed: true });
+}
+
+export async function clearActiveSession(): Promise<void> {
+  await browser.storage.local.remove(SESSION_KEY);
 }

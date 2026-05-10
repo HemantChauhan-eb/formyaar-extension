@@ -5,6 +5,7 @@ import {
   showVerifyScreen,
   updateFillProgress,
 } from "./panel";
+import { showUploadScreen } from "./uploadScreen";
 import { getUserData, type UserData } from "./userData";
 // ─── Types matching pan_card.json schema v2 ──────────────────────────
 interface FieldConfig {
@@ -97,6 +98,10 @@ export async function runAutofill(form: string = "pan_card") {
   if (isLastStep) {
     await browser.storage.session.remove("autofillActive");
   }
+  if ((step as any).guidance_only) {
+    showVerifyScreen();
+    return;
+  }
   // Initial progress: all pending
   const progress = step.fields.map((f) => ({
     label: FIELD_LABELS[f.field_id] ?? f.field_id,
@@ -111,7 +116,7 @@ export async function runAutofill(form: string = "pan_card") {
 
     const field = step.fields[i];
     const value = resolveValue(field, userData);
-    const ok = fillField(field, value);
+    const ok = await fillField(field, value);
     const delay = field.type === "button_click" ? 2500 : 150;
     await sleep(delay);
     progress[i].status = ok ? "done" : "done"; // mark done either way; missing fields aren't fatal
@@ -128,9 +133,14 @@ export async function runAutofill(form: string = "pan_card") {
       await autoFillAOCode(userData.aadhaar_pin_code);
     }
   }
-
   await sleep(400);
-  showVerifyScreen();
+
+  // Last step of pan_card → show upload helper screen instead of generic verify
+  if (form === "pan_card" && isLastStep) {
+    showUploadScreen();
+  } else {
+    showVerifyScreen();
+  }
 }
 
 // ─── Fetch config from backend ───────────────────────────────────────
@@ -149,6 +159,13 @@ async function fetchConfig(form: string): Promise<FormConfig | null> {
 function matchStep(config: FormConfig): StepConfig | null {
   const url = window.location.pathname + window.location.search;
 
+  // Check for token page first — regardless of URL
+  // (NSDL shows this on registerEndUser.html after submission)
+  const tokenRadio = document.querySelector("input.tokenButton");
+  if (tokenRadio) {
+    return config.steps.find((s: any) => s.is_token_page === true) ?? null;
+  }
+
   // Page 1 — registerEndUser, simple URL match
   if (!url.includes("endUserLogin")) {
     return config.steps.find((s) => url.includes(s.page_pattern)) ?? null;
@@ -165,7 +182,6 @@ function matchStep(config: FormConfig): StepConfig | null {
 
   if (visibleIndex === -1) return null;
 
-  // Match by stepy_index field in config
   return config.steps.find((s: any) => s.stepy_index === visibleIndex) ?? null;
 }
 
@@ -191,15 +207,22 @@ function resolveValue(
     return field.static_value ?? "";
   }
   if (field.value_source.startsWith("user.")) {
-    const key = field.value_source.slice(5) as keyof UserData;
-    const v = userData[key];
+    const key = field.value_source.slice(5);
+    // Derived fields not stored directly in UserData
+    if (key === "aadhaar_first_8") {
+      return (userData.aadhaar_number ?? "").replace(/\s/g, "").slice(0, 8);
+    }
+    const v = userData[key as keyof UserData];
     return v !== undefined ? v : "";
   }
   return "";
 }
 
 // ─── Fill a single field based on its type ───────────────────────────
-function fillField(field: FieldConfig, value: string | boolean): boolean {
+async function fillField(
+  field: FieldConfig,
+  value: string | boolean,
+): Promise<boolean> {
   const el = document.querySelector(field.selector) as HTMLElement | null;
   if (!el) {
     console.warn(`FormYaar: field not found ${field.selector}`);
@@ -237,6 +260,25 @@ function fillField(field: FieldConfig, value: string | boolean): boolean {
       }
       return fillRadio(el as HTMLInputElement, Boolean(value));
     case "button_click":
+      // Wait for button to be enabled if disabled (e.g. token page)
+      if ((el as HTMLButtonElement).disabled) {
+        await new Promise<void>((resolve) => {
+          const observer = new MutationObserver(() => {
+            if (!(el as HTMLButtonElement).disabled) {
+              observer.disconnect();
+              resolve();
+            }
+          });
+          observer.observe(el, {
+            attributes: true,
+            attributeFilter: ["disabled"],
+          });
+          setTimeout(() => {
+            observer.disconnect();
+            resolve();
+          }, 3000);
+        });
+      }
       return clickButton(el);
     default:
       return false;
