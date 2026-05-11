@@ -142,7 +142,41 @@ export async function runAutofill(form: string = "pan_card") {
     showVerifyScreen();
   }
 }
+export async function runAutofillFromSubmission(sub: any): Promise<void> {
+  // Map Supabase submission to UserData format
+  const userData: UserData = {
+    first_name: (sub.name ?? "").split(" ")[0] ?? "",
+    middle_name: (sub.name ?? "").split(" ")[1] ?? "",
+    last_name: (sub.name ?? "").split(" ").slice(2).join(" ") ?? "",
+    date_of_birth: sub.dob ?? "",
+    email: sub.email ?? "",
+    mobile: sub.mobile ?? "",
+    aadhaar_number: "",
+    aadhaar_last_4: "",
+    gender: "",
+    father_first_name: (sub.father_name ?? "").split(" ")[0] ?? "",
+    father_middle_name: (sub.father_name ?? "").split(" ")[1] ?? "",
+    father_last_name:
+      (sub.father_name ?? "").split(" ").slice(2).join(" ") ?? "",
+    mother_first_name: (sub.mother_name ?? "").split(" ")[0] ?? "",
+    mother_middle_name: (sub.mother_name ?? "").split(" ")[1] ?? "",
+    mother_last_name:
+      (sub.mother_name ?? "").split(" ").slice(2).join(" ") ?? "",
+    parent_on_card_is_father: true,
+    parent_on_card_is_mother: false,
+    aadhaar_pin_code: sub.pincode ?? "",
+    place: sub.city ?? "",
+    is_defence: sub.defence ?? false,
+    passport_number: "",
+    tin_number: "",
+    proof_of_dob: sub.proof_of_dob ?? "",
+    income_source: sub.income_source ?? "",
+  };
 
+  // Override getUserData for this session
+  (window as any).__fy_operator_userdata = userData;
+  await runAutofill(sub.form_type);
+}
 // ─── Fetch config from backend ───────────────────────────────────────
 async function fetchConfig(form: string): Promise<FormConfig | null> {
   try {

@@ -63,6 +63,10 @@ export const EMPTY_USER_DATA: UserData = {
   income_source: "",
 };
 export async function getUserData(): Promise<UserData> {
+  // Operator override — used when autofilling from a customer submission
+  if ((window as any).__fy_operator_userdata) {
+    return (window as any).__fy_operator_userdata;
+  }
   try {
     const result = await browser.storage.local.get(STORAGE_KEY);
     const saved = result[STORAGE_KEY] as UserData | undefined;

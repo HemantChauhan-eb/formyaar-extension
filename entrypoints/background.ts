@@ -96,7 +96,10 @@ export default defineBackground(() => {
           );
         return true;
       }
-
+      if (message.type === "OPEN_URL") {
+        browser.tabs.create({ url: message.url });
+        return true;
+      }
       if (message.type === "OPEN_RAZORPAY") {
         const originTabId = sender.tab?.id;
         if (!originTabId) {

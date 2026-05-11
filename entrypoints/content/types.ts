@@ -32,7 +32,8 @@ export type ExtensionMessage =
       userMessage: string;
     }
   | { type: "CREATE_PAYMENT"; form: string }
-  | { type: "OPEN_RAZORPAY"; order_id: string; amount: number };
+  | { type: "OPEN_RAZORPAY"; order_id: string; amount: number }
+  | { type: "OPEN_URL"; url: string };
 
 export type BackgroundResponse =
   | { response: string }
