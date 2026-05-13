@@ -152,7 +152,7 @@ export async function runAutofillFromSubmission(sub: any): Promise<void> {
     email: sub.email ?? "",
     mobile: sub.mobile ?? "",
     aadhaar_number: "",
-    aadhaar_last_4: "",
+    aadhaar_last_4: sub.aadhaar_last_4 ?? "",
     gender: "",
     father_first_name: (sub.father_name ?? "").split(" ")[0] ?? "",
     father_middle_name: (sub.father_name ?? "").split(" ")[1] ?? "",

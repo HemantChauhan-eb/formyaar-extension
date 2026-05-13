@@ -6,7 +6,6 @@ import {
   Z_INDEX,
 } from "./constants";
 import {
-  supabase,
   getOperatorSession,
   signInWithGoogle,
   signOut,
@@ -613,29 +612,30 @@ function renderOperatorLoginScreen(): string {
         <div style="text-align:center;margin-bottom:6px;">
           <div style="font-size:40px;margin-bottom:10px;">🏪</div>
           <div style="font-size:17px;font-weight:800;color:#0a0a2e;margin-bottom:5px;">Operator Sign In</div>
-          <div style="font-size:12px;color:#50507a;line-height:1.6;">Sign in on our website, then paste your token here.</div>
+          <div style="font-size:12px;color:#50507a;line-height:1.6;">Go to your FormYaar dashboard, open Settings, and generate a token. Paste it below.</div>
         </div>
 
-        <button id="fy-open-operator-login" style="width:100%;padding:12px 16px;background:#000080;color:white;border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          Open Sign In Page
+        <button id="fy-open-operator-login" style="width:100%;padding:12px 16px;background:#f8fafc;color:#000080;border:1.5px solid #e0e0f0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000080" stroke-width="2.2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open Dashboard
         </button>
 
         <div style="display:flex;align-items:center;gap:8px;margin:2px 0;">
           <div style="flex:1;height:1px;background:#e5e7eb;"></div>
-          <span style="font-size:11px;color:#94a3b8;font-weight:500;">then paste your token below</span>
+          <span style="font-size:11px;color:#94a3b8;font-weight:500;">paste your token below</span>
           <div style="flex:1;height:1px;background:#e5e7eb;"></div>
         </div>
 
         <div style="display:flex;flex-direction:column;gap:8px;">
-          <textarea
+          <input
             id="fy-token-input"
-            placeholder="Paste token here..."
-            rows="3"
-            style="width:100%;padding:10px 12px;border:1.5px solid #e0e0f0;border-radius:10px;font-size:12px;font-family:monospace;resize:none;color:#0a0a2e;outline:none;line-height:1.5;"
-          ></textarea>
-          <button id="fy-token-submit" style="width:100%;padding:11px;background:#22c55e;color:white;border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;">
-            Sign In
+            type="text"
+            placeholder="e.g. K7XQ3MNPLVRB"
+            maxlength="12"
+            style="width:100%;padding:14px;border:1.5px solid #e0e0f0;border-radius:10px;font-size:20px;font-family:monospace;font-weight:800;letter-spacing:3px;color:#000080;text-align:center;text-transform:uppercase;outline:none;"
+          />
+          <button id="fy-token-submit" style="width:100%;padding:11px;background:#000080;color:white;border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;">
+            Connect Extension
           </button>
         </div>
 
@@ -653,16 +653,24 @@ function renderOperatorQueueScreen(): string {
     <div id="fy-operator-queue" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
       <div style="position:relative;background:#000080;overflow:hidden;flex-shrink:0;">
         <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;">
-          <div>
-            <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
-              <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;">·</span><span>Yaar</span>
-            </div>
-            <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Operator Queue</div>
-          </div>
-          <button id="fy-operator-signout" style="background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.18);border-radius:7px;padding:5px 10px;color:white;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">
-            Sign out
-          </button>
-        </div>
+  <div>
+    <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
+      <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;">·</span><span>Yaar</span>
+    </div>
+    <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Operator Queue</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button id="fy-queue-refresh" style="background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.18);border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+      <svg id="fy-refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+    </button>
+    <button id="fy-operator-signout" style="background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.18);border-radius:7px;padding:5px 10px;color:white;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">
+      Sign out
+    </button>
+  </div>
+</div>
         <div style="height:3px;display:flex;"><div style="flex:1;background:#FF9933;"></div><div style="flex:1;background:#ffffff;"></div><div style="flex:1;background:#138808;"></div></div>
       </div>
 
@@ -1297,7 +1305,7 @@ function attachPanelEventHandlers() {
     ?.addEventListener("click", async () => {
       const input = document.getElementById(
         "fy-token-input",
-      ) as HTMLTextAreaElement;
+      ) as HTMLInputElement;
       const errorEl = document.getElementById(
         "fy-token-error",
       ) as HTMLDivElement;
@@ -1305,14 +1313,15 @@ function attachPanelEventHandlers() {
         "fy-token-submit",
       ) as HTMLButtonElement;
 
-      const token = input.value.trim();
-      if (!token) {
+      const token = input.value.trim().toUpperCase();
+      if (!token || token.length !== 12) {
         errorEl.style.display = "block";
-        errorEl.textContent = "Please paste your token first.";
+        errorEl.textContent =
+          "Please enter the 12-character token from your dashboard.";
         return;
       }
 
-      btn.textContent = "Signing in...";
+      btn.textContent = "Connecting...";
       btn.disabled = true;
       errorEl.style.display = "none";
 
@@ -1321,8 +1330,12 @@ function attachPanelEventHandlers() {
       if (error) {
         errorEl.style.display = "block";
         errorEl.textContent =
-          "Invalid token. Please copy it again from the website.";
-        btn.textContent = "Sign In";
+          error === "Token expired"
+            ? "Token expired. Go to your dashboard and generate a new one."
+            : error === "Token already used"
+              ? "This token has already been used. Generate a new one from your dashboard."
+              : "Invalid token. Please check and try again.";
+        btn.textContent = "Connect Extension";
         btn.disabled = false;
         return;
       }
@@ -1333,7 +1346,6 @@ function attachPanelEventHandlers() {
       const session = await getOperatorSession();
       if (session) await loadQueue(session.id);
     });
-
   // Operator sign out
   document
     .getElementById("fy-operator-signout")
@@ -1342,7 +1354,21 @@ function attachPanelEventHandlers() {
       document.getElementById("fy-operator-queue")!.style.display = "none";
       document.getElementById("fy-operator-login")!.style.display = "flex";
     });
-
+  document
+    .getElementById("fy-queue-refresh")
+    ?.addEventListener("click", async () => {
+      const icon = document.getElementById("fy-refresh-icon");
+      if (icon) {
+        icon.style.transition = "transform 0.5s ease";
+        icon.style.transform = "rotate(360deg)";
+        setTimeout(() => {
+          icon.style.transition = "none";
+          icon.style.transform = "rotate(0deg)";
+        }, 500);
+      }
+      const session = await getOperatorSession();
+      if (session) await loadQueue(session.id);
+    });
   // Review back button
   document.getElementById("fy-review-back")?.addEventListener("click", () => {
     document.getElementById("fy-operator-review")!.style.display = "none";
@@ -1607,16 +1633,15 @@ export async function showOperatorPanel(): Promise<void> {
 }
 
 async function loadQueue(operatorId: string): Promise<void> {
-  supabase.channel("operator-queue").unsubscribe();
   const list = document.getElementById("fy-queue-list");
   if (!list) return;
 
-  const { data, error } = await supabase
-    .from("submissions")
-    .select("*")
-    .eq("operator_id", operatorId)
-    .eq("status", "pending")
-    .order("created_at", { ascending: true });
+  const res = await fetch(
+    `https://formyaar-backend-production.up.railway.app/operator/queue/${operatorId}`,
+  );
+  const { data, error } = res.ok
+    ? { data: await res.json(), error: null }
+    : { data: null, error: true };
 
   if (error || !data || data.length === 0) {
     list.innerHTML = `
@@ -1637,7 +1662,7 @@ async function loadQueue(operatorId: string): Promise<void> {
 
   list.innerHTML = data
     .map(
-      (sub) => `
+      (sub: any) => `
     <button class="fy-queue-tile" data-id="${sub.id}" style="width:100%;background:#fff;border:1.5px solid #e0e0f0;border-radius:12px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;text-align:left;transition:border-color 0.15s;">
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:20px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
@@ -1655,27 +1680,10 @@ async function loadQueue(operatorId: string): Promise<void> {
   // Wire up tile clicks
   list.querySelectorAll<HTMLButtonElement>(".fy-queue-tile").forEach((tile) => {
     tile.addEventListener("click", () => {
-      const sub = data.find((s) => s.id === tile.dataset.id);
+      const sub = data.find((s: any) => s.id === tile.dataset.id);
       if (sub) showReviewScreen(sub);
     });
   });
-  // Realtime subscription — new submissions appear instantly
-  supabase
-    .channel("operator-queue")
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "submissions",
-        filter: `operator_id=eq.${operatorId}`,
-      },
-      () => {
-        // Re-render the queue when a new submission arrives
-        loadQueue(operatorId);
-      },
-    )
-    .subscribe();
 }
 
 function showReviewScreen(sub: any): void {
@@ -1718,15 +1726,17 @@ function showReviewScreen(sub: any): void {
   // Accept button
   const acceptBtn = document.getElementById("fy-review-accept")!;
   acceptBtn.onclick = async () => {
-    await supabase
-      .from("submissions")
-      .update({ status: "filling" })
-      .eq("id", sub.id);
-    // Map submission to UserData format and trigger autofill
+    await fetch(
+      `https://formyaar-backend-production.up.railway.app/operator/submission/${sub.id}/status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "filling" }),
+      },
+    );
     await browser.storage.session.set({
       autofillActive: { form: sub.form_type, submission_id: sub.id },
     });
-    // Switch to filling screen
     document.getElementById("fy-operator-review")!.style.display = "none";
     runAutofillFromSubmission(sub);
   };
@@ -1734,10 +1744,14 @@ function showReviewScreen(sub: any): void {
   // Reject button
   const rejectBtn = document.getElementById("fy-review-reject")!;
   rejectBtn.onclick = async () => {
-    await supabase
-      .from("submissions")
-      .update({ status: "rejected" })
-      .eq("id", sub.id);
+    await fetch(
+      `https://formyaar-backend-production.up.railway.app/operator/submission/${sub.id}/status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "rejected" }),
+      },
+    );
     document.getElementById("fy-operator-review")!.style.display = "none";
     document.getElementById("fy-operator-queue")!.style.display = "flex";
   };

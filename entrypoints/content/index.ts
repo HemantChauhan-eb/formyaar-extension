@@ -82,8 +82,8 @@ export default defineContentScript({
         }
       });
     }
-    // Show contextual banner on supported sites
-    if (SITE_CONFIGS[hostname]) {
+    // Show contextual banner on supported sites + formyaar website
+    if (SITE_CONFIGS[hostname] || hostname === "formyaar.pages.dev") {
       setTimeout(() => showContextualBanner(), BANNER_DELAY_MS);
     }
 

@@ -1,9 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
-
-export const supabase = createClient(
-  "https://wkubrgktujihesjjxyrk.supabase.co",
-  "sb_publishable_Om3cok-sF2MttenPzjmzGA_M1RMp6yc",
-);
+const BACKEND_URL = "https://formyaar-backend-production.up.railway.app";
+const STORAGE_KEY = "fy_operator_session";
 
 export type OperatorSession = {
   id: string;
@@ -14,53 +10,45 @@ export type OperatorSession = {
 
 export async function getOperatorSession(): Promise<OperatorSession | null> {
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) return null;
-
-    const { data: operator } = await supabase
-      .from("operators")
-      .select("id, email, subscription_status, subscription_expires_at")
-      .eq("id", session.user.id)
-      .single();
-
-    return operator ?? null;
+    const result = await browser.storage.local.get(STORAGE_KEY);
+    return (result[STORAGE_KEY] as OperatorSession) ?? null;
   } catch {
     return null;
   }
 }
+
 export async function signInWithToken(
   token: string,
 ): Promise<{ error: string | null }> {
   try {
-    const { data, error } = await supabase.auth.setSession({
-      access_token: token,
-      refresh_token: token, // Supabase accepts access_token here for manual session set
+    const res = await fetch(`${BACKEND_URL}/operator/verify-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: token.trim() }),
     });
-    if (error) return { error: error.message };
-    if (!data.session) return { error: "Invalid token" };
 
-    // Upsert operator record
-    await supabase
-      .from("operators")
-      .upsert(
-        { id: data.session.user.id, email: data.session.user.email },
-        { onConflict: "id" },
-      );
+    const data = await res.json();
+
+    if (!res.ok) {
+      return { error: data.error ?? "Invalid token" };
+    }
+
+    // Store operator session locally
+    await browser.storage.local.set({ [STORAGE_KEY]: data.operator });
     return { error: null };
   } catch {
-    return { error: "Failed to set session" };
+    return { error: "Network error. Check your connection." };
   }
 }
 
-// Keep this for backwards compat but it now just opens the website
+export async function signOut(): Promise<void> {
+  await browser.storage.local.remove(STORAGE_KEY);
+}
+
+// Kept for backwards compat but no longer used for auth
 export async function signInWithGoogle(): Promise<void> {
   browser.runtime.sendMessage({
     type: "OPEN_URL",
-    url: "https://formyaar.pages.dev/operator-login.html",
+    url: "https://formyaar.pages.dev/operator-dashboard.html",
   });
-}
-export async function signOut(): Promise<void> {
-  await supabase.auth.signOut();
 }
