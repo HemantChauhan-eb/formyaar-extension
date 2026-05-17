@@ -88,9 +88,11 @@ export async function runAutofill(form: string = "pan_card") {
   const step = matchStep(config);
   if (!step) {
     updateFillProgress([{ label: "Page not recognized", status: "active" }]);
+    trackEvent("step_match_failed", form, {
+      url: window.location.pathname + window.location.search,
+    });
     return;
   }
-
   trackEvent("guide_started", form);
 
   // If this is the last step we have a config for, clear the active flag
@@ -115,7 +117,7 @@ export async function runAutofill(form: string = "pan_card") {
     progress[i].status = "active";
     updateFillProgress([...progress]);
 
-    const field = step.fields[i];
+    const field = { ...step.fields[i], _step: step.step };
     const value = resolveValue(field, userData);
     const ok = await fillField(field, value);
     const delay = field.type === "button_click" ? 2500 : 150;
@@ -265,8 +267,14 @@ async function fillField(
   value: string | boolean,
 ): Promise<boolean> {
   const el = document.querySelector(field.selector) as HTMLElement | null;
+  console.log("FormYaar: fillField called for", field.selector);
   if (!el) {
     console.warn(`FormYaar: field not found ${field.selector}`);
+    trackEvent("field_fill_failed", "pan_card", {
+      field_id: field.field_id,
+      selector: field.selector,
+      step: (field as any)._step ?? "unknown",
+    });
     return false;
   }
 
@@ -542,6 +550,10 @@ async function autoFillAOCode(pinCode: string): Promise<boolean> {
     return await autoSelectAOCode();
   } catch (err) {
     console.error("FormYaar: AO code auto-fill failed", err);
+    trackEvent("ao_code_failed", "pan_card", {
+      pincode: pinCode,
+      reason: err instanceof Error ? err.message : "unknown",
+    });
     return false;
   }
 }

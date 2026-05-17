@@ -100,6 +100,7 @@ export default defineBackground(() => {
         browser.tabs.create({ url: message.url });
         return true;
       }
+
       if (message.type === "OPEN_RAZORPAY") {
         const originTabId = sender.tab?.id;
         if (!originTabId) {
@@ -127,6 +128,14 @@ export default defineBackground(() => {
 
         sendResponse({ success: true });
         return true;
+      }
+      if (message.type === "TELEMETRY_EVENT") {
+        fetch(`${BACKEND}/telemetry/event`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(message.payload),
+        }).catch(() => {});
+        return;
       }
     },
   );

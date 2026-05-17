@@ -33,8 +33,15 @@ export type ExtensionMessage =
     }
   | { type: "CREATE_PAYMENT"; form: string }
   | { type: "OPEN_RAZORPAY"; order_id: string; amount: number }
-  | { type: "OPEN_URL"; url: string };
-
+  | { type: "OPEN_URL"; url: string }
+  | {
+      type: "TELEMETRY_EVENT";
+      payload: {
+        event: string;
+        form: string;
+        metadata: Record<string, unknown>;
+      };
+    };
 export type BackgroundResponse =
   | { response: string }
   | { success: boolean; order_id?: string; amount?: number; error?: string };

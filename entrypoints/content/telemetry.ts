@@ -5,12 +5,13 @@ export function trackEvent(
   form = "pan_card",
   metadata: Record<string, unknown> = {},
 ): void {
-  // Fire and forget — never block the user flow
-  fetch(`${BACKEND_URL}/telemetry/event`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ event, form, metadata }),
-  }).catch(() => {
-    // Silently ignore — telemetry should never cause errors
-  });
+  // Route through background to bypass NSDL's CSP restrictions
+  browser.runtime
+    .sendMessage({
+      type: "TELEMETRY_EVENT",
+      payload: { event, form, metadata },
+    })
+    .catch(() => {
+      // Silently ignore — telemetry must never break user flow
+    });
 }
