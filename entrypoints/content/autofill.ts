@@ -6,7 +6,8 @@ import {
   updateFillProgress,
 } from "./panel";
 import { showUploadScreen } from "./uploadScreen";
-import { getUserData, type UserData } from "./userData";
+import { getUserData, type UserData, setOperatorSubmission } from "./userData";
+
 // ─── Types matching pan_card.json schema v2 ──────────────────────────
 interface FieldConfig {
   field_id: string;
@@ -143,25 +144,27 @@ export async function runAutofill(form: string = "pan_card") {
   }
 }
 export async function runAutofillFromSubmission(sub: any): Promise<void> {
-  // Map Supabase submission to UserData format
-  const userData: UserData = {
-    first_name: (sub.name ?? "").split(" ")[0] ?? "",
-    middle_name: (sub.name ?? "").split(" ")[1] ?? "",
-    last_name: (sub.name ?? "").split(" ").slice(2).join(" ") ?? "",
+  const incomeSources: string[] = (sub.income_source ?? "")
+    .split(",")
+    .map((s: string) => s.trim())
+    .filter(Boolean);
+
+  const userData: Partial<UserData> = {
+    first_name: sub.first_name ?? "",
+    middle_name: sub.middle_name ?? "",
+    last_name: sub.last_name ?? "",
+    father_first_name: sub.father_first_name ?? "",
+    father_middle_name: sub.father_middle_name ?? "",
+    father_last_name: sub.father_last_name ?? "",
+    mother_first_name: sub.mother_first_name ?? "",
+    mother_middle_name: sub.mother_middle_name ?? "",
+    mother_last_name: sub.mother_last_name ?? "",
     date_of_birth: sub.dob ?? "",
     email: sub.email ?? "",
     mobile: sub.mobile ?? "",
     aadhaar_number: "",
     aadhaar_last_4: sub.aadhaar_last_4 ?? "",
     gender: "",
-    father_first_name: (sub.father_name ?? "").split(" ")[0] ?? "",
-    father_middle_name: (sub.father_name ?? "").split(" ")[1] ?? "",
-    father_last_name:
-      (sub.father_name ?? "").split(" ").slice(2).join(" ") ?? "",
-    mother_first_name: (sub.mother_name ?? "").split(" ")[0] ?? "",
-    mother_middle_name: (sub.mother_name ?? "").split(" ")[1] ?? "",
-    mother_last_name:
-      (sub.mother_name ?? "").split(" ").slice(2).join(" ") ?? "",
     parent_on_card_is_father: true,
     parent_on_card_is_mother: false,
     aadhaar_pin_code: sub.pincode ?? "",
@@ -170,11 +173,15 @@ export async function runAutofillFromSubmission(sub: any): Promise<void> {
     passport_number: "",
     tin_number: "",
     proof_of_dob: sub.proof_of_dob ?? "",
-    income_source: sub.income_source ?? "",
+    income_source: (incomeSources[0] as UserData["income_source"]) ?? "",
   };
 
-  // Override getUserData for this session
-  (window as any).__fy_operator_userdata = userData;
+  // Remove the old window override — use session storage so it survives navigation
+  delete (window as any).__fy_operator_userdata;
+
+  const { setOperatorSubmission } = await import("./userData");
+  await setOperatorSubmission(userData);
+
   await runAutofill(sub.form_type);
 }
 // ─── Fetch config from backend ───────────────────────────────────────
@@ -381,11 +388,13 @@ function fillRadio(
   shouldSelect: boolean,
   forceClick = false,
 ): boolean {
-  if (!shouldSelect) return true;
-  if (input.checked && !forceClick) return true;
-  input.checked = true;
-  input.dispatchEvent(new Event("change", { bubbles: true }));
-  input.dispatchEvent(new Event("click", { bubbles: true }));
+  if (!shouldSelect && !forceClick) return true;
+  if (shouldSelect) {
+    if (input.checked && !forceClick) return true;
+    input.checked = true;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    input.dispatchEvent(new Event("click", { bubbles: true }));
+  }
   return true;
 }
 async function autoSelectAOCode(): Promise<boolean> {

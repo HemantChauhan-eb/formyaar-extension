@@ -311,7 +311,7 @@ function renderHomeScreen(): string {
             </div>
             <div style="font-size:10.5px;color:#aabbd4;font-weight:500;letter-spacing:0.3px;">Your dost for every sarkari kaam</div>
           </div>
-          <a href="https://formyaar.pages.dev/help" target="_blank" style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.13);border-radius:7px;padding:5px 10px;text-decoration:none;border:1px solid rgba(255,255,255,0.18);">
+          <a href="https://formyaar.pages.dev/contact" target="_blank" style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.13);border-radius:7px;padding:5px 10px;text-decoration:none;border:1px solid rgba(255,255,255,0.18);">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
             <span style="font-size:11px;color:white;font-weight:700;opacity:0.9;">Help</span>
           </a>
@@ -1667,7 +1667,7 @@ async function loadQueue(operatorId: string): Promise<void> {
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:20px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
         <div>
-          <div style="font-size:13.5px;font-weight:700;color:#0a0a2e;">${sub.name ?? "Unknown"}</div>
+          <div style="font-size:13.5px;font-weight:700;color:#0a0a2e;">${[sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown"}</div>
           <div style="font-size:11px;color:#64748b;margin-top:2px;">${sub.form_type.replace("_", " ").toUpperCase()} · ${new Date(sub.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
         </div>
       </div>
@@ -1705,7 +1705,7 @@ function showReviewScreen(sub: any): void {
 
   body.innerHTML = `
     <div style="margin-bottom:14px;">
-      <div style="font-size:16px;font-weight:800;color:#0a0a2e;">${sub.name}</div>
+      <div style="font-size:16px;font-weight:800;color:#0a0a2e;">${[sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown"}</div>
       <div style="font-size:11.5px;color:#64748b;margin-top:2px;">${sub.form_type.replace("_", " ").toUpperCase()}</div>
     </div>
     <div style="background:#f8fafc;border-radius:10px;padding:4px 12px;">

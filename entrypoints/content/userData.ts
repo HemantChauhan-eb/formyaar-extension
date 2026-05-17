@@ -63,11 +63,16 @@ export const EMPTY_USER_DATA: UserData = {
   income_source: "",
 };
 export async function getUserData(): Promise<UserData> {
-  // Operator override — used when autofilling from a customer submission
-  if ((window as any).__fy_operator_userdata) {
-    return (window as any).__fy_operator_userdata;
-  }
   try {
+    // Operator override — persisted in session storage, survives navigation
+    const sessionResult = await browser.storage.session.get(OPERATOR_SUB_KEY);
+    const sessionSub = sessionResult[OPERATOR_SUB_KEY] as
+      | Partial<UserData>
+      | undefined;
+    if (sessionSub && sessionSub.first_name) {
+      return { ...EMPTY_USER_DATA, ...sessionSub };
+    }
+    // Regular user — local storage
     const result = await browser.storage.local.get(STORAGE_KEY);
     const saved = result[STORAGE_KEY] as UserData | undefined;
     return { ...EMPTY_USER_DATA, ...(saved ?? {}) };
@@ -75,7 +80,6 @@ export async function getUserData(): Promise<UserData> {
     return EMPTY_USER_DATA;
   }
 }
-
 export async function saveUserData(data: UserData): Promise<void> {
   await browser.storage.local.set({ [STORAGE_KEY]: data });
 }
@@ -191,4 +195,16 @@ export async function markSessionCompleted(): Promise<void> {
 
 export async function clearActiveSession(): Promise<void> {
   await browser.storage.local.remove(SESSION_KEY);
+}
+
+const OPERATOR_SUB_KEY = "fy_operator_submission";
+
+export async function setOperatorSubmission(
+  sub: Partial<UserData>,
+): Promise<void> {
+  await browser.storage.session.set({ [OPERATOR_SUB_KEY]: sub });
+}
+
+export async function clearOperatorSubmission(): Promise<void> {
+  await browser.storage.session.remove(OPERATOR_SUB_KEY);
 }
