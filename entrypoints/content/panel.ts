@@ -10,6 +10,7 @@ import {
   signInWithGoogle,
   signOut,
   signInWithToken,
+  OperatorSession,
 } from "./supabase";
 import { runAutofill, runAutofillFromSubmission } from "./autofill";
 import { trackEvent } from "./telemetry";
@@ -653,7 +654,7 @@ function renderOperatorQueueScreen(): string {
     <div id="fy-operator-queue" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
       <div style="position:relative;background:#000080;overflow:hidden;flex-shrink:0;">
         <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;">
-  <div>
+<div>
     <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
       <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;">·</span><span>Yaar</span>
     </div>
@@ -1631,10 +1632,27 @@ export async function showOperatorPanel(): Promise<void> {
   document.getElementById("fy-operator-queue")!.style.display = "flex";
   await loadQueue(session.id);
 }
-
+function isSubscriptionActive(session: OperatorSession): boolean {
+  if (session.subscription_status !== "active") return false;
+  if (!session.subscription_expires_at) return false;
+  return new Date(session.subscription_expires_at) > new Date();
+}
 async function loadQueue(operatorId: string): Promise<void> {
   const list = document.getElementById("fy-queue-list");
   if (!list) return;
+
+  const session = await getOperatorSession();
+  if (!session || !isSubscriptionActive(session)) {
+    list.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;">
+        <div style="font-size:36px;margin-bottom:14px;">🔒</div>
+        <div style="font-size:15px;font-weight:800;color:#0a0a2e;margin-bottom:8px;">Subscription Expired</div>
+        <div style="font-size:12.5px;color:#64748b;line-height:1.6;margin-bottom:16px;">Your FormYaar subscription has expired. Renew to keep using speedy filling services for your customers.</div>
+        <a href="https://formyaar.pages.dev/operator-dashboard.html" target="_blank" style="display:inline-block;padding:10px 20px;background:#000080;color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">Renew Subscription</a>
+      </div>
+    `;
+    return;
+  }
 
   const res = await fetch(
     `https://formyaar-backend-production.up.railway.app/operator/queue/${operatorId}`,
@@ -1677,7 +1695,6 @@ async function loadQueue(operatorId: string): Promise<void> {
     )
     .join("");
 
-  // Wire up tile clicks
   list.querySelectorAll<HTMLButtonElement>(".fy-queue-tile").forEach((tile) => {
     tile.addEventListener("click", () => {
       const sub = data.find((s: any) => s.id === tile.dataset.id);
