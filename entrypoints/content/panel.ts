@@ -1642,7 +1642,18 @@ async function loadQueue(operatorId: string): Promise<void> {
   if (!list) return;
 
   const session = await getOperatorSession();
-  if (!session || !isSubscriptionActive(session)) {
+  if (!session) {
+    document.getElementById("fy-operator-login")!.style.display = "flex";
+    document.getElementById("fy-operator-queue")!.style.display = "none";
+    return;
+  }
+
+  const subRes = await fetch(
+    `https://formyaar-backend-production.up.railway.app/operator/subscription/${session.id}`,
+  );
+  const subData = subRes.ok ? await subRes.json() : null;
+
+  if (!subData?.is_active) {
     list.innerHTML = `
       <div style="text-align:center;padding:40px 20px;">
         <div style="font-size:36px;margin-bottom:14px;">🔒</div>
