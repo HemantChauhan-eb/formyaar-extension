@@ -13,7 +13,7 @@ export default defineConfig({
       "https://www.utiitsl.com/*",
       "https://passporthub.gov.in/*",
       "https://sarathi.parivahan.gov.in/*",
-      "https://formyaar.pages.dev/*",
+      "https://formyaar.in/*",
       "https://formyaar-backend-production.up.railway.app/*",
     ],
   },
