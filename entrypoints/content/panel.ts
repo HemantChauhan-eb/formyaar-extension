@@ -1,5 +1,6 @@
 import { ensureFontsLoaded } from "./fonts";
 import {
+  BACKEND_URL,
   PANEL_WIDTH,
   PULSE_INITIAL_DELAY_MS,
   PULSE_INTERVAL_MS,
@@ -312,7 +313,7 @@ function renderHomeScreen(): string {
             </div>
             <div style="font-size:10.5px;color:#aabbd4;font-weight:500;letter-spacing:0.3px;">Your dost for every sarkari kaam</div>
           </div>
-          <a href="https://formyaar.pages.dev/contact" target="_blank" style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.13);border-radius:7px;padding:5px 10px;text-decoration:none;border:1px solid rgba(255,255,255,0.18);">
+          <a href="https://formyaar.in/contact" target="_blank" style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.13);border-radius:7px;padding:5px 10px;text-decoration:none;border:1px solid rgba(255,255,255,0.18);">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
             <span style="font-size:11px;color:white;font-weight:700;opacity:0.9;">Help</span>
           </a>
@@ -354,7 +355,7 @@ function renderHomeScreen(): string {
             <div>
               <div style="font-size:12px;color:#0a0a2e;font-weight:600;margin-bottom:3px;">New to FormYaar?</div>
               <div style="font-size:11px;color:#50507a;line-height:1.5;">We guide you through every field — no agent, no confusion. Takes 10 mins.</div>
-              <a href="https://formyaar.pages.dev" target="_blank" style="font-size:11px;color:#821cff;font-weight:700;text-decoration:none;margin-top:5px;display:inline-block;">Visit formyaar.in to learn more →</a>
+              <a href="https://formyaar.in" target="_blank" style="font-size:11px;color:#821cff;font-weight:700;text-decoration:none;margin-top:5px;display:inline-block;">Visit formyaar.in to learn more →</a>
             </div>
           </div>
           <div style="margin-top:12px;background:#f0f8ff;border:1px solid #bfd4ec;border-radius:10px;padding:9px 13px;display:flex;align-items:center;gap:8px;">
@@ -1297,7 +1298,7 @@ function attachPanelEventHandlers() {
     ?.addEventListener("click", () => {
       browser.runtime.sendMessage({
         type: "OPEN_URL",
-        url: "https://formyaar.pages.dev/operator-login.html",
+        url: "https://formyaar.in/operator-login.html",
       });
     });
 
@@ -1649,7 +1650,7 @@ async function loadQueue(operatorId: string): Promise<void> {
   }
 
   const subRes = await fetch(
-    `https://formyaar-backend-production.up.railway.app/operator/subscription/${session.id}`,
+    `${BACKEND_URL}}/operator/subscription/${session.id}`,
   );
   const subData = subRes.ok ? await subRes.json() : null;
 
@@ -1659,15 +1660,13 @@ async function loadQueue(operatorId: string): Promise<void> {
         <div style="font-size:36px;margin-bottom:14px;">🔒</div>
         <div style="font-size:15px;font-weight:800;color:#0a0a2e;margin-bottom:8px;">Subscription Expired</div>
         <div style="font-size:12.5px;color:#64748b;line-height:1.6;margin-bottom:16px;">Your FormYaar subscription has expired. Renew to keep using speedy filling services for your customers.</div>
-        <a href="https://formyaar.pages.dev/operator-dashboard.html" target="_blank" style="display:inline-block;padding:10px 20px;background:#000080;color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">Renew Subscription</a>
+        <a href="https://formyaar.in/operator-dashboard.html" target="_blank" style="display:inline-block;padding:10px 20px;background:#000080;color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">Renew Subscription</a>
       </div>
     `;
     return;
   }
 
-  const res = await fetch(
-    `https://formyaar-backend-production.up.railway.app/operator/queue/${operatorId}`,
-  );
+  const res = await fetch(`${BACKEND_URL}}/operator/queue/${operatorId}`);
   const { data, error } = res.ok
     ? { data: await res.json(), error: null }
     : { data: null, error: true };
@@ -1754,14 +1753,11 @@ function showReviewScreen(sub: any): void {
   // Accept button
   const acceptBtn = document.getElementById("fy-review-accept")!;
   acceptBtn.onclick = async () => {
-    await fetch(
-      `https://formyaar-backend-production.up.railway.app/operator/submission/${sub.id}/status`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "filling" }),
-      },
-    );
+    await fetch(`${BACKEND_URL}/operator/submission/${sub.id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "filling" }),
+    });
     await browser.storage.session.set({
       autofillActive: { form: sub.form_type, submission_id: sub.id },
     });
@@ -1772,14 +1768,11 @@ function showReviewScreen(sub: any): void {
   // Reject button
   const rejectBtn = document.getElementById("fy-review-reject")!;
   rejectBtn.onclick = async () => {
-    await fetch(
-      `https://formyaar-backend-production.up.railway.app/operator/submission/${sub.id}/status`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "rejected" }),
-      },
-    );
+    await fetch(`${BACKEND_URL}}/operator/submission/${sub.id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "rejected" }),
+    });
     document.getElementById("fy-operator-review")!.style.display = "none";
     document.getElementById("fy-operator-queue")!.style.display = "flex";
   };

@@ -1,4 +1,10 @@
 import { defineConfig } from "wxt";
+import { config } from "dotenv";
+config({ path: `.env.${process.env.NODE_ENV || "development"}` });
+
+const backendUrl =
+  process.env.VITE_BACKEND_URL ??
+  "https://formyaar-backend-production.up.railway.app";
 
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
@@ -14,7 +20,7 @@ export default defineConfig({
       "https://passporthub.gov.in/*",
       "https://sarathi.parivahan.gov.in/*",
       "https://formyaar.in/*",
-      "https://formyaar-backend-production.up.railway.app/*",
+      `${backendUrl}/*`,
     ],
   },
 });

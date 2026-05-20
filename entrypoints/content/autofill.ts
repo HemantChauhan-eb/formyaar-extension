@@ -465,9 +465,7 @@ async function autoSelectAOCode(): Promise<boolean> {
 async function autoFillAOCode(pinCode: string): Promise<boolean> {
   try {
     // Step 1: Get state and city from backend
-    const res = await fetch(
-      `https://formyaar-backend-production.up.railway.app/pincode/${pinCode}`,
-    );
+    const res = await fetch(`${BACKEND_URL}/pincode/${pinCode}`);
     if (!res.ok) return false;
     const { state, city } = (await res.json()) as {
       state: string;

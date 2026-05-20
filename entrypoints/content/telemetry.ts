@@ -1,5 +1,3 @@
-import { BACKEND_URL } from "./constants";
-
 export function trackEvent(
   event: string,
   form = "pan_card",

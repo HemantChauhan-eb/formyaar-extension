@@ -1,4 +1,5 @@
-const BACKEND_URL = "https://formyaar-backend-production.up.railway.app";
+import { BACKEND_URL } from "./constants";
+
 const STORAGE_KEY = "fy_operator_session";
 
 export type OperatorSession = {
@@ -49,6 +50,6 @@ export async function signOut(): Promise<void> {
 export async function signInWithGoogle(): Promise<void> {
   browser.runtime.sendMessage({
     type: "OPEN_URL",
-    url: "https://formyaar.pages.dev/operator-dashboard.html",
+    url: "https://formyaar.in/operator-dashboard.html",
   });
 }

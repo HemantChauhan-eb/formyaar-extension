@@ -1,4 +1,5 @@
-const BACKEND = "https://formyaar-backend-production.up.railway.app";
+import { BACKEND_URL } from "./content/constants";
+
 const POLL_INTERVAL_MINUTES = 0.1; // ~6 seconds
 const MAX_ATTEMPTS = 60; // 5 minutes max
 import type { ExtensionMessage } from "./content/types";
@@ -35,7 +36,7 @@ export default defineBackground(() => {
     }
 
     try {
-      const res = await fetch(`${BACKEND}/payment/status/${orderId}`);
+      const res = await fetch(`${BACKEND_URL}/payment/status/${orderId}`);
       const data = await res.json();
 
       if (data.paid) {
@@ -64,7 +65,7 @@ export default defineBackground(() => {
   browser.runtime.onMessage.addListener(
     (message: ExtensionMessage, sender, sendResponse) => {
       if (message.type === "AI_CHAT") {
-        fetch(`${BACKEND}/ai/chat`, {
+        fetch(`${BACKEND_URL}/ai/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -84,7 +85,7 @@ export default defineBackground(() => {
       }
 
       if (message.type === "CREATE_PAYMENT") {
-        fetch(`${BACKEND}/payment/create-order`, {
+        fetch(`${BACKEND_URL}/payment/create-order`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ form: message.form || "pan_card" }),
@@ -130,7 +131,7 @@ export default defineBackground(() => {
         return true;
       }
       if (message.type === "TELEMETRY_EVENT") {
-        fetch(`${BACKEND}/telemetry/event`, {
+        fetch(`${BACKEND_URL}/telemetry/event`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(message.payload),

@@ -10,7 +10,7 @@ export default defineContentScript({
     "*://*.utiitsl.com/*",
     "*://*.passporthub.gov.in/*",
     "*://*.sarathi.parivahan.gov.in/*",
-    "*://formyaar.pages.dev/*",
+    "*://formyaar.in/*",
   ],
   async main() {
     if (import.meta.env.DEV)
@@ -83,7 +83,7 @@ export default defineContentScript({
       });
     }
     // Show contextual banner on supported sites + formyaar website
-    if (SITE_CONFIGS[hostname] || hostname === "formyaar.pages.dev") {
+    if (SITE_CONFIGS[hostname] || hostname === "formyaar.in") {
       setTimeout(() => showContextualBanner(), BANNER_DELAY_MS);
     }
 

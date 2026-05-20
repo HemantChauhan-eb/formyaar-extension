@@ -10,7 +10,7 @@ const FAQ_ITEMS: { q: string; emoji: string }[] = [
   { q: "I uploaded but it's not working — what now?", emoji: "🛠️" },
 ];
 
-const COMPRESSOR_URL = "https://formyaar.pages.dev/compress";
+const COMPRESSOR_URL = "https://formyaar.in/compress";
 
 export function renderUploadScreen(): string {
   return `
