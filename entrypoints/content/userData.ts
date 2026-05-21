@@ -113,11 +113,10 @@ export function validateUserData(data: UserData): ValidationError[] {
       message: "Enter a valid 10-digit mobile number",
     });
 
-  const aadhaarClean = (data.aadhaar_number ?? "").replace(/\s/g, "");
-  if (!aadhaarClean || !/^\d{12}$/.test(aadhaarClean)) {
+  if (!data.aadhaar_last_4 || !/^\d{4}$/.test(data.aadhaar_last_4)) {
     errors.push({
-      field: "aadhaar_number",
-      message: "Aadhaar number must be exactly 12 digits",
+      field: "aadhaar_last_4",
+      message: "Enter the last 4 digits of your Aadhaar",
     });
   }
 

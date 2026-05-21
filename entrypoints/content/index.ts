@@ -1,7 +1,7 @@
-import { SITE_CONFIGS, BANNER_DELAY_MS } from "./constants";
+import { SITE_CONFIGS, BANNER_DELAY_MS, BACKEND_URL } from "./constants";
 import { showContextualBanner } from "./panel";
 import { runAutofill } from "./autofill";
-import { getActiveSession } from "./userData";
+import { getActiveSession, getUserData } from "./userData";
 import { showResumeScreen } from "./panel";
 export default defineContentScript({
   matches: [
@@ -24,19 +24,19 @@ export default defineContentScript({
         showContextualBanner();
       }
       if (message.type === "PAYMENT_VERIFIED") {
-        // Mark autofill flow as active — survives page navigation
+        const orderId = message.order_id ?? "";
+
         browser.storage.session
           .set({ autofillActive: { form: "pan_card" } })
           .catch((err) =>
             console.warn("FormYaar: could not save autofill state", err),
           );
 
-        // Persist resume session in local storage (survives browser restart)
         browser.storage.local
           .set({
             fy_active_session: {
               form: "pan_card",
-              order_id: message.order_id ?? "",
+              order_id: orderId,
               paid_at: Date.now(),
               completed: false,
             },
@@ -44,6 +44,21 @@ export default defineContentScript({
           .catch((err) =>
             console.warn("FormYaar: could not save resume session", err),
           );
+
+        // Also persist server-side so session survives localStorage wipes
+        getUserData().then((userData) => {
+          if (!userData.mobile) return;
+          fetch(`${BACKEND_URL}/payment/save-session`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              order_id: orderId,
+              mobile: userData.mobile,
+              form_type: "pan_card",
+              form_data: userData,
+            }),
+          }).catch(() => {});
+        });
 
         runAutofill("pan_card");
       }
