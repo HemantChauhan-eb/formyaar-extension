@@ -1650,7 +1650,7 @@ async function loadQueue(operatorId: string): Promise<void> {
   }
 
   const subRes = await fetch(
-    `${BACKEND_URL}}/operator/subscription/${session.id}`,
+    `${BACKEND_URL}/operator/subscription/${session.id}`,
   );
   const subData = subRes.ok ? await subRes.json() : null;
 
@@ -1666,7 +1666,7 @@ async function loadQueue(operatorId: string): Promise<void> {
     return;
   }
 
-  const res = await fetch(`${BACKEND_URL}}/operator/queue/${operatorId}`);
+  const res = await fetch(`${BACKEND_URL}/operator/queue/${operatorId}`);
   const { data, error } = res.ok
     ? { data: await res.json(), error: null }
     : { data: null, error: true };
@@ -1768,7 +1768,7 @@ function showReviewScreen(sub: any): void {
   // Reject button
   const rejectBtn = document.getElementById("fy-review-reject")!;
   rejectBtn.onclick = async () => {
-    await fetch(`${BACKEND_URL}}/operator/submission/${sub.id}/status`, {
+    await fetch(`${BACKEND_URL}/operator/submission/${sub.id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "rejected" }),
