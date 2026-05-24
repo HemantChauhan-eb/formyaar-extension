@@ -1,10 +1,74 @@
 # FormYaar Extension — Technical Documentation
 
+**Last updated:** 2026-05-24
+**Version:** 0.4.5
+**Stack:** WXT 0.20 · TypeScript · React 19 (popup only) · Vanilla DOM (panel) · Manifest V3
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Architecture](#architecture)
+3. [Project Structure](#project-structure)
+4. [Setup & Build](#setup--build)
+5. [Manifest & Permissions](#manifest--permissions)
+6. [Entry Points](#entry-points)
+7. [User Data & Storage](#user-data--storage)
+8. [Autofill Engine](#autofill-engine)
+9. [Payment Flow](#payment-flow)
+10. [Session Resume](#session-resume)
+11. [Operator (B2B) Flow](#operator-b2b-flow)
+12. [Panel UI System](#panel-ui-system)
+13. [Telemetry](#telemetry)
+14. [Privacy & Chrome Web Store Notes](#privacy--chrome-web-store-notes)
+15. [Versioning](#versioning)
+
+---
+
 ## Overview
 
-FormYaar is a Chrome/Firefox browser extension that auto-fills Indian government forms (PAN Card, Passport, Driving License) using user-provided personal data. It uses a config-driven approach — form field selectors and fill logic live in JSON files served by the backend, so the extension doesn't need rebuilding when government sites change their layouts.
+FormYaar is a browser extension that auto-fills Indian government forms (currently NSDL/Protean PAN card) for two audiences:
 
-**Architecture**: Chrome MV3 (Manifest V3), built with [WXT](https://wxt.dev/) and React.
+- **B2C users** — pay once (₹29) per form, fill their own data once, the extension drives the multi-step government form
+- **B2B operators** — café/agent operators with an active subscription. They see a queue of customer submissions made via formyaar.in and run autofill on a customer's behalf without re-entering data
+
+The extension is a "guide, not a robot" — it auto-fills what it can, stops at steps that require human attention (OTPs, captchas, file uploads), and walks the user through them via the side panel.
+
+---
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    Browser Page                          │
+│                                                          │
+│  ┌──────────────────────┐  ┌─────────────────────────┐  │
+│  │  Government form     │  │  FormYaar Panel (DOM     │  │
+│  │  (NSDL, Protean…)    │  │  injection, no iframe)  │  │
+│  └──────────┬───────────┘  └─────────┬───────────────┘  │
+│             │                         │                  │
+│             └──────► Content Script ◄┘                  │
+│                    (panel.ts + autofill.ts + …)         │
+│                            │                            │
+└────────────────────────────┼────────────────────────────┘
+                             │ runtime.sendMessage
+                             ▼
+                  ┌─────────────────────┐
+                  │  Background (SW)    │
+                  │  Payment polling    │
+                  │  Tab opening        │
+                  │  Telemetry proxy    │
+                  │  AI chat proxy      │
+                  └────────┬────────────┘
+                           │ fetch
+                           ▼
+                  ┌─────────────────────┐
+                  │  Backend (Railway)  │
+                  └─────────────────────┘
+```
+
+There is also a small **popup** (React) shown when the user clicks the toolbar icon — its only job is to detect whether the current tab is a supported government site and tell the user, or link them to formyaar.in if not.
 
 ---
 
@@ -13,424 +77,403 @@ FormYaar is a Chrome/Firefox browser extension that auto-fills Indian government
 ```
 formyaar-extension/
 ├── entrypoints/
-│   ├── background.ts          # Service worker — API proxy + payment polling
-│   ├── content/
-│   │   ├── index.ts           # Content script entry — detects supported sites
-│   │   ├── autofill.ts        # Core form-filling engine
-│   │   ├── panel.ts           # Side panel UI (all screens, HTML/CSS inline)
-│   │   ├── userData.ts        # Local storage + session management
-│   │   ├── supabase.ts        # Operator token authentication
-│   │   ├── telemetry.ts       # Analytics event tracking
-│   │   ├── uploadScreen.ts    # Document upload helper screen
-│   │   ├── constants.ts       # Config constants, site map
-│   │   ├── fonts.ts           # DM Sans font loader
-│   │   └── types.ts           # Shared message type definitions
-│   └── popup/
-│       ├── App.tsx            # Extension popup (React)
-│       └── main.tsx           # React entry point
-├── wxt.config.ts              # Manifest + build config
+│   ├── background.ts             ← Service worker
+│   ├── popup/
+│   │   ├── App.tsx, main.tsx     ← Toolbar popup (React)
+│   │   └── index.html, style.css
+│   └── content/
+│       ├── index.ts              ← Content script entry, message router
+│       ├── panel.ts              ← Panel UI (DOM strings, ~1900 lines)
+│       ├── autofill.ts           ← Form-filling engine
+│       ├── userData.ts           ← Storage layer + types
+│       ├── supabase.ts           ← B2B operator session helpers
+│       ├── telemetry.ts          ← trackEvent wrapper
+│       ├── uploadScreen.ts       ← End-of-flow upload helper UI
+│       ├── toasts.ts             ← Toast utility
+│       ├── constants.ts          ← VERSION, BACKEND_URL, SITE_CONFIGS, z-indexes
+│       ├── fonts.ts              ← Font loader
+│       └── types.ts              ← ExtensionMessage union, shared interfaces
+├── public/
+│   ├── icon/                     ← Toolbar icons
+│   └── configs/
+│       └── pan_card.json         ← Bundled fallback autofill config
+├── wxt.config.ts                 ← Manifest + WXT config
 ├── package.json
-└── tsconfig.json
+└── CHANGELOG.md
 ```
+
+The panel is monolithic (`panel.ts` ~1900 lines) by design — keeping all DOM strings, screen rendering, and event wiring in one file lets us reason about screen transitions without chasing imports. UI subsystems like `uploadScreen.ts` are split out only when they ship as a self-contained screen.
 
 ---
 
-## Extension Permissions
+## Setup & Build
 
-Declared in [wxt.config.ts](wxt.config.ts):
-
-| Permission  | Reason                                                                        |
-| ----------- | ----------------------------------------------------------------------------- |
-| `storage`   | Persist user data and sessions                                                |
-| `activeTab` | Detect current tab URL in popup                                               |
-| `scripting` | Inject content scripts dynamically                                            |
-| `alarms`    | Payment status polling (MV3 replacement for `setInterval` in service workers) |
-| `tabs`      | Open payment page in new tab                                                  |
-
-**Host permissions** (sites where content scripts run):
-
-- `https://onlineservices.proteantech.in/*` — PAN (Protean)
-- `https://onlineservices.nsdl.com/*` — PAN (NSDL)
-- `https://www.utiitsl.com/*` — PAN (UTI)
-- `https://passporthub.gov.in/*` — Passport
-- `https://sarathi.parivahan.gov.in/*` — Driving License
-- `https://formyaar.in/*` — Payment page
-- `https://formyaar-backend-production.up.railway.app/*` — Backend API
-
----
-
-## Message Bus
-
-All cross-component communication goes through `browser.runtime.sendMessage`. Message types are defined in [entrypoints/content/types.ts](entrypoints/content/types.ts).
-
-```typescript
-type ExtensionMessage =
-  | { type: "OPEN_PANEL" }
-  | { type: "START_GUIDE"; form: string }
-  | { type: "STOP_GUIDE" }
-  | { type: "PAYMENT_VERIFIED"; order_id?: string }
-  | {
-      type: "AI_CHAT";
-      fieldId: string;
-      fieldExplanation: string;
-      userMessage: string;
-    }
-  | { type: "CREATE_PAYMENT"; form: string }
-  | { type: "OPEN_RAZORPAY"; order_id: string; amount: number }
-  | { type: "OPEN_URL"; url: string }
-  | {
-      type: "TELEMETRY_EVENT";
-      payload: {
-        event: string;
-        form: string;
-        metadata: Record<string, unknown>;
-      };
-    };
-```
-
-**Why route everything through the service worker?**  
-Government sites enforce strict CSPs that block `fetch()` from content scripts. The service worker is the only context that can call external APIs freely, so all network requests are proxied through `background.ts`.
-
----
-
-## Components
-
-### background.ts — Service Worker
-
-The central hub. Listens for messages from content scripts and the popup, then either handles them locally or forwards to the backend.
-
-**Handlers:**
-
-| Message            | Action                                                              |
-| ------------------ | ------------------------------------------------------------------- |
-| `AI_CHAT`          | `POST /ai/chat` → returns `{ response: string }`                    |
-| `CREATE_PAYMENT`   | `POST /payment/create-order` → returns `{ order_id, amount }`       |
-| `OPEN_RAZORPAY`    | Opens `formyaar.in/pay?order_id=…` in new tab; starts polling alarm |
-| `PAYMENT_VERIFIED` | Stores `ActiveSession` in local storage; notifies content script    |
-| `TELEMETRY_EVENT`  | `POST /telemetry/event` (fire-and-forget)                           |
-
-**Payment polling** uses `browser.alarms` (required in MV3 — service workers are not persistent):
-
-```
-Interval: 0.1 min (~6 seconds)
-Max attempts: 60 (5 minute timeout)
-Endpoint: GET /payment/status/{orderId}
-On success: clear alarm, send PAYMENT_VERIFIED to origin tab
-On timeout: clear alarm, surface error
-```
-
-State during polling is kept in `browser.storage.session` under the key `pendingPayment: { orderId, originTabId, attempts }`.
-
----
-
-### content/index.ts — Content Script Entry
-
-Injected into every configured government site. Responsibilities:
-
-1. Reads hostname → looks up `SITE_CONFIGS` in [constants.ts](entrypoints/content/constants.ts)
-2. After 1500ms delay, calls `showContextualBanner()` from `panel.ts`
-3. Listens for `OPEN_PANEL` (from popup) → renders side panel
-4. Listens for `PAYMENT_VERIFIED` → calls `runAutofill(form)`
-5. Watches for "next step" button clicks via `MutationObserver` on `.stepy-step` — waits 300ms for the next page section to render, then re-runs autofill
-
----
-
-### content/autofill.ts — Form-Filling Engine
-
-The most complex file (~569 lines). Entry points:
-
-**`runAutofill(form: string)`**
-
-1. Fetches `FormConfig` from `GET /configs/{form}/latest`
-2. Loads `UserData` from storage
-3. Calls `matchStep(config)` to identify which config step matches the current URL
-4. Iterates fields in the matched step and fills each one
-5. For PAN step 4: calls `autoFillAOCode(pinCode)` to select AO automatically
-6. Shows verify/upload screens on completion
-
-**`runAutofillFromSubmission(submission: any)`**  
-Operator variant. Converts a queue submission object to `UserData`, saves it to session storage (overrides regular user data), then calls `runAutofill`.
-
-**Step matching (`matchStep`):**
-
-- Checks for NSDL token page first (special case)
-- Matches `window.location.pathname + search` against `step.page_pattern`
-- For `endUserLogin` pages: detects the currently visible `.stepy-step` by index
-
-**Field filling (`fillField`):**
-
-| Field type     | Strategy                                                                                                                |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `text`         | Native input value setter bypass + `input`, `change`, `blur` events (React/Angular apps ignore direct value assignment) |
-| `select`       | Match option by `.value` or `.text`; falls back to Select2 trigger                                                      |
-| `checkbox`     | Set `checked`, fire `change` + `click`                                                                                  |
-| `radio`        | Find matching `value`, set `checked`, fire `change` + `click`                                                           |
-| `date`         | Same as `text` with format string applied                                                                               |
-| `button_click` | Click with 2500ms wait for element to become enabled                                                                    |
-
-**Value resolution (`resolveValue`):**
-
-`value_source` in the config is a dot-path into `UserData` (e.g. `user.first_name`) or a special token:
-
-- `user.aadhaar_first_8` → `aadhaar_number.slice(0, 8)` (derived)
-- `static` → use `field.static_value` directly
-- For checkboxes: value resolves to `user.is_defence === field.static_value`
-
-**AO Code auto-fill (`autoFillAOCode`):**
-
-1. `GET /pincode/{pinCode}` → `{ state, city }`
-2. Select state dropdown, wait for AJAX to populate city list
-3. Select city dropdown
-4. Click "Fetch" button
-5. Wait for AO table to appear
-6. Auto-select first row that is not "EXEMPTION" or "COMPANY"
-
----
-
-### content/panel.ts — Side Panel UI
-
-~1787 lines of HTML/CSS/JS rendered as strings and injected into the page. Uses `innerHTML` to mount React-free UI (avoids conflicts with page's own React/Angular instances).
-
-**Screens:**
-
-| Function                                       | Screen                                  |
-| ---------------------------------------------- | --------------------------------------- |
-| `showContextualBanner()`                       | Slide-in panel, home screen             |
-| `renderHomeScreen()`                           | 6 form cards, start button              |
-| `renderUserFormScreen()`                       | Personal details collection             |
-| `renderPaymentScreen()`                        | ₹29 pricing + Razorpay button           |
-| `showFillingScreen()` / `updateFillProgress()` | Real-time fill progress                 |
-| `showVerifyScreen()`                           | "All done" + manual step instructions   |
-| `showResumeScreen(session)`                    | Welcome back after payment confirmation |
-| `showUploadScreen()`                           | Document upload helper (last PAN step)  |
-| Operator screens                               | Login, queue list, submission review    |
-
-**Z-index layering** (from [constants.ts](entrypoints/content/constants.ts)):
-
-```
-BARS:      999997
-SPOTLIGHT: 999998
-TOOLTIP:   999999
-PANEL:     2147483647  (max int — always on top)
-```
-
-**Styling notes:**
-
-- Font: DM Sans (loaded by `fonts.ts` before render)
-- All CSS is inline in template literal strings
-- No external stylesheets or shadow DOM — designed to override site styles at max z-index
-
----
-
-### content/userData.ts — Storage Manager
-
-Handles all user data persistence.
-
-**`UserData` interface (key fields):**
-
-```typescript
-{
-  (first_name, middle_name, last_name);
-  date_of_birth; // DD/MM/YYYY
-  gender; // "M" | "F" | "T"
-  (email, mobile); // validated at input
-  aadhaar_number; // 12 digits
-  aadhaar_pin_code; // 6 digits
-  father_first / middle / last_name;
-  mother_first / middle / last_name;
-  (parent_on_card_is_father, parent_on_card_is_mother);
-  proof_of_dob; // dropdown value
-  is_defence; // boolean
-  income_source; // "salary" | "business" | ...
-  place; // city
-}
-```
-
-**Storage keys:**
-
-| Key                      | Store     | Contents                                                         |
-| ------------------------ | --------- | ---------------------------------------------------------------- |
-| `fy_user_data`           | `local`   | Regular user's personal data                                     |
-| `fy_active_session`      | `local`   | Current payment session `{ form, order_id, paid_at, completed }` |
-| `fy_operator_session`    | `local`   | Operator auth `{ id, email, subscription_status }`               |
-| `fy_operator_submission` | `session` | Active submission (takes priority over `fy_user_data`)           |
-| `pendingPayment`         | `session` | Payment polling state `{ orderId, originTabId, attempts }`       |
-
-`local` = persists across browser restarts. `session` = cleared when all extension contexts close.
-
-**`getUserData()`** checks session storage first (operator override), then falls back to local storage. This is how the operator flow transparently replaces user data without touching the autofill logic.
-
----
-
-### content/supabase.ts — Operator Auth
-
-Operators use short-lived tokens (generated in their dashboard) to authenticate the extension without a full login flow.
-
-```
-Operator generates token in dashboard
-  → Enters token in extension
-  → POST /operator/verify-token
-  → Backend returns OperatorSession
-  → Stored in browser.storage.local under "fy_operator_session"
-```
-
-Token lifetime: 5 minutes (enforced server-side).
-
-**`OperatorSession` type:**
-
-```typescript
-{
-  id: string;
-  email: string;
-  subscription_status: "active" | "inactive" | "expired";
-  subscription_expires_at: string | null;
-}
-```
-
----
-
-### content/telemetry.ts
-
-Single exported function `trackEvent(event, form, metadata)`. Routes through background service worker (CSP bypass). Never throws — analytics must never interrupt the fill flow.
-
-**Events emitted:**
-
-| Event               | When                                     |
-| ------------------- | ---------------------------------------- |
-| `banner_shown`      | Panel first appears on a supported site  |
-| `guide_started`     | Autofill begins                          |
-| `guide_completed`   | Autofill finishes all fields             |
-| `step_match_failed` | Current URL didn't match any config step |
-| `field_fill_failed` | A single field couldn't be filled        |
-| `ao_code_failed`    | AO auto-selection failed                 |
-
----
-
-### popup/App.tsx — Extension Popup
-
-React component shown when the user clicks the extension icon.
-
-**States:**
-
-1. **Loading** — querying active tab URL
-2. **Supported** — green checkmark + "Open FormYaar" button → sends `OPEN_PANEL` to content script, then closes popup
-3. **Unsupported** — lists supported government sites
-
----
-
-## User Flows
-
-### Regular User
-
-```
-1. Land on supported government site
-2. Extension auto-shows side panel after 1.5s
-3. User fills personal details form in panel
-4. Clicks "Continue to Pay ₹29"
-5. Payment page opens in new tab (Razorpay)
-6. Background polls /payment/status every 6s
-7. On payment captured → PAYMENT_VERIFIED sent to content script
-8. runAutofill() fetches config, fills all fields
-9. showVerifyScreen() guides user through manual steps (upload, CAPTCHA, submit)
-```
-
-### Cafe Operator
-
-```
-1. Operator enters token → signInWithToken() → session stored
-2. Opens queue → GET /operator/queue/{id} → lists pending submissions
-3. Clicks submission → review screen shows customer data
-4. Clicks "Accept & Fill"
-5. runAutofillFromSubmission() converts submission → UserData → session storage
-6. runAutofill() fills form with customer's data
-7. Operator oversees and submits
-```
-
----
-
-## Build & Development
+### Scripts
 
 ```bash
-# Install dependencies
-npm install
-
-# Development (hot reload)
-npm run dev
-
-# Production build (Chrome MV3)
-npm run build
-
-# Firefox build
-npm run build:firefox
-
-# Create distributable ZIP
-npm run zip
-
-# TypeScript type checking only
-npm run compile
+npm run dev            # Chrome dev build, hot reload
+npm run dev:firefox    # Firefox dev build
+npm run build          # Chrome production
+npm run build:firefox  # Firefox production
+npm run zip            # Chrome Web Store-ready zip
+npm run compile        # tsc --noEmit (type check only)
 ```
 
-Built output goes to `.output/chrome-mv3/` (Chrome) or `.output/firefox-mv3/`.
+### Environment variables
+
+`.env.development` / `.env.production`:
+
+```
+VITE_BACKEND_URL=https://formyaar-backend-production.up.railway.app
+```
+
+Used at build time in `wxt.config.ts` (for `host_permissions`) and at runtime in `constants.ts` (for `fetch`).
+
+> **Important for store submission:** when zipping for the Web Store, `VITE_BACKEND_URL` must be set to production. Defaults in `constants.ts` and `wxt.config.ts` are the production Railway URL, so an unset env var is also safe.
 
 ---
 
-## Backend API Reference
+## Manifest & Permissions
 
-Base URL: `https://formyaar-backend-production.up.railway.app`
+Defined in `wxt.config.ts`:
 
-| Method | Path                        | Called By     | Purpose                    |
-| ------ | --------------------------- | ------------- | -------------------------- |
-| `POST` | `/ai/chat`                  | background.ts | Claude AI field assistance |
-| `POST` | `/payment/create-order`     | background.ts | Create Razorpay order      |
-| `GET`  | `/payment/status/:order_id` | background.ts | Poll payment status        |
-| `POST` | `/payment/confirm`          | pay.html      | Verify Razorpay signature  |
-| `GET`  | `/configs/:form/latest`     | autofill.ts   | Fetch form fill config     |
-| `GET`  | `/pincode/:pincode`         | autofill.ts   | PIN code → state/city      |
-| `POST` | `/operator/verify-token`    | supabase.ts   | Authenticate operator      |
-| `GET`  | `/operator/queue/:id`       | panel.ts      | List pending submissions   |
-| `POST` | `/telemetry/event`          | telemetry.ts  | Track analytics event      |
+| Permission | Why |
+|---|---|
+| `storage` | `browser.storage.local` and `.session` for user data, sessions |
+| `activeTab` | Popup interacts with the current tab |
+| `alarms` | Background payment-status polling (~6 s interval) |
+| `tabs` | `browser.tabs.create` (open NSDL, payment page); `browser.tabs.query` (popup) |
+
+**Removed**: `scripting` — was listed previously, not used (content scripts are injected via manifest declaration).
+
+### Host permissions
+
+```
+https://onlineservices.proteantech.in/*
+https://onlineservices.nsdl.com/*
+https://www.utiitsl.com/*
+https://passporthub.gov.in/*
+https://sarathi.parivahan.gov.in/*
+https://formyaar.in/*
+<backend URL>/*
+```
+
+### Content script matches
+
+```
+*://*.proteantech.in/*
+*://*.nsdl.com/*
+*://*.utiitsl.com/*
+*://*.passporthub.gov.in/*
+*://*.sarathi.parivahan.gov.in/*
+*://formyaar.in/*
+```
 
 ---
 
-## Form Config Schema
+## Entry Points
 
-Configs drive all autofill behavior. Fetched at runtime from `/configs/:form/latest`.
+### `entrypoints/background.ts` (service worker)
+
+Handles cross-tab and privileged operations:
+
+| Message | Action |
+|---|---|
+| `AI_CHAT` | Proxy to `POST /ai/chat` (avoids NSDL CSP) |
+| `CREATE_PAYMENT` | Proxy to `POST /payment/create-order` |
+| `OPEN_URL` | `browser.tabs.create({ url })` |
+| `OPEN_RAZORPAY` | Open `https://formyaar.in/pay?order_id=...`, store `pendingPayment` in session, start `paymentPoll` alarm |
+| `TELEMETRY_EVENT` | Proxy to `POST /telemetry/event` |
+
+**Payment polling** — `browser.alarms.create("paymentPoll", { periodInMinutes: 0.1 })` fires every ~6 s. Reads `pendingPayment` from `storage.session`, queries `/payment/status/:orderId`. On `paid: true`: sends `PAYMENT_VERIFIED` to the originating tab, clears the alarm. Hard cap of 60 attempts (~5 min) to prevent runaway polling.
+
+### `entrypoints/content/index.ts`
+
+Top-level content script. Responsibilities:
+
+1. **Message listener** for `OPEN_PANEL` and `PAYMENT_VERIFIED`
+   - On `PAYMENT_VERIFIED`: write `autofillActive` to session storage + `fy_active_session` to local storage in parallel, post `mobile`/`order_id`/`form_type` to `/payment/save-session`, then either run autofill directly (already on NSDL) or navigate the tab to `endUserRegisterContact.html` (autofill picks up on page load).
+2. **Next-button observer** (`onlineservices.proteantech.in` only) — re-runs autofill when the user moves to the next `stepy` step.
+3. **Contextual banner** — auto-opens the side panel after `BANNER_DELAY_MS` (1500 ms) on supported sites and formyaar.in.
+4. **Page-load autofill** — if `autofillActive` exists in session storage and `pageKey` (pathname) is not in `done[]`, autofill that step (with 1.5 s delay for page to settle), then add `pageKey` to `done`.
+
+### `entrypoints/popup/App.tsx`
+
+Pure UI. Queries the active tab, classifies it as `supported` or `unsupported`, shows a CTA. On supported sites, the "Open FormYaar" button sends `OPEN_PANEL` to the content script. On unsupported sites, links to formyaar.in.
+
+---
+
+## User Data & Storage
+
+### `UserData` interface
 
 ```typescript
-interface FormConfig {
-  form: string; // "pan_card" | "passport" | "driving_license"
-  version: number;
-  site: string;
-  steps: {
-    step: number;
-    page_pattern: string; // matched against pathname+search
-    stop_message: string;
-    fields: {
-      field_id: string;
-      type: "text" | "select" | "checkbox" | "date" | "radio" | "button_click";
-      selector: string; // CSS selector
-      value_source: string; // "user.first_name" | "static" | ...
-      static_value?: string | boolean;
-      match_by?: "value" | "text"; // for selects
-      format?: string; // for dates
-      explanation: string; // shown in panel + used in AI prompts
-    }[];
-  }[];
+{
+  first_name, middle_name, last_name
+  date_of_birth, email, mobile
+  aadhaar_last_4              // sensitive — session only
+  gender ('M'|'F'|'T'|'')
+  father_*, mother_*          // first/middle/last
+  parent_on_card_is_father / _is_mother
+  aadhaar_pin_code, place
+  is_defence
+  passport_number             // sensitive — session only
+  tin_number                  // sensitive — session only
+  proof_of_dob
+  income_source               // enum
 }
 ```
 
-To add support for a new form step or site layout change: update the relevant JSON config in the backend (`configs/` directory) — no extension rebuild required.
+**Note:** the full `aadhaar_number` field was removed from `UserData`. The website's `user-form.html` may still POST a full number to the backend's submission flow, but the extension never stores or uses it — `runAutofillFromSubmission()` derives `aadhaar_last_4` from it on the fly.
+
+### Storage split
+
+| Bucket | Key | Contents | Lifetime |
+|---|---|---|---|
+| `storage.local` | `fy_user_data` | Non-sensitive fields (name, DOB, address, etc.) | Forever (until uninstall or manual clear) |
+| `storage.session` | `fy_sensitive_data` | `aadhaar_last_4`, `passport_number`, `tin_number` | Browser session only |
+| `storage.local` | `fy_active_session` | `{ form, order_id, paid_at, completed }` | Until user discards |
+| `storage.session` | `autofillActive` | `{ form, done: string[] }` | Browser session |
+| `storage.session` | `fy_operator_submission` | Operator-loaded customer data | Browser session |
+| `storage.session` | `pendingPayment` | Payment polling state | Browser session |
+| `storage.local` | `fy_operator_session` | Operator id + email + subscription | Until sign out |
+
+### Read priority in `getUserData()`
+
+1. **Operator override** (`fy_operator_submission` with `first_name`) — used when operator is filling for a customer
+2. **Regular user** — merge `local.fy_user_data` ∪ `session.fy_sensitive_data` over `EMPTY_USER_DATA`
+
+### What goes to the backend
+
+| Endpoint | Payload |
+|---|---|
+| `/payment/save-session` | `order_id`, `mobile`, `form_type` only — **no form data** |
+| `/payment/resume/:mobile` | mobile in URL |
+| `/payment/status/:order_id` | order ID in URL |
+| `/configs/:form/latest` | none |
+| `/pincode/:pin` | PIN in URL |
+| `/telemetry/event` | event name, form, URL pathname / step / selector — no PII |
+| `/ai/chat` | field ID, field explanation, user's typed question — no PII |
+
+Sensitive identity numbers never leave the device.
 
 ---
 
-## Key Design Decisions
+## Autofill Engine
 
-**Config-driven autofill** — Form field selectors live in JSON on the backend. When a government site changes its HTML, only the config needs updating, not the extension (which requires Chrome Web Store review).
+`entrypoints/content/autofill.ts`
 
-**No content-script fetch** — All `fetch()` calls go through the service worker to avoid CSP violations on government sites.
+### Main flow (`runAutofill(form)`)
 
-**MV3 alarms for payment polling** — Service workers in MV3 don't stay alive. `browser.alarms` fires the worker periodically to poll `/payment/status`, eliminating the need for a persistent connection.
+1. Show filling screen in the panel
+2. **Fetch config** — backend first (`/configs/:form/latest`), bundled `public/configs/pan_card.json` as fallback
+3. **Match step** (`matchStep`):
+   - **Token-page short-circuit** — if `input.tokenButton` exists in the DOM, return the step with `is_token_page: true`
+   - **Non-`endUserLogin` URLs** — find step whose `page_pattern` is a substring of `pathname + search`
+   - **`endUserLogin`** — query `.stepy-step`, find the visible one (display ≠ "none"), match by `stepy_index`
+4. **Guidance-only steps** — show verify screen without filling
+5. **Fill each field** sequentially with 150 ms delay (2500 ms after button clicks):
+   - Resolve value: `static` / `static_value`, `user.<field>` lookup, or special checkbox case where `value_source` is a user field AND `static_value` is provided (used for multi-checkbox enums like `income_source`)
+   - Find element via CSS selector
+   - Skip if disabled
+   - Dispatch via type-specific filler (see below)
+6. **Step 4 (AO code)** — if `stepy_index === 3` and user is not defence personnel, run `autoFillAOCode(pinCode)`
+7. **Last step of PAN** — show upload helper screen; else generic verify screen
+8. **Clear `autofillActive`** if this was the last step in the config (prevents re-running on later visits)
 
-**Operator session override** — Storing operator submission data in `session` storage (vs `local`) means it automatically disappears when the browser session ends, and it takes priority over personal data without any conditional logic in `autofill.ts`.
+### Field-type fillers
 
-**Inline CSS/HTML in panel.ts** — Avoids style injection into the page's `<head>` (which can break government site layouts) and prevents conflicts with page-level CSS by using explicit z-index and fixed positioning.
+- **text / date** — uses the native `HTMLInputElement.value` setter via `Object.getOwnPropertyDescriptor` to bypass React/framework value tracking. Dispatches `input`, `change`, `blur`.
+- **select** — match by `value` (default) or `text`. Triggers Select2 update if jQuery + Select2 are present.
+- **checkbox** — sets `.checked` and dispatches `change` + `click`.
+- **radio** — handles `defence_selector` indirection (different radio depending on `user.is_defence`).
+- **button_click** — waits up to 3 s for `disabled` to clear via MutationObserver, then clicks twice (native `click()` + dispatched `MouseEvent` for jQuery handlers).
+
+### AO Code auto-fill (`autoFillAOCode`)
+
+Multi-step async dance on the NSDL AO code page:
+
+1. `GET /pincode/:pin` — receives `{ state, city, ao_code? }`
+2. Wait for `#state_aoCode` to have >1 option (MutationObserver, 5 s timeout)
+3. Set the state, dispatch `change`, also trigger jQuery `change` for legacy listeners
+4. Wait for `#city_aoCode` to populate via the site's AJAX
+5. Select city (exact match → partial match fallback)
+6. Click `#fetchAOList`
+7. `autoSelectAOCode(ao_code)` — watches for `#table_id` to populate, then:
+   - If we have a target AO code from the backend → match exact row by area_code + range_code + ao_number
+   - Otherwise → first non-exemption, non-company row
+
+### Operator entry (`runAutofillFromSubmission(sub)`)
+
+Converts a backend submission object → `UserData`, stores it in `storage.session.fy_operator_submission`, then calls `runAutofill(sub.form_type)`. The operator override in `getUserData()` ensures subsequent reads return the customer's data.
+
+---
+
+## Payment Flow
+
+```
+User fills panel form
+       │
+       ▼
+Click "Pay ₹29"
+       │ runtime.sendMessage(CREATE_PAYMENT)
+       ▼
+Background → POST /payment/create-order
+       │
+       │ runtime.sendMessage(OPEN_RAZORPAY)
+       ▼
+Background opens https://formyaar.in/pay?order_id=...
+       │
+       │ stores pendingPayment in storage.session
+       │ creates alarm "paymentPoll" (every 6s)
+       ▼
+User completes Razorpay on the website
+       │
+       ▼
+Alarm fires → GET /payment/status/:orderId
+       │
+       │ when paid:true
+       ▼
+Background → sendMessage(PAYMENT_VERIFIED) to origin tab
+       │
+       ▼
+Content script:
+  1. POST /payment/save-session (mobile + order_id, no form data)
+  2. await storage writes for autofillActive + fy_active_session
+  3. if on NSDL → runAutofill directly
+     else → window.location.href = NSDL_START_URL
+            (page-load handler will run autofill)
+```
+
+The **payment page itself** lives on formyaar.in (not in the extension). It calls `GET /payment/order/:order_id` to get the authoritative amount (so the extension can't tamper), invokes Razorpay Checkout, then calls `POST /payment/confirm` for signature verification. After confirmation, the page can be closed — the extension's polling will detect `captured` status independently.
+
+---
+
+## Session Resume
+
+A B2C user who pays but doesn't finish the form should be able to resume without paying again, on any browser.
+
+### Save (post-payment)
+
+- Extension writes `fy_active_session` to `storage.local` (this device)
+- Extension calls `POST /payment/save-session` with mobile + order_id (server-side, 48-hour TTL)
+
+### Same browser
+
+- "In Progress" card auto-renders on the panel home screen via `refreshPendingSessions()` whenever the panel opens
+- Click **Continue** → checks `getUserData().first_name` exists (otherwise alerts user to fill details first), sets `autofillActive`, navigates to NSDL
+- Click **Discard** → confirm + clear `fy_active_session`
+
+### Different browser
+
+- User clicks "Already paid? Recover session"
+- Enters mobile → `GET /payment/resume/:mobile`
+- Server returns `{ order_id, form_type, form_data, created_at, expires_at }` (`form_data` is `{}` for current versions)
+- Extension writes `fy_active_session` and shows the "In Progress" card
+- From here, same as same-browser flow — but if `getUserData().first_name` is empty (no local data on this browser), Continue blocks with a message asking the user to fill details first
+
+### Mark completed
+
+When the autofill engine reaches the last config step, it calls `markSessionCompleted()` which sets `completed: true`. (A separate `POST /payment/complete-session` exists for the backend side — wired from the website's success page, not from the extension.)
+
+---
+
+## Operator (B2B) Flow
+
+1. Operator signs in on formyaar.in (operator-dashboard)
+2. Website calls `POST /operator/generate-token` → 12-char alphanumeric, 5-min TTL
+3. Operator enters the token into the extension's operator-login screen
+4. Extension calls `POST /operator/verify-token` → returns operator + subscription status; token is one-time
+5. Operator session stored in `storage.local.fy_operator_session`
+6. Panel switches to Operator Queue (`renderOperatorQueueScreen`)
+7. Operator Queue: `GET /operator/queue/:operator_id` returns pending submissions
+8. Operator clicks a submission → Accept → `PATCH /operator/submission/:id/status` (`filling`) → `runAutofillFromSubmission(sub)`
+9. Subsequent autofill reads use the operator-override `getUserData()` path
+
+Operators currently have **lifetime access** (no `expires_at`); subscription status check treats NULL `expires_at` as "no expiry". The B2C/B2B separation is **incomplete** — operator subscriptions and B2C payments flow through the same conceptual paths, and isolation isn't enforced at the data layer yet (tracked in the project backlog).
+
+---
+
+## Panel UI System
+
+Single file: `entrypoints/content/panel.ts`. Architecture:
+
+- **Screens** — each `render*Screen()` returns an HTML string; all screens live as siblings inside the panel, visibility is toggled by `style.display`
+- **Screen list**: home, payment, filling, verify, upload, recover, operator-login, operator-queue, operator-review, user-form (created dynamically per `showUserForm()`)
+- **Event handlers** wired in `attachPanelEventHandlers()` after `panel.innerHTML = ...`
+- **Pending sessions** rendered into `#fy-pending-sessions` placeholder via `refreshPendingSessions()`
+
+### Open/close
+
+- `showContextualBanner()` injects the panel `div#formyaar-panel` (z-index `2147483647`), slides it in from the right
+- Side **tab** (`#fy-tab`) is a thin pill on the right edge — clicking toggles `panel.style.right` between `0px` and `-PANEL_WIDTH px`
+- **Click-outside handler** — closes the panel on document clicks outside `#formyaar-panel` and `#fy-tab`. Includes a `document.contains(e.target)` check to avoid false positives when a click handler removes the clicked element from the DOM (fixed in 0.4.4).
+
+### Why monolithic and not React?
+
+- Injection into hostile DOMs (government sites with their own jQuery + CSS resets) — bundling a React tree per content-script context costs ~150 KB and risks style bleed
+- Panel is mostly static screens with deterministic transitions, not a reactive tree
+- React is reserved for the popup, where the host is the extension itself
+
+---
+
+## Telemetry
+
+`entrypoints/content/telemetry.ts` — `trackEvent(event, form, metadata)`. Posts via the background's `TELEMETRY_EVENT` proxy (avoids NSDL's CSP blocking direct fetches).
+
+Events emitted from the extension:
+- `banner_shown`, `panel_opened`, `payment_started`, `payment_completed`
+- `guide_started`, `guide_completed`, `guide_paused`
+- `field_skipped`, `field_not_found`, `field_fill_failed`, `step_match_failed`
+- `help_chat_used`, `upload_screen_shown`, `upload_scroll_clicked`, `compressor_opened`, `faq_clicked`
+- `ao_code_failed`, `autofill_error`
+
+Metadata never includes PII — only field IDs, CSS selectors, URL pathnames. Failures in `trackEvent` are swallowed by design (telemetry must never break the user flow).
+
+---
+
+## Privacy & Chrome Web Store Notes
+
+### What we collect locally (never sent)
+- Name, DOB, email, mobile, parent names, address, gender, income source → `storage.local`
+- Aadhaar last 4, passport, TIN → `storage.session` only
+
+### What we send to our backend
+- Mobile + order_id at payment time (for resume)
+- Pincode (for AO code lookup)
+- Telemetry events with no PII
+- AI chat: user's typed question + field context (no name/Aadhaar)
+
+### Disclosed in panel UI
+- Home screen badge: *"Your details are saved only on your device — never on our servers"*
+- Footer: *"Not affiliated with any government entity. … Anonymous usage events are collected to improve the service."*
+
+### Web Store rejection risks (current state)
+
+| Risk | Status |
+|---|---|
+| Remote-controlled autofill config | **Mitigated** — `pan_card.json` bundled in `public/configs/`, backend fetch is fallback only |
+| `scripting` permission | **Removed** |
+| `tabs` permission | Needed; justify in store listing as *"open payment page + detect active tab"* |
+| No data-deletion UI | **Open** — `storage.local` data persists forever; needs a "Clear my data" button in the panel |
+| Telemetry disclosure | **Done** — disclosed in footer |
+| Misleading "never store" copy | **Fixed** — now accurately says "saved only on your device" |
+
+---
+
+## Versioning
+
+`VERSION` lives in three files and **must be kept in sync** on every code change (per project policy in `CLAUDE.md`):
+
+- `entrypoints/content/constants.ts` → `export const VERSION`
+- `wxt.config.ts` → `manifest.version`
+- `package.json` → `version`
+
+Reason: the panel shows `VERSION` in the header so we can verify users (and ourselves) are seeing the latest build.
+
+Semver:
+- **Patch** — bug fixes, copy tweaks
+- **Minor** — new features, new flows
+- **Major** — only on breaking changes to user data or config schema
+
+See `CHANGELOG.md` for history.

@@ -6,7 +6,7 @@ import {
   updateFillProgress,
 } from "./panel";
 import { showUploadScreen } from "./uploadScreen";
-import { getUserData, type UserData, setOperatorSubmission } from "./userData";
+import { getUserData, type UserData } from "./userData";
 
 // ─── Types matching pan_card.json schema v2 ──────────────────────────
 interface FieldConfig {
@@ -164,8 +164,7 @@ export async function runAutofillFromSubmission(sub: any): Promise<void> {
     date_of_birth: sub.dob ?? "",
     email: sub.email ?? "",
     mobile: sub.mobile ?? "",
-    aadhaar_number: "",
-    aadhaar_last_4: sub.aadhaar_last_4 ?? "",
+    aadhaar_last_4: sub.aadhaar_last_4 ?? (sub.aadhaar_number ? String(sub.aadhaar_number).replace(/\D/g, "").slice(-4) : ""),
     gender: "",
     parent_on_card_is_father: true,
     parent_on_card_is_mother: false,
@@ -186,16 +185,24 @@ export async function runAutofillFromSubmission(sub: any): Promise<void> {
 
   await runAutofill(sub.form_type);
 }
-// ─── Fetch config from backend ───────────────────────────────────────
+// ─── Fetch config — backend first for live updates, bundled as fallback ─
 async function fetchConfig(form: string): Promise<FormConfig | null> {
+  // Backend first — allows pushing selector fixes without an extension update
   try {
     const res = await fetch(`${BACKEND_URL}/configs/${form}/latest`);
-    if (!res.ok) return null;
-    return await res.json();
+    if (res.ok) return await res.json();
+  } catch {
+    // fall through to bundled
+  }
+  // Bundled fallback — works offline, satisfies Chrome's local-copy requirement
+  try {
+    const bundledUrl = (browser.runtime.getURL as (p: string) => string)(`configs/${form}.json`);
+    const res = await fetch(bundledUrl);
+    if (res.ok) return await res.json();
   } catch (err) {
     console.warn("FormYaar: config fetch failed", err);
-    return null;
   }
+  return null;
 }
 
 // ─── Match the current page to a step in the config ──────────────────
@@ -251,10 +258,6 @@ function resolveValue(
   }
   if (field.value_source.startsWith("user.")) {
     const key = field.value_source.slice(5);
-    // Derived fields not stored directly in UserData
-    if (key === "aadhaar_first_8") {
-      return (userData.aadhaar_number ?? "").replace(/\s/g, "").slice(0, 8);
-    }
     const v = userData[key as keyof UserData];
     return v !== undefined ? v : "";
   }
@@ -405,7 +408,14 @@ function fillRadio(
   }
   return true;
 }
-async function autoSelectAOCode(): Promise<boolean> {
+interface AOCode {
+  area_code: string;
+  ao_type: string;
+  range_code: string;
+  ao_number: string;
+}
+
+async function autoSelectAOCode(target?: AOCode): Promise<boolean> {
   return new Promise((resolve) => {
     // Wait for table to populate after fetch
     const observer = new MutationObserver(() => {
@@ -413,10 +423,36 @@ async function autoSelectAOCode(): Promise<boolean> {
       if (!table) return;
 
       const rows = table.querySelectorAll("tr");
-      if (rows.length <= 1) return; // Only header row, not loaded yet
+      if (rows.length <= 1) return;
 
       observer.disconnect();
 
+      // If we have a known AO code, try to match the exact row first
+      if (target) {
+        for (const row of rows) {
+          const cells = row.querySelectorAll("td");
+          if (cells.length < 2) continue;
+          const rowText = Array.from(cells).map(c => c.textContent?.trim().toUpperCase() ?? "").join("|");
+          if (
+            rowText.includes(target.area_code.toUpperCase()) &&
+            rowText.includes(target.range_code) &&
+            rowText.includes(target.ao_number)
+          ) {
+            const radio = row.querySelector("input[type='radio']") as HTMLInputElement | null;
+            if (radio) {
+              radio.checked = true;
+              radio.dispatchEvent(new Event("change", { bubbles: true }));
+              radio.dispatchEvent(new Event("click", { bubbles: true }));
+              console.log("FormYaar: AO code matched by config:", target);
+              resolve(true);
+              return;
+            }
+          }
+        }
+        console.warn("FormYaar: target AO code not found in table, falling back to first valid row");
+      }
+
+      // Fallback: pick first non-exemption, non-company row
       for (const row of rows) {
         const cells = row.querySelectorAll("td");
         if (cells.length < 2) continue;
@@ -424,7 +460,6 @@ async function autoSelectAOCode(): Promise<boolean> {
         const description = cells[1]?.textContent?.toUpperCase() || "";
         const additionalDesc = cells[2]?.textContent?.toUpperCase() || "";
 
-        // Skip exemption and company rows
         if (description.includes("EXEMPTION")) continue;
         if (additionalDesc.includes("EXEMPTION")) continue;
         if (
@@ -433,15 +468,12 @@ async function autoSelectAOCode(): Promise<boolean> {
         )
           continue;
 
-        // Click the radio in first valid row
-        const radio = row.querySelector(
-          "input[type='radio']",
-        ) as HTMLInputElement | null;
+        const radio = row.querySelector("input[type='radio']") as HTMLInputElement | null;
         if (radio) {
           radio.checked = true;
           radio.dispatchEvent(new Event("change", { bubbles: true }));
           radio.dispatchEvent(new Event("click", { bubbles: true }));
-          console.log("FormYaar: AO code selected:", description);
+          console.log("FormYaar: AO code selected (fallback):", description);
           resolve(true);
           return;
         }
@@ -450,12 +482,8 @@ async function autoSelectAOCode(): Promise<boolean> {
       resolve(false);
     });
 
-    observer.observe(document.body, {
-      subtree: true,
-      childList: true,
-    });
+    observer.observe(document.body, { subtree: true, childList: true });
 
-    // Safety timeout — 10 seconds
     setTimeout(() => {
       observer.disconnect();
       resolve(false);
@@ -464,19 +492,28 @@ async function autoSelectAOCode(): Promise<boolean> {
 }
 async function autoFillAOCode(pinCode: string): Promise<boolean> {
   try {
-    // Step 1: Get state and city from backend
+    // Step 1: Get state, city, and resolved AO code (if locally known) from backend
     const res = await fetch(`${BACKEND_URL}/pincode/${pinCode}`);
     if (!res.ok) return false;
-    const { state, city } = (await res.json()) as {
+    const { state, city, ao_code } = (await res.json()) as {
       state: string;
       city: string;
+      ao_code?: AOCode;
     };
 
-    // Step 2: Select state in dropdown
-    const stateSelect = document.getElementById(
-      "state_aoCode",
-    ) as HTMLSelectElement | null;
-    if (!stateSelect) return false;
+    // Step 2: Wait for state dropdown to be populated (radio click needs time to propagate)
+    const stateSelect = await new Promise<HTMLSelectElement | null>((resolve) => {
+      const check = () => document.getElementById("state_aoCode") as HTMLSelectElement | null;
+      const el = check();
+      if (el && el.options.length > 1) { resolve(el); return; }
+      const observer = new MutationObserver(() => {
+        const el = check();
+        if (el && el.options.length > 1) { observer.disconnect(); resolve(el); }
+      });
+      observer.observe(document.body, { subtree: true, childList: true, attributes: true });
+      setTimeout(() => { observer.disconnect(); resolve(check()); }, 5000);
+    });
+    if (!stateSelect || stateSelect.options.length <= 1) return false;
 
     const stateOption = Array.from(stateSelect.options).find(
       (o) => o.text.trim().toUpperCase() === state.toUpperCase(),
@@ -544,8 +581,8 @@ async function autoFillAOCode(pinCode: string): Promise<boolean> {
     if (!fetchBtn) return false;
     fetchBtn.click();
 
-    // Step 6: Wait for table and auto-select first valid row
-    return await autoSelectAOCode();
+    // Step 6: Wait for table and auto-select — prefer matching known AO code
+    return await autoSelectAOCode(ao_code);
   } catch (err) {
     console.error("FormYaar: AO code auto-fill failed", err);
     trackEvent("ao_code_failed", "pan_card", {

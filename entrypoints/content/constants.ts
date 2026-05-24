@@ -1,3 +1,5 @@
+export const VERSION = "0.4.5";
+
 export const BACKEND_URL =
   (import.meta.env.VITE_BACKEND_URL as string) ??
   "https://formyaar-backend-production.up.railway.app";

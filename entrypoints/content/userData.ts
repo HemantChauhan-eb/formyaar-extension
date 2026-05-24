@@ -1,6 +1,12 @@
 // User data collection — types, storage, defaults
 
 const STORAGE_KEY = "fy_user_data";
+const SENSITIVE_KEY = "fy_sensitive_data";
+const SENSITIVE_FIELDS: (keyof UserData)[] = [
+  "aadhaar_last_4",
+  "passport_number",
+  "tin_number",
+];
 
 export interface UserData {
   first_name: string;
@@ -9,7 +15,6 @@ export interface UserData {
   date_of_birth: string;
   email: string;
   mobile: string;
-  aadhaar_number: string;
   aadhaar_last_4: string;
   gender: "M" | "F" | "T" | "";
   father_first_name: string;
@@ -44,7 +49,6 @@ export const EMPTY_USER_DATA: UserData = {
   email: "",
   mobile: "",
   aadhaar_last_4: "",
-  aadhaar_number: "",
   gender: "",
   father_first_name: "",
   father_middle_name: "",
@@ -72,16 +76,32 @@ export async function getUserData(): Promise<UserData> {
     if (sessionSub && sessionSub.first_name) {
       return { ...EMPTY_USER_DATA, ...sessionSub };
     }
-    // Regular user — local storage
-    const result = await browser.storage.local.get(STORAGE_KEY);
-    const saved = result[STORAGE_KEY] as UserData | undefined;
-    return { ...EMPTY_USER_DATA, ...(saved ?? {}) };
+    // Regular user — merge localStorage (non-sensitive) + sessionStorage (sensitive)
+    const [localResult, sensitiveResult] = await Promise.all([
+      browser.storage.local.get(STORAGE_KEY),
+      browser.storage.session.get(SENSITIVE_KEY),
+    ]);
+    const saved = localResult[STORAGE_KEY] as Partial<UserData> | undefined;
+    const sensitive = sensitiveResult[SENSITIVE_KEY] as Partial<UserData> | undefined;
+    return { ...EMPTY_USER_DATA, ...(saved ?? {}), ...(sensitive ?? {}) };
   } catch {
     return EMPTY_USER_DATA;
   }
 }
 export async function saveUserData(data: UserData): Promise<void> {
-  await browser.storage.local.set({ [STORAGE_KEY]: data });
+  const sensitive: Partial<UserData> = {};
+  const local: Partial<UserData> = {};
+  for (const key of Object.keys(data) as (keyof UserData)[]) {
+    if (SENSITIVE_FIELDS.includes(key)) {
+      (sensitive as any)[key] = data[key];
+    } else {
+      (local as any)[key] = data[key];
+    }
+  }
+  await Promise.all([
+    browser.storage.local.set({ [STORAGE_KEY]: local }),
+    browser.storage.session.set({ [SENSITIVE_KEY]: sensitive }),
+  ]);
 }
 
 export interface ValidationError {
