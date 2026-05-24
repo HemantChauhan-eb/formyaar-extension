@@ -210,33 +210,18 @@ export default function App() {
               </div>
             </div>
 
-            <div
-              style={{
-                fontSize: 11,
-                color: "#888",
-                marginBottom: 8,
-                fontWeight: 600,
-              }}
-            >
-              Supported sites:
-            </div>
-            {[
-              "PAN Card — proteantech.in / nsdl.com",
-              "Passport — passporthub.gov.in",
-              "Driving License — sarathi.parivahan.gov.in",
-            ].map((site) => (
-              <div
-                key={site}
-                style={{
-                  fontSize: 11,
-                  color: "#666",
-                  padding: "4px 0",
-                  borderBottom: "1px solid #f0f0f0",
-                }}
+            <div style={{ fontSize: 12, color: "#666", lineHeight: 1.6 }}>
+              Visit{" "}
+              <a
+                href="https://formyaar.in"
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: "#000080", fontWeight: 700, textDecoration: "underline" }}
               >
-                • {site}
-              </div>
-            ))}
+                formyaar.in
+              </a>{" "}
+              to learn more about our services and get started.
+            </div>
           </div>
         )}
       </div>

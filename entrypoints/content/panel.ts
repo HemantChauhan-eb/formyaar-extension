@@ -4,16 +4,16 @@ import {
   PANEL_WIDTH,
   PULSE_INITIAL_DELAY_MS,
   PULSE_INTERVAL_MS,
+  VERSION,
   Z_INDEX,
 } from "./constants";
 import {
   getOperatorSession,
-  signInWithGoogle,
   signOut,
   signInWithToken,
   OperatorSession,
 } from "./supabase";
-import { runAutofill, runAutofillFromSubmission } from "./autofill";
+import { runAutofillFromSubmission } from "./autofill";
 import { trackEvent } from "./telemetry";
 import {
   getUserData,
@@ -269,7 +269,6 @@ function renderPanelHTML(): string {
     ${renderFillingScreen()}
     ${renderVerifyScreen()}
     ${renderUploadScreen()}
-    ${renderResumeScreen()}
     ${renderRecoverScreen()}
     ${renderOperatorLoginScreen()}
 ${renderOperatorQueueScreen()}
@@ -313,7 +312,7 @@ function renderHomeScreen(): string {
             <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;line-height:1.2;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
               <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;font-weight:800;">·</span><span style="font-weight:800;color:#ffffff;">Yaar</span>
             </div>
-            <div style="font-size:10.5px;color:#aabbd4;font-weight:500;letter-spacing:0.3px;">Your dost for every sarkari kaam</div>
+            <div style="font-size:10.5px;color:#aabbd4;font-weight:500;letter-spacing:0.3px;">Your dost for every sarkari kaam <span style="opacity:0.5;font-size:9px;">v${VERSION}</span></div>
           </div>
           <a href="https://formyaar.in/contact" target="_blank" style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.13);border-radius:7px;padding:5px 10px;text-decoration:none;border:1px solid rgba(255,255,255,0.18);">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -350,6 +349,7 @@ function renderHomeScreen(): string {
           <div style="margin-top:12px;text-align:center;">
             <span style="font-size:10.5px;color:#50507a;font-weight:500;opacity:0.7;">+ More services coming soon — Passport, VISA &amp; more</span>
           </div>
+          <div id="fy-pending-sessions"></div>
           <div style="margin-top:14px;background:rgba(130,28,255,0.05);border:1.5px solid rgba(130,28,255,0.13);border-radius:12px;padding:12px 13px;display:flex;gap:10px;align-items:flex-start;">
             <div style="flex-shrink:0;margin-top:1px;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#821cff" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -362,7 +362,7 @@ function renderHomeScreen(): string {
           </div>
           <div style="margin-top:12px;background:#f0f8ff;border:1px solid #bfd4ec;border-radius:10px;padding:9px 13px;display:flex;align-items:center;gap:8px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-            <span style="font-size:11px;color:#50507a;font-weight:500;">We <strong style="color:#0a0a2e;">never store your information</strong></span>
+            <span style="font-size:11px;color:#50507a;font-weight:500;">Your details are <strong style="color:#0a0a2e;">saved only on your device</strong> — never on our servers</span>
           </div>
         </div>
         <div style="margin-top:12px;text-align:center;display:flex;gap:16px;justify-content:center;">
@@ -375,7 +375,7 @@ function renderHomeScreen(): string {
         </div>
         <div style="margin-top:10px;padding:6px 4px;text-align:center;display:flex;align-items:flex-start;gap:6px;justify-content:center;">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          <p style="font-size:9.5px;color:#aaa;line-height:1.5;font-weight:400;text-align:left;">Not affiliated with any government entity. FormYaar is a private service that helps you fill forms with ease.</p>
+          <p style="font-size:9.5px;color:#aaa;line-height:1.5;font-weight:400;text-align:left;">Not affiliated with any government entity. FormYaar is a private service that helps you fill forms with ease. Anonymous usage events are collected to improve the service.</p>
         </div>
       </div>
     </div>
@@ -708,11 +708,16 @@ function renderOperatorQueueScreen(): string {
     <div id="fy-operator-queue" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
       <div style="position:relative;background:#000080;overflow:hidden;flex-shrink:0;">
         <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;">
-<div>
-    <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
-      <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;">·</span><span>Yaar</span>
+<div style="display:flex;align-items:center;gap:10px;">
+    <button id="fy-queue-back" style="background:none;border:none;cursor:pointer;color:white;display:flex;align-items:center;padding:4px 0;opacity:0.85;font-family:inherit;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div>
+      <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
+        <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;">·</span><span>Yaar</span>
+      </div>
+      <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Operator Queue</div>
     </div>
-    <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Operator Queue</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="fy-queue-refresh" style="background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.18);border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
@@ -813,7 +818,7 @@ function renderPaymentScreen(): string {
             </div>
             <div style="font-size:11px;opacity:0.8;font-weight:500;letter-spacing:0.3px;">PAN CARD — NEW APPLICATION</div>
             <div style="font-size:36px;font-weight:800;margin-top:6px;letter-spacing:-0.5px;">₹29</div>
-            <div style="font-size:10.5px;opacity:0.72;margin-top:6px;">Govt. fee ₹93 + Service fee ₹14 (incl. GST)</div>
+          
             <div style="margin-top:12px;display:flex;gap:10px;">
               <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.15);border-radius:20px;padding:4px 10px;">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
@@ -1158,46 +1163,6 @@ function renderVerifyScreen(): string {
   `;
 }
 
-function renderResumeScreen(): string {
-  return `
-    <div id="fy-resume" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
-      <div style="position:relative;background:#000080;overflow:hidden;flex-shrink:0;">
-        <div style="padding:13px 16px;display:flex;align-items:center;gap:10px;position:relative;z-index:1;">
-          <div style="flex:1;text-align:center;">
-            <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;line-height:1.2;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
-              <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;font-weight:800;">·</span><span style="font-weight:800;color:#ffffff;">Yaar</span>
-            </div>
-            <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Welcome back</div>
-          </div>
-        </div>
-        <div style="height:3px;display:flex;"><div style="flex:1;background:#FF9933;"></div><div style="flex:1;background:#ffffff;"></div><div style="flex:1;background:#138808;"></div></div>
-      </div>
-
-      <div style="flex:1;overflow-y:auto;padding:24px 20px;">
-        <div style="text-align:center;margin-bottom:18px;">
-          <div style="width:60px;height:60px;border-radius:50%;background:#22c55e;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;animation:fy-successPop 0.5s ease forwards;box-shadow:0 8px 20px rgba(34,197,94,0.27);">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <div style="font-size:19px;font-weight:800;color:#0a0a2e;">Payment confirmed</div>
-          <div style="margin-top:6px;font-size:12.5px;color:#50507a;line-height:1.5;">PAN Card — New Application<br>Your details are saved. Ready to continue?</div>
-        </div>
-
-        <button id="fy-resume-start" style="width:100%;padding:14px;background:#000080;color:#fff;border:none;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 5px 20px rgba(0,0,128,0.27);letter-spacing:0.3px;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;margin-bottom:10px;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Start Filling Now
-        </button>
-
-        <button id="fy-resume-startover" style="width:100%;padding:11px;background:transparent;color:#50507a;border:1.5px solid #e0e0f0;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">
-          Start over with a new form
-        </button>
-
-        <div style="margin-top:16px;background:#f0f8ff;border:1px solid #bfd4ec;border-radius:10px;padding:11px 14px;font-size:11.5px;color:#50507a;line-height:1.5;text-align:center;">
-          If you started filling earlier, NSDL will ask whether to use your previous token. We'll handle that automatically.
-        </div>
-      </div>
-    </div>
-  `;
-}
 function createTab() {
   const tab = document.createElement("div");
   tab.id = "fy-tab";
@@ -1282,6 +1247,7 @@ function attachClickOutsideHandler() {
     if (!p || !t) return;
     if (
       p.style.right === "0px" &&
+      document.contains(e.target as Node) &&
       !p.contains(e.target as Node) &&
       !t.contains(e.target as Node)
     ) {
@@ -1302,7 +1268,74 @@ function attachClickOutsideHandler() {
   };
   document.addEventListener("keydown", currentKeyHandler);
 }
+const FORM_LABELS: Record<string, string> = {
+  pan_card: "PAN Card — New Application",
+};
+
+async function refreshPendingSessions(): Promise<void> {
+  const container = document.getElementById("fy-pending-sessions");
+  if (!container) return;
+
+  const result = await browser.storage.local.get("fy_active_session");
+  const session = result["fy_active_session"] as ActiveSession | undefined;
+
+  if (!session || session.completed) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const label = FORM_LABELS[session.form] ?? session.form;
+  const paidDate = new Date(session.paid_at).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  container.innerHTML = `
+    <div style="margin-top:14px;background:#fff8eb;border:1.5px solid #f5d27a;border-radius:12px;padding:12px 13px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#b8860b;margin-bottom:8px;">In Progress</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#0a0a2e;">${label}</div>
+          <div style="font-size:11px;color:#7a5a00;margin-top:2px;">Paid ${paidDate}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button id="fy-session-discard" style="padding:7px 10px;background:transparent;color:#ef4444;border:1.5px solid #ef4444;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Discard</button>
+          <button id="fy-session-continue" style="padding:7px 12px;background:#000080;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Continue →</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document
+    .getElementById("fy-session-continue")
+    ?.addEventListener("click", async () => {
+      const existing = await getUserData();
+      if (!existing.first_name.trim()) {
+        alert(
+          "Your details are not saved on this device. Please fill in your details first (tap the PAN card option on the home screen).",
+        );
+        return;
+      }
+      await browser.storage.session.set({
+        autofillActive: { form: session.form, done: [] },
+      });
+      window.location.href =
+        "https://onlineservices.proteantech.in/paam/endUserRegisterContact.html";
+    });
+
+  document
+    .getElementById("fy-session-discard")
+    ?.addEventListener("click", async () => {
+      if (!confirm("Discard this application? You won't be able to undo this."))
+        return;
+      await clearActiveSession();
+      container.innerHTML = "";
+    });
+}
+
 function attachPanelEventHandlers() {
+  refreshPendingSessions();
   document.getElementById("fy-pan-card")?.addEventListener("click", () => {
     trackEvent("panel_opened", "pan_card");
     showUserForm("pan_card");
@@ -1315,66 +1348,70 @@ function attachPanelEventHandlers() {
   document.getElementById("fy-operator-mode")?.addEventListener("click", () => {
     showOperatorPanel();
   });
-  document.getElementById("fy-recover-session")?.addEventListener("click", () => {
-    document.getElementById("fy-home")!.style.display = "none";
-    document.getElementById("fy-recover")!.style.display = "flex";
-  });
+  document
+    .getElementById("fy-recover-session")
+    ?.addEventListener("click", () => {
+      document.getElementById("fy-home")!.style.display = "none";
+      document.getElementById("fy-recover")!.style.display = "flex";
+    });
   document.getElementById("fy-recover-back")?.addEventListener("click", () => {
     document.getElementById("fy-recover")!.style.display = "none";
     document.getElementById("fy-home")!.style.display = "flex";
   });
-  document.getElementById("fy-recover-submit")?.addEventListener("click", async () => {
-    const input = document.getElementById("fy-recover-mobile") as HTMLInputElement;
-    const errorEl = document.getElementById("fy-recover-error") as HTMLDivElement;
-    const btn = document.getElementById("fy-recover-submit") as HTMLButtonElement;
+  document
+    .getElementById("fy-recover-submit")
+    ?.addEventListener("click", async () => {
+      const input = document.getElementById(
+        "fy-recover-mobile",
+      ) as HTMLInputElement;
+      const errorEl = document.getElementById(
+        "fy-recover-error",
+      ) as HTMLDivElement;
+      const btn = document.getElementById(
+        "fy-recover-submit",
+      ) as HTMLButtonElement;
 
-    const mobile = input.value.replace(/\D/g, "");
-    if (!mobile || mobile.length !== 10) {
-      errorEl.style.display = "block";
-      errorEl.textContent = "Enter a valid 10-digit mobile number.";
-      return;
-    }
-
-    btn.textContent = "Looking up...";
-    btn.disabled = true;
-    errorEl.style.display = "none";
-
-    try {
-      const res = await fetch(`${BACKEND_URL}/payment/resume/${mobile}`);
-      if (!res.ok) {
+      const mobile = input.value.replace(/\D/g, "");
+      if (!mobile || mobile.length !== 10) {
         errorEl.style.display = "block";
-        errorEl.textContent = "No active session found for this number. Sessions expire after 48 hours.";
-        btn.textContent = "Recover Session";
-        btn.disabled = false;
+        errorEl.textContent = "Enter a valid 10-digit mobile number.";
         return;
       }
 
-      const session = await res.json();
+      btn.textContent = "Looking up...";
+      btn.disabled = true;
+      errorEl.style.display = "none";
 
-      // Restore form data and active session to localStorage
-      if (session.form_data) {
-        await saveUserData(session.form_data);
+      try {
+        const res = await fetch(`${BACKEND_URL}/payment/resume/${mobile}`);
+        if (!res.ok) {
+          errorEl.style.display = "block";
+          errorEl.textContent =
+            "No active session found for this number. Sessions expire after 48 hours.";
+          btn.textContent = "Recover Session";
+          btn.disabled = false;
+          return;
+        }
+
+        const session = await res.json();
+
+        await setActiveSession({
+          form: session.form_type,
+          order_id: session.order_id,
+          paid_at: new Date(session.created_at).getTime(),
+          completed: false,
+        });
+
+        document.getElementById("fy-recover")!.style.display = "none";
+        document.getElementById("fy-home")!.style.display = "flex";
+        refreshPendingSessions();
+      } catch {
+        errorEl.style.display = "block";
+        errorEl.textContent = "Network error. Please check your connection.";
+        btn.textContent = "Recover Session";
+        btn.disabled = false;
       }
-      await setActiveSession({
-        form: session.form_type,
-        order_id: session.order_id,
-        paid_at: new Date(session.created_at).getTime(),
-        completed: false,
-      });
-
-      showResumeScreen({
-        form: session.form_type,
-        order_id: session.order_id,
-        paid_at: new Date(session.created_at).getTime(),
-        completed: false,
-      });
-    } catch {
-      errorEl.style.display = "block";
-      errorEl.textContent = "Network error. Please check your connection.";
-      btn.textContent = "Recover Session";
-      btn.disabled = false;
-    }
-  });
+    });
   document.getElementById("fy-pay-btn")?.addEventListener("click", async () => {
     const btn = document.getElementById("fy-pay-btn") as HTMLButtonElement;
     btn.innerHTML = `<div style="width:16px;height:16px;border:2.5px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:fy-spin 0.8s linear infinite;"></div> Processing...`;
@@ -1411,7 +1448,7 @@ function attachPanelEventHandlers() {
     ?.addEventListener("click", () => {
       browser.runtime.sendMessage({
         type: "OPEN_URL",
-        url: "https://formyaar.in/operator-login.html",
+        url: "https://formyaar.in/operator-dashboard.html",
       });
     });
 
@@ -1461,6 +1498,10 @@ function attachPanelEventHandlers() {
       const session = await getOperatorSession();
       if (session) await loadQueue(session.id);
     });
+  document.getElementById("fy-queue-back")?.addEventListener("click", () => {
+    document.getElementById("fy-operator-queue")!.style.display = "none";
+    document.getElementById("fy-home")!.style.display = "flex";
+  });
   // Operator sign out
   document
     .getElementById("fy-operator-signout")
@@ -1509,54 +1550,15 @@ export function showVerifyScreen() {
   const p = document.getElementById("formyaar-panel");
   if (p) p.style.right = "0px";
 }
-export function showResumeScreen(session: ActiveSession): void {
+function showUserForm(form: string): void {
+  // Hide all other screens
   const screens = [
     "fy-home",
     "fy-payment",
     "fy-filling",
     "fy-verify",
-    "fy-upload",
     "fy-recover",
   ];
-  screens.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = "none";
-  });
-  const resume = document.getElementById("fy-resume");
-  if (resume) resume.style.display = "flex";
-
-  // Open panel
-  const p = document.getElementById("formyaar-panel");
-  if (p) p.style.right = "0px";
-
-  // Wire up buttons (every time we show, in case DOM was rebuilt)
-  document
-    .getElementById("fy-resume-start")
-    ?.addEventListener("click", async () => {
-      // Mark autofill active so it runs on the NSDL page load
-      await browser.storage.session.set({
-        autofillActive: { form: session.form, order_id: session.order_id },
-      });
-      // Navigate to NSDL page 1 (will autofill on landing)
-      window.location.href =
-        "https://onlineservices.proteantech.in/paam/registerEndUser.html";
-    });
-
-  document
-    .getElementById("fy-resume-startover")
-    ?.addEventListener("click", async () => {
-      if (
-        !confirm("This will clear your current application progress. Continue?")
-      )
-        return;
-      await clearActiveSession();
-      document.getElementById("fy-resume")!.style.display = "none";
-      document.getElementById("fy-home")!.style.display = "flex";
-    });
-}
-function showUserForm(form: string): void {
-  // Hide all other screens
-  const screens = ["fy-home", "fy-payment", "fy-filling", "fy-verify", "fy-recover"];
   screens.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
@@ -1671,7 +1673,6 @@ function collectFormData(): UserData {
     date_of_birth: get("date_of_birth"),
     email: get("email"),
     mobile: get("mobile"),
-    aadhaar_number: "",
     aadhaar_last_4: get("aadhaar_last_4").replace(/\D/g, "").slice(0, 4),
     gender: getRadio("gender") as "M" | "F" | "T" | "",
     father_first_name: get("father_first_name").toUpperCase(),
@@ -1730,7 +1731,6 @@ export async function showOperatorPanel(): Promise<void> {
     "fy-filling",
     "fy-verify",
     "fy-upload",
-    "fy-resume",
     "fy-recover",
   ];
   screens.forEach((id) => {
@@ -1750,7 +1750,7 @@ export async function showOperatorPanel(): Promise<void> {
 }
 function isSubscriptionActive(session: OperatorSession): boolean {
   if (session.subscription_status !== "active") return false;
-  if (!session.subscription_expires_at) return false;
+  if (!session.subscription_expires_at) return true;
   return new Date(session.subscription_expires_at) > new Date();
 }
 async function loadQueue(operatorId: string): Promise<void> {

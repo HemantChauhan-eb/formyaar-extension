@@ -1,0 +1,512 @@
+{
+  "form": "pan_card",
+  "version": 5,
+  "site": "onlineservices.proteantech.in",
+  "steps": [
+    {
+      "step": 1,
+      "page_pattern": "endUserRegisterContact",
+      "page": "registerEndUser",
+      "fields": [
+        {
+          "field_id": "application_type",
+          "type": "select",
+          "selector": "#type",
+          "value_source": "static",
+          "static_value": "49A",
+          "match_by": "value",
+          "explanation": "PAN application type — New PAN for Indian Citizens."
+        },
+        {
+          "field_id": "applicant_category",
+          "type": "select",
+          "selector": "#cat_applicant1",
+          "value_source": "static",
+          "static_value": "P",
+          "match_by": "value",
+          "explanation": "Applicant category — Individual."
+        },
+        {
+          "field_id": "first_name",
+          "type": "text",
+          "selector": "#f_name_end",
+          "value_source": "user.first_name",
+          "explanation": "Your first name as per Aadhaar."
+        },
+        {
+          "field_id": "middle_name",
+          "type": "text",
+          "selector": "#m_name_end",
+          "value_source": "user.middle_name",
+          "explanation": "Your middle name as per Aadhaar."
+        },
+        {
+          "field_id": "last_name",
+          "type": "text",
+          "selector": "#l_name_end",
+          "value_source": "user.last_name",
+          "explanation": "Your last name as per Aadhaar."
+        },
+        {
+          "field_id": "date_of_birth",
+          "type": "text",
+          "selector": "#date_of_birth_reg",
+          "value_source": "user.date_of_birth",
+          "explanation": "Your date of birth in DD/MM/YYYY format."
+        },
+        {
+          "field_id": "email",
+          "type": "text",
+          "selector": "#email_id2",
+          "value_source": "user.email",
+          "explanation": "Your email — your ePAN will be sent here."
+        },
+        {
+          "field_id": "mobile",
+          "type": "text",
+          "selector": "#rvContactNo",
+          "value_source": "user.mobile",
+          "explanation": "Your 10-digit mobile number."
+        },
+        {
+          "field_id": "consent",
+          "type": "checkbox",
+          "selector": "#consent",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Consent to data processing."
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "page_pattern": "endUserLogin",
+      "page": "tokenPage",
+      "is_token_page": true,
+      "stepy_index": -1,
+      "stop_message": "Existing application found. Selecting your previous token.",
+      "fields": [
+        {
+          "field_id": "existing_token",
+          "type": "radio",
+          "selector": "input.tokenButton",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Select existing token to resume previous application."
+        },
+        {
+          "field_id": "use_token_btn",
+          "type": "button_click",
+          "selector": "#submitForm11",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Click Use above Token to proceed."
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "page_pattern": "endUserLogin",
+      "page": "endUserLogin",
+      "stepy_index": 1,
+      "stop_message": "Personal details filled. Please verify and click Next.",
+      "fields": [
+        {
+          "field_id": "submission_mode_ekyc",
+          "type": "radio",
+          "selector": "#eVerfication4",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Aadhaar-based eKYC mode."
+        },
+        {
+          "field_id": "epan_option",
+          "type": "radio",
+          "selector": "#appli_epan_op1_y",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Get both physical PAN card and digital ePAN."
+        },
+        {
+          "field_id": "aadhaar_last_4",
+          "type": "text",
+          "selector": "#aadhaarNo_2",
+          "value_source": "user.aadhaar_last_4",
+          "explanation": "Last 4 digits of your Aadhaar number."
+        },
+        {
+          "field_id": "ekyc_photo_consent",
+          "type": "select",
+          "selector": "#consentEkyc",
+          "value_source": "static",
+          "static_value": "Y",
+          "match_by": "value",
+          "explanation": "Consent to print your Aadhaar photo on PAN card."
+        },
+        {
+          "field_id": "first_name_step2",
+          "type": "text",
+          "selector": "#f_name",
+          "value_source": "user.first_name",
+          "explanation": "First name as per Aadhaar."
+        },
+        {
+          "field_id": "middle_name_step2",
+          "type": "text",
+          "selector": "#m_name",
+          "value_source": "user.middle_name",
+          "explanation": "Middle name as per Aadhaar."
+        },
+        {
+          "field_id": "last_name_step2",
+          "type": "text",
+          "selector": "#l_name",
+          "value_source": "user.last_name",
+          "explanation": "Last name as per Aadhaar."
+        },
+        {
+          "field_id": "gender",
+          "type": "select",
+          "selector": "#gender",
+          "value_source": "user.gender",
+          "match_by": "value",
+          "explanation": "Your gender as per Aadhaar."
+        },
+        {
+          "field_id": "father_first_name",
+          "type": "text",
+          "selector": "#faf_name",
+          "value_source": "user.father_first_name",
+          "explanation": "Father's first name."
+        },
+        {
+          "field_id": "father_middle_name",
+          "type": "text",
+          "selector": "#fam_name",
+          "value_source": "user.father_middle_name",
+          "explanation": "Father's middle name."
+        },
+        {
+          "field_id": "father_last_name",
+          "type": "text",
+          "selector": "#fal_name",
+          "value_source": "user.father_last_name",
+          "explanation": "Father's last name."
+        },
+        {
+          "field_id": "mother_first_name",
+          "type": "text",
+          "selector": "#mof_name",
+          "value_source": "user.mother_first_name",
+          "explanation": "Mother's first name."
+        },
+        {
+          "field_id": "mother_middle_name",
+          "type": "text",
+          "selector": "#mom_name",
+          "value_source": "user.mother_middle_name",
+          "explanation": "Mother's middle name."
+        },
+        {
+          "field_id": "mother_last_name",
+          "type": "text",
+          "selector": "#mol_name",
+          "value_source": "user.mother_last_name",
+          "explanation": "Mother's last name."
+        },
+        {
+          "field_id": "parent_on_card_father",
+          "type": "radio",
+          "selector": "#parent_father",
+          "value_source": "user.parent_on_card_is_father",
+          "explanation": "Father's name on PAN card."
+        },
+        {
+          "field_id": "parent_on_card_mother",
+          "type": "radio",
+          "selector": "#parent_mother",
+          "value_source": "user.parent_on_card_is_mother",
+          "explanation": "Mother's name on PAN card."
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "page_pattern": "endUserLogin",
+      "page": "endUserLogin",
+      "stepy_index": 2,
+      "stop_message": "Contact details filled. Please select your source of income, then click Next.",
+      "fields": [
+        {
+          "field_id": "income_salary",
+          "type": "checkbox",
+          "selector": "#sal_id",
+          "value_source": "user.income_source",
+          "static_value": "salary",
+          "explanation": "Source of income — Salary."
+        },
+        {
+          "field_id": "income_business",
+          "type": "checkbox",
+          "selector": "#buss",
+          "value_source": "user.income_source",
+          "static_value": "business",
+          "explanation": "Source of income — Business/Profession."
+        },
+        {
+          "field_id": "income_house",
+          "type": "checkbox",
+          "selector": "#inc_house",
+          "value_source": "user.income_source",
+          "static_value": "house_property",
+          "explanation": "Source of income — House property."
+        },
+        {
+          "field_id": "income_other",
+          "type": "checkbox",
+          "selector": "#inc_other_sources",
+          "value_source": "user.income_source",
+          "static_value": "other_sources",
+          "explanation": "Source of income — Other sources."
+        },
+        {
+          "field_id": "income_capital",
+          "type": "checkbox",
+          "selector": "#capital_gains",
+          "value_source": "user.income_source",
+          "static_value": "capital_gains",
+          "explanation": "Source of income — Capital gains."
+        },
+        {
+          "field_id": "income_no_income",
+          "type": "checkbox",
+          "selector": "#no_income",
+          "value_source": "user.income_source",
+          "static_value": "no_income",
+          "explanation": "Source of income — No income."
+        },
+        {
+          "field_id": "isd_code",
+          "type": "select",
+          "selector": "#tel_num_isdcode",
+          "value_source": "static",
+          "static_value": "91",
+          "match_by": "value",
+          "explanation": "Country code — India (91)."
+        },
+        {
+          "field_id": "residential_status_resident",
+          "type": "radio",
+          "selector": "#residential_status_r",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Residential status — Resident."
+        },
+
+        {
+          "field_id": "passport_num",
+          "type": "text",
+          "selector": "#passport_num",
+          "value_source": "user.passport_number",
+          "explanation": "Passport number (optional)."
+        },
+        {
+          "field_id": "tin_num",
+          "type": "text",
+          "selector": "#tin_num",
+          "value_source": "user.tin_number",
+          "explanation": "TIN number (optional)."
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "page_pattern": "endUserLogin",
+      "page": "endUserLogin",
+      "stepy_index": 3,
+      "stop_message": "AO Code step. Select your state and city, then click Fetch.",
+      "fields": [
+        {
+          "field_id": "ao_indian_citizen",
+          "type": "radio",
+          "selector": "#aoSelection",
+          "value_source": "user.is_defence",
+          "explanation": "AO category — Indian Citizens (or Defence if applicable).",
+          "defence_selector": "#def_aoCode"
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "page_pattern": "endUserLogin",
+      "page": "endUserLogin",
+      "stepy_index": 4,
+      "stop_message": "Almost done! Review and click Submit.",
+      "fields": [
+        {
+          "field_id": "poid_code",
+          "type": "select",
+          "selector": "#poidCode",
+          "value_source": "static",
+          "static_value": "AADHAAR Card issued by the Unique Identification Authority of India",
+          "match_by": "text",
+          "explanation": "Proof of identity — Aadhaar."
+        },
+        {
+          "field_id": "poa_code",
+          "type": "select",
+          "selector": "#poaCode",
+          "value_source": "static",
+          "static_value": "AADHAAR Card issued by the Unique Identification Authority of India",
+          "match_by": "text",
+          "explanation": "Proof of address — Aadhaar."
+        },
+        {
+          "field_id": "proof_dob_code",
+          "type": "select",
+          "selector": "#proof_dob_code",
+          "value_source": "user.proof_of_dob",
+          "match_by": "text",
+          "explanation": "Proof of date of birth."
+        },
+        {
+          "field_id": "designation",
+          "type": "text",
+          "selector": "#designation",
+          "value_source": "static",
+          "static_value": "SELF",
+          "explanation": "Designation — Self."
+        },
+        {
+          "field_id": "capacity_verifier",
+          "type": "select",
+          "selector": "#capacityVerifier",
+          "value_source": "static",
+          "static_value": "01",
+          "match_by": "value",
+          "explanation": "Declaration capacity — Self."
+        },
+        {
+          "field_id": "place",
+          "type": "text",
+          "selector": "#verifierPlace",
+          "value_source": "user.place",
+          "explanation": "City where you're filing the application."
+        }
+      ]
+    },
+    {
+      "step": 6,
+      "page_pattern": "fullFormSave",
+      "page": "fullFormSave",
+      "stop_message": "Review complete. Proceeding automatically.",
+      "fields": [
+        {
+          "field_id": "confirm_submit",
+          "type": "button_click",
+          "selector": "#confirmSubmit",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Proceed to payment."
+        }
+      ]
+    },
+    {
+      "step": 7,
+      "page_pattern": "fullFormSubmit",
+      "page": "fullFormSubmit",
+      "stop_message": "Agreeing to terms and proceeding to payment.",
+      "fields": [
+        {
+          "field_id": "agree_terms",
+          "type": "radio",
+          "selector": "#agree",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Agree to terms of service."
+        },
+        {
+          "field_id": "proceed_to_payment",
+          "type": "button_click",
+          "selector": "#pay",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Proceed to payment."
+        }
+      ]
+    },
+    {
+      "step": 8,
+      "page_pattern": "ddSave",
+      "page": "ddSave",
+      "guidance_only": true,
+      "stop_message": "Please review the fee and click Pay Confirm to proceed.",
+      "fields": [
+        {
+          "field_id": "pay_confirm",
+          "type": "button_click",
+          "selector": "#payConfirm",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Confirm payment to proceed to the payment gateway."
+        }
+      ]
+    },
+    {
+      "step": 9,
+      "page_pattern": "paytmResponseAfterStatus",
+      "page": "paytmResponseAfterStatus",
+      "stop_message": "Payment successful. Continuing to eKYC.",
+      "fields": [
+        {
+          "field_id": "continue_payment",
+          "type": "button_click",
+          "selector": "#continuePayment",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Continue after payment success."
+        }
+      ]
+    },
+    {
+      "step": 10,
+      "page_pattern": "continuePayment",
+      "page": "continuePayment",
+      "stop_message": "Aadhaar consent ticked. Please click Authenticate and complete the OTP.",
+      "fields": [
+        {
+          "field_id": "consent",
+          "type": "checkbox",
+          "selector": "#consent",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Consent to Aadhaar authentication for eKYC."
+        },
+        {
+          "field_id": "authenticate",
+          "type": "button_click",
+          "selector": "#submitAadhaarFullForm",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Click Authenticate to trigger OTP."
+        }
+      ]
+    },
+    {
+      "step": 11,
+      "page_pattern": "proceedAadhaarDetails",
+      "page": "proceedAadhaarDetails",
+      "stop_message": "Proceeding to OTP authentication.",
+      "fields": [
+        {
+          "field_id": "submit_esign",
+          "type": "button_click",
+          "selector": "#submitEsign",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Continue with e-KYC to proceed to OTP."
+        }
+      ]
+    }
+  ]
+}
