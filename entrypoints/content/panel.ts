@@ -288,7 +288,7 @@ function renderHomeScreen(): string {
   }).join("");
 
   return `
-    <div id="fy-home" class="fy-screen" style="display:flex;flex-direction:column;height:100%;">
+    <div id="fy-home" class="fy-screen" style="display:flex;flex-direction:column;height:100%;position:relative;">
       <div style="position:relative;background:#000080;overflow:hidden;flex-shrink:0;">
         <div style="position:absolute;right:-8px;top:-8px;pointer-events:none;opacity:0.07;">
           <svg width="72" height="72" viewBox="0 0 72 72">
@@ -365,7 +365,7 @@ function renderHomeScreen(): string {
             <span style="font-size:11px;color:#50507a;font-weight:500;">Your details are <strong style="color:#0a0a2e;">saved only on your device</strong> — never on our servers</span>
           </div>
         </div>
-        <div style="margin-top:12px;text-align:center;display:flex;gap:16px;justify-content:center;">
+        <div style="margin-top:12px;text-align:center;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
           <button id="fy-operator-mode" style="background:transparent;border:none;color:#94a3b8;font-size:11px;cursor:pointer;font-family:inherit;text-decoration:underline;">
             Cafe operator? Sign in here
           </button>
@@ -378,6 +378,15 @@ function renderHomeScreen(): string {
           <p style="font-size:9.5px;color:#aaa;line-height:1.5;font-weight:400;text-align:left;">Not affiliated with any government entity. FormYaar is a private service that helps you fill forms with ease. Anonymous usage events are collected to improve the service.</p>
         </div>
       </div>
+      <button id="fy-clear-data" title="Clear my data" style="position:absolute;bottom:16px;right:16px;width:26px;height:26px;border-radius:30%;background:#fff0f0;border:1.5px solid #fca5a5;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(239,68,68,0.15);padding:0;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/>
+          <path d="M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </button>
     </div>
   `;
 }
@@ -1358,6 +1367,24 @@ function attachPanelEventHandlers() {
     document.getElementById("fy-recover")!.style.display = "none";
     document.getElementById("fy-home")!.style.display = "flex";
   });
+  document
+    .getElementById("fy-clear-data")
+    ?.addEventListener("click", async () => {
+      const confirmed = window.confirm(
+        "This will delete all your saved form details from this device. Continue?",
+      );
+      if (!confirmed) return;
+      await Promise.all([
+        browser.storage.local.remove(["fy_user_data", "fy_active_session"]),
+        browser.storage.session.remove([
+          "autofillActive",
+          "aadhaar_last_4",
+          "passport_number",
+          "tin_number",
+        ]),
+      ]);
+      refreshPendingSessions();
+    });
   document
     .getElementById("fy-recover-submit")
     ?.addEventListener("click", async () => {
