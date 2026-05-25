@@ -110,6 +110,7 @@ export default defineBackground(() => {
         }
 
         const paymentUrl = `https://formyaar.in/pay?order_id=${message.order_id}`;
+
         browser.tabs.create({ url: paymentUrl });
 
         // Store pending payment and start alarm

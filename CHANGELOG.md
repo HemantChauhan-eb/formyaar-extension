@@ -1,5 +1,15 @@
 # FormYaar Extension — Changelog
 
+## [0.4.8] — 2026-05-25
+
+### Added
+- Clear data (trash) button on home screen — wipes `fy_user_data`, `fy_active_session`, and session-only sensitive fields in one tap with confirmation prompt
+
+### Changed
+- Real Razorpay payment flow now live and tested end-to-end
+- `flex-wrap` on home screen footer action buttons to prevent overflow on narrow panels
+- `position: relative` on home container to anchor the clear-data button
+
 ## [0.4.5] — 2026-05-24
 
 ### Added
