@@ -1901,7 +1901,7 @@ function showReviewScreen(sub: any): void {
       body: JSON.stringify({ status: "filling" }),
     });
     await browser.storage.session.set({
-      autofillActive: { form: sub.form_type, submission_id: sub.id },
+      autofillActive: { form: sub.form_type, submission_id: sub.id, done: [] },
     });
     document.getElementById("fy-operator-review")!.style.display = "none";
     runAutofillFromSubmission(sub);

@@ -1,5 +1,11 @@
 # FormYaar Extension — Changelog
 
+## [0.4.9] — 2026-05-27
+
+### Fixed
+- Operator submission flow set `autofillActive` without a `done` array — caused a crash on every page load (`TypeError: Cannot read properties of undefined (reading 'includes')`), silently breaking auto-run for the token page and first step of `endUserLogin.html`
+- Token page (`input.tokenButton`) was skipped by the URL deduplication logic because it reloads at the same URL as step 1 — added DOM-state detection to always run autofill on the token page regardless of `done`
+
 ## [0.4.8] — 2026-05-25
 
 ### Added

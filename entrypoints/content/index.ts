@@ -108,10 +108,14 @@ export default defineContentScript({
         const active = result.autofillActive as { form: string; done: string[] } | undefined;
         if (active) {
           const pageKey = window.location.pathname;
-          if (!active.done.includes(pageKey)) {
-            await browser.storage.session.set({
-              autofillActive: { ...active, done: [...active.done, pageKey] },
-            });
+          const isTokenPage = !!document.querySelector("input.tokenButton");
+          const done = active.done ?? [];
+          if (isTokenPage || !done.includes(pageKey)) {
+            if (!isTokenPage) {
+              await browser.storage.session.set({
+                autofillActive: { ...active, done: [...done, pageKey] },
+              });
+            }
             setTimeout(() => runAutofill(active.form), 1500);
           }
         }

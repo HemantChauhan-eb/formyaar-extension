@@ -1,4 +1,4 @@
-export const VERSION = "0.4.8";
+export const VERSION = "0.4.9";
 
 export const BACKEND_URL =
   (import.meta.env.VITE_BACKEND_URL as string) ??
