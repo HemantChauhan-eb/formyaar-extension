@@ -1056,6 +1056,22 @@ function renderUserFormScreen(form: string, data: UserData): string {
             </div>
           </label>
 
+          ${data.is_defence ? `
+          <label class="fy-userform-field">
+            <span>Defence branch</span>
+            <div class="fy-userform-radios">
+              <label class="fy-userform-radio">
+                <input type="radio" name="defence_branch" data-field="defence_branch" value="army" ${data.defence_branch === "army" ? "checked" : ""}>
+                <span>Army</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="defence_branch" data-field="defence_branch" value="air_force" ${data.defence_branch === "air_force" ? "checked" : ""}>
+                <span>Air Force</span>
+              </label>
+            </div>
+          </label>
+          ` : ""}
+
           <label class="fy-userform-field">
             <span>Passport number</span>
             <input type="text" data-field="passport_number" value="${escapeHtml(data.passport_number)}" placeholder="(optional)" autocomplete="off">
@@ -1205,22 +1221,22 @@ function createTab() {
     t.style.boxShadow = "-6px 0 24px rgba(0,0,128,0.5)";
     setTimeout(() => {
       t.style.transition = "transform 0.06s ease";
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(-4px)";
+      t.style.transform = "translateY(-50%) scale(1.4) translateX(-8px)";
     }, 220);
     setTimeout(() => {
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(4px)";
+      t.style.transform = "translateY(-50%) scale(1.4) translateX(8px)";
     }, 280);
     setTimeout(() => {
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(-4px)";
+      t.style.transform = "translateY(-50%) scale(1.4) translateX(-8px)";
     }, 340);
     setTimeout(() => {
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(4px)";
+      t.style.transform = "translateY(-50%) scale(1.4) translateX(8px)";
     }, 400);
     setTimeout(() => {
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(-3px)";
+      t.style.transform = "translateY(-50%) scale(1.4) translateX(-6px)";
     }, 460);
     setTimeout(() => {
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(3px)";
+      t.style.transform = "translateY(-50%) scale(1.4) translateX(6px)";
     }, 520);
     setTimeout(() => {
       t.style.transform = "translateY(-50%) scale(1.4) translateX(0)";
@@ -1713,6 +1729,7 @@ function collectFormData(): UserData {
     aadhaar_pin_code: get("aadhaar_pin_code"),
     place: get("place").toUpperCase(),
     is_defence: getRadio("is_defence") === "true",
+    defence_branch: getRadio("defence_branch") as UserData["defence_branch"],
     passport_number: get("passport_number"),
     tin_number: get("tin_number"),
     proof_of_dob: get("proof_of_dob"),

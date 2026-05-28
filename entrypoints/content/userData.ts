@@ -28,6 +28,7 @@ export interface UserData {
   aadhaar_pin_code: string;
   place: string;
   is_defence: boolean;
+  defence_branch: "army" | "air_force" | "";
   passport_number: string;
   tin_number: string;
   proof_of_dob: string;
@@ -61,6 +62,7 @@ export const EMPTY_USER_DATA: UserData = {
   aadhaar_pin_code: "",
   place: "",
   is_defence: false,
+  defence_branch: "",
   passport_number: "",
   tin_number: "",
   proof_of_dob: "",
