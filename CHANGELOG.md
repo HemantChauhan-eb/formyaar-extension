@@ -1,5 +1,15 @@
 # FormYaar Extension — Changelog
 
+## [0.5.0] — 2026-05-28
+
+### Added
+- Defence personnel AO code selection — Army (PNE/W/55/3) and Air Force (DEL/W/72/2) hardcoded; filled directly based on `defence_branch` when `is_defence` is true
+- Defence branch radio selector in user data form (shown only when "Defence personnel" is checked)
+
+### Changed
+- AO code step completely reworked: backend already resolves the exact AO code from city configs (`/pincode/:pin`), so the state dropdown → city dropdown → Fetch button → table selection dance is gone — values are written directly into `#area_code`, `#ao_type`, `#range_code`, `#ao_num`
+- Shake animation on F·Y tab icon: amplitude doubled (±4px → ±8px) and interval halved (25s → 12s) for more visibility
+
 ## [0.4.9] — 2026-05-27
 
 ### Fixed

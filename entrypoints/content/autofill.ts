@@ -128,11 +128,19 @@ export async function runAutofill(form: string = "pan_card") {
 
   trackEvent("guide_completed", form);
 
-  // Auto select AO code on step 4
+  // Fill AO code fields directly on step 4
   if ((step as any).stepy_index === 3) {
     const isDefence =
       userData.is_defence === true || (userData.is_defence as any) === "true";
-    if (!isDefence) {
+    if (isDefence) {
+      const DEFENCE_AO: Record<string, AOCode> = {
+        army:      { area_code: "PNE", ao_type: "W", range_code: "55", ao_number: "3" },
+        air_force: { area_code: "DEL", ao_type: "W", range_code: "72", ao_number: "2" },
+      };
+      const branch = (userData as any).defence_branch as string;
+      const target = DEFENCE_AO[branch];
+      if (target) fillAOCodeFields(target);
+    } else {
       await autoFillAOCode(userData.aadhaar_pin_code);
     }
   }
@@ -415,174 +423,30 @@ interface AOCode {
   ao_number: string;
 }
 
-async function autoSelectAOCode(target?: AOCode): Promise<boolean> {
-  return new Promise((resolve) => {
-    // Wait for table to populate after fetch
-    const observer = new MutationObserver(() => {
-      const table = document.getElementById("table_id");
-      if (!table) return;
-
-      const rows = table.querySelectorAll("tr");
-      if (rows.length <= 1) return;
-
-      observer.disconnect();
-
-      // If we have a known AO code, try to match the exact row first
-      if (target) {
-        for (const row of rows) {
-          const cells = row.querySelectorAll("td");
-          if (cells.length < 2) continue;
-          const rowText = Array.from(cells).map(c => c.textContent?.trim().toUpperCase() ?? "").join("|");
-          if (
-            rowText.includes(target.area_code.toUpperCase()) &&
-            rowText.includes(target.range_code) &&
-            rowText.includes(target.ao_number)
-          ) {
-            const radio = row.querySelector("input[type='radio']") as HTMLInputElement | null;
-            if (radio) {
-              radio.checked = true;
-              radio.dispatchEvent(new Event("change", { bubbles: true }));
-              radio.dispatchEvent(new Event("click", { bubbles: true }));
-              console.log("FormYaar: AO code matched by config:", target);
-              resolve(true);
-              return;
-            }
-          }
-        }
-        console.warn("FormYaar: target AO code not found in table, falling back to first valid row");
-      }
-
-      // Fallback: pick first non-exemption, non-company row
-      for (const row of rows) {
-        const cells = row.querySelectorAll("td");
-        if (cells.length < 2) continue;
-
-        const description = cells[1]?.textContent?.toUpperCase() || "";
-        const additionalDesc = cells[2]?.textContent?.toUpperCase() || "";
-
-        if (description.includes("EXEMPTION")) continue;
-        if (additionalDesc.includes("EXEMPTION")) continue;
-        if (
-          additionalDesc.includes("COMPANY CASES") &&
-          !additionalDesc.includes("NON COMPANY")
-        )
-          continue;
-
-        const radio = row.querySelector("input[type='radio']") as HTMLInputElement | null;
-        if (radio) {
-          radio.checked = true;
-          radio.dispatchEvent(new Event("change", { bubbles: true }));
-          radio.dispatchEvent(new Event("click", { bubbles: true }));
-          console.log("FormYaar: AO code selected (fallback):", description);
-          resolve(true);
-          return;
-        }
-      }
-
-      resolve(false);
-    });
-
-    observer.observe(document.body, { subtree: true, childList: true });
-
-    setTimeout(() => {
-      observer.disconnect();
-      resolve(false);
-    }, 10000);
-  });
+function fillAOCodeFields(ao: AOCode): void {
+  const map: [string, string][] = [
+    ["area_code", ao.area_code],
+    ["ao_type",   ao.ao_type],
+    ["range_code", ao.range_code],
+    ["ao_num",    ao.ao_number],
+  ];
+  for (const [id, value] of map) {
+    const el = document.getElementById(id) as HTMLInputElement | null;
+    if (el) fillText(el, value);
+  }
 }
+
 async function autoFillAOCode(pinCode: string): Promise<boolean> {
   try {
-    // Step 1: Get state, city, and resolved AO code (if locally known) from backend
     const res = await fetch(`${BACKEND_URL}/pincode/${pinCode}`);
     if (!res.ok) return false;
-    const { state, city, ao_code } = (await res.json()) as {
-      state: string;
-      city: string;
-      ao_code?: AOCode;
-    };
-
-    // Step 2: Wait for state dropdown to be populated (radio click needs time to propagate)
-    const stateSelect = await new Promise<HTMLSelectElement | null>((resolve) => {
-      const check = () => document.getElementById("state_aoCode") as HTMLSelectElement | null;
-      const el = check();
-      if (el && el.options.length > 1) { resolve(el); return; }
-      const observer = new MutationObserver(() => {
-        const el = check();
-        if (el && el.options.length > 1) { observer.disconnect(); resolve(el); }
-      });
-      observer.observe(document.body, { subtree: true, childList: true, attributes: true });
-      setTimeout(() => { observer.disconnect(); resolve(check()); }, 5000);
-    });
-    if (!stateSelect || stateSelect.options.length <= 1) return false;
-
-    const stateOption = Array.from(stateSelect.options).find(
-      (o) => o.text.trim().toUpperCase() === state.toUpperCase(),
-    );
-    if (!stateOption) {
-      console.warn("FormYaar: state not found in dropdown:", state);
+    const { ao_code } = (await res.json()) as { state: string; city: string; ao_code?: AOCode };
+    if (!ao_code) {
+      console.warn("FormYaar: no AO code in backend response for pincode", pinCode);
       return false;
     }
-
-    stateSelect.value = stateOption.value;
-    stateSelect.dispatchEvent(new Event("change", { bubbles: true }));
-    const win = window as any;
-    if (win.$) win.$("#state_aoCode").val(stateOption.value).trigger("change");
-
-    // Step 3: Wait for city dropdown to populate via AJAX
-    await new Promise<void>((resolve) => {
-      const observer = new MutationObserver(() => {
-        const citySelect = document.getElementById(
-          "city_aoCode",
-        ) as HTMLSelectElement | null;
-        if (citySelect && citySelect.options.length > 1) {
-          observer.disconnect();
-          resolve();
-        }
-      });
-      observer.observe(document.body, { subtree: true, childList: true });
-      setTimeout(() => {
-        observer.disconnect();
-        resolve();
-      }, 5000);
-    });
-
-    // Step 4: Select city
-    const citySelect = document.getElementById(
-      "city_aoCode",
-    ) as HTMLSelectElement | null;
-    if (!citySelect) return false;
-
-    const cityOption = Array.from(citySelect.options).find(
-      (o) => o.text.trim().toUpperCase() === city.toUpperCase(),
-    );
-    if (!cityOption) {
-      console.warn("FormYaar: city not found in dropdown:", city);
-      // Try partial match
-      const partial = Array.from(citySelect.options).find(
-        (o) =>
-          o.text.trim().toUpperCase().includes(city.toUpperCase()) ||
-          city.toUpperCase().includes(o.text.trim().toUpperCase()),
-      );
-      if (!partial) return false;
-      citySelect.value = partial.value;
-      citySelect.dispatchEvent(new Event("change", { bubbles: true }));
-      if (win.$) win.$("#city_aoCode").val(partial.value).trigger("change");
-    } else {
-      citySelect.value = cityOption.value;
-      citySelect.dispatchEvent(new Event("change", { bubbles: true }));
-      if (win.$) win.$("#city_aoCode").val(cityOption.value).trigger("change");
-    }
-
-    // Step 5: Click Fetch button
-    await sleep(800);
-    const fetchBtn = document.getElementById(
-      "fetchAOList",
-    ) as HTMLButtonElement | null;
-    if (!fetchBtn) return false;
-    fetchBtn.click();
-
-    // Step 6: Wait for table and auto-select — prefer matching known AO code
-    return await autoSelectAOCode(ao_code);
+    fillAOCodeFields(ao_code);
+    return true;
   } catch (err) {
     console.error("FormYaar: AO code auto-fill failed", err);
     trackEvent("ao_code_failed", "pan_card", {
