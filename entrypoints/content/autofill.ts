@@ -153,7 +153,7 @@ export async function runAutofill(form: string = "pan_card") {
     showVerifyScreen();
   }
 }
-export async function runAutofillFromSubmission(sub: any): Promise<void> {
+export async function prepareOperatorSubmission(sub: any): Promise<void> {
   const incomeSources: string[] = (sub.income_source ?? "")
     .split(",")
     .map((s: string) => s.trim())
@@ -185,12 +185,14 @@ export async function runAutofillFromSubmission(sub: any): Promise<void> {
     income_source: (incomeSources[0] as UserData["income_source"]) ?? "",
   };
 
-  // Remove the old window override — use session storage so it survives navigation
   delete (window as any).__fy_operator_userdata;
 
   const { setOperatorSubmission } = await import("./userData");
   await setOperatorSubmission(userData);
+}
 
+export async function runAutofillFromSubmission(sub: any): Promise<void> {
+  await prepareOperatorSubmission(sub);
   await runAutofill(sub.form_type);
 }
 // ─── Fetch config — backend first for live updates, bundled as fallback ─

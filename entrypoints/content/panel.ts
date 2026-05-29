@@ -13,7 +13,7 @@ import {
   signInWithToken,
   OperatorSession,
 } from "./supabase";
-import { runAutofillFromSubmission } from "./autofill";
+import { runAutofillFromSubmission, prepareOperatorSubmission } from "./autofill";
 import { trackEvent } from "./telemetry";
 import {
   getUserData,
@@ -26,6 +26,79 @@ import {
 } from "./userData";
 import { renderUploadScreen, attachUploadScreenHandlers } from "./uploadScreen";
 let currentClickHandler: ((e: MouseEvent) => void) | null = null;
+let maintenanceCountdownInterval: ReturnType<typeof setInterval> | null = null;
+
+function renderMaintenanceScreen(backAt: string | null): string {
+  return `
+    <style>
+      @keyframes fy-stripe-scroll {
+        from { background-position: 0 0; }
+        to { background-position: 40px 0; }
+      }
+      .fy-maint-stripe {
+        height: 34px;
+        flex-shrink: 0;
+        background: repeating-linear-gradient(
+          -45deg,
+          #FFD700 0px, #FFD700 24px,
+          #333 24px, #333 48px
+        );
+      }
+      .fy-maint-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 36px 28px;
+        text-align: center;
+      }
+      .fy-maint-timer-box {
+        width: 100%;
+        background: #eef0fa;
+        border: 1.5px solid #000080;
+        border-radius: 14px;
+        padding: 18px 24px;
+        margin-top: 32px;
+      }
+    </style>
+    <div class="fy-maint-stripe"></div>
+    <div class="fy-maint-body">
+      <div style="font-size:56px;line-height:1;margin-bottom:24px;">🚧</div>
+      <div style="font-size:10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:#b8920a;margin-bottom:10px;">Under Maintenance</div>
+      <div style="font-size:20px;font-weight:800;color:#1a1a18;line-height:1.3;margin-bottom:16px;">FormYaar is getting better</div>
+      <div style="font-size:12.5px;color:#64748b;line-height:1.75;max-width:268px;">To provide you the latest and most updated services, we've temporarily paused. We'll be right back.</div>
+      <div class="fy-maint-timer-box">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#000080;margin-bottom:10px;">Back in</div>
+        <div id="fy-maint-countdown" style="font-size:36px;font-weight:800;color:#1a1a18;letter-spacing:4px;font-variant-numeric:tabular-nums;">--:--:--</div>
+      </div>
+    </div>
+    <div class="fy-maint-stripe"></div>
+  `;
+}
+
+function startMaintenanceCountdown(backAt: string | null) {
+  const update = () => {
+    const el = document.getElementById("fy-maint-countdown");
+    if (!el) return;
+    if (!backAt) { el.textContent = "--:--:--"; return; }
+    const diff = new Date(backAt).getTime() - Date.now();
+    if (diff <= 0) {
+      el.textContent = "Soon";
+      if (maintenanceCountdownInterval) {
+        clearInterval(maintenanceCountdownInterval);
+        maintenanceCountdownInterval = null;
+      }
+      return;
+    }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+  update();
+  maintenanceCountdownInterval = setInterval(update, 1000);
+}
 
 export function removeTab() {
   const t = document.getElementById("fy-tab");
@@ -35,10 +108,11 @@ export function removeTab() {
   t.remove();
 }
 
-export function showContextualBanner() {
+export async function showContextualBanner() {
   ensureFontsLoaded();
   if (document.getElementById("formyaar-panel")) return;
 
+  // Create panel immediately — autofill screen transitions depend on this existing at page load
   const panel = document.createElement("div");
   panel.id = "formyaar-panel";
   panel.style.cssText = `
@@ -56,17 +130,29 @@ export function showContextualBanner() {
     flex-direction: column;
     overflow: hidden;
   `;
-
   panel.innerHTML = renderPanelHTML();
   document.body.appendChild(panel);
 
-  setTimeout(() => {
-    panel.style.right = "0px";
-  }, 100);
+  setTimeout(() => { panel.style.right = "0px"; }, 100);
   trackEvent("banner_shown");
   createTab();
   attachClickOutsideHandler();
   attachPanelEventHandlers();
+
+  // Check maintenance in background — swap content if ON (doesn't block autofill)
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 2500);
+    const res = await fetch(`${BACKEND_URL}/maintenance/status`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.enabled) {
+        panel.innerHTML = renderMaintenanceScreen(data.back_at ?? null);
+        startMaintenanceCountdown(data.back_at ?? null);
+      }
+    }
+  } catch { /* treat fetch failure as not in maintenance */ }
 }
 
 function renderPanelHTML(): string {
@@ -1270,6 +1356,8 @@ function attachClickOutsideHandler() {
     const p = document.getElementById("formyaar-panel");
     const t = document.getElementById("fy-tab");
     if (!p || !t) return;
+    const filling = document.getElementById("fy-filling");
+    if (filling && filling.style.display !== "none") return;
     if (
       p.style.right === "0px" &&
       document.contains(e.target as Node) &&
@@ -1766,6 +1854,27 @@ export function updateFillProgress(
     })
     .join("");
 }
+const OP_INPROGRESS_KEY = "fy_op_inprogress";
+
+async function getInProgressSubmissions(): Promise<any[]> {
+  const result = await browser.storage.local.get(OP_INPROGRESS_KEY);
+  return (result[OP_INPROGRESS_KEY] as any[]) ?? [];
+}
+
+async function addInProgressSubmission(sub: any): Promise<void> {
+  const list = await getInProgressSubmissions();
+  if (list.some((s) => s.id === sub.id)) return;
+  list.unshift({ ...sub, _accepted_at: Date.now() });
+  await browser.storage.local.set({ [OP_INPROGRESS_KEY]: list });
+}
+
+async function removeInProgressSubmission(id: string): Promise<void> {
+  const list = await getInProgressSubmissions();
+  await browser.storage.local.set({
+    [OP_INPROGRESS_KEY]: list.filter((s) => s.id !== id),
+  });
+}
+
 export async function showOperatorPanel(): Promise<void> {
   const session = await getOperatorSession();
 
@@ -1825,20 +1934,13 @@ async function loadQueue(operatorId: string): Promise<void> {
     return;
   }
 
-  const res = await fetch(`${BACKEND_URL}/operator/queue/${operatorId}`);
-  const { data, error } = res.ok
-    ? { data: await res.json(), error: null }
+  const [queueRes, inProgress] = await Promise.all([
+    fetch(`${BACKEND_URL}/operator/queue/${operatorId}`),
+    getInProgressSubmissions(),
+  ]);
+  const { data, error } = queueRes.ok
+    ? { data: await queueRes.json(), error: null }
     : { data: null, error: true };
-
-  if (error || !data || data.length === 0) {
-    list.innerHTML = `
-      <div style="text-align:center;color:#94a3b8;font-size:13px;padding:40px 20px;">
-        <div style="font-size:32px;margin-bottom:12px;">✅</div>
-        No pending forms. Queue is clear.
-      </div>
-    `;
-    return;
-  }
 
   const FORM_ICONS: Record<string, string> = {
     pan_card: "🪪",
@@ -1847,27 +1949,80 @@ async function loadQueue(operatorId: string): Promise<void> {
     voter_id: "🗳️",
   };
 
-  list.innerHTML = data
-    .map(
-      (sub: any) => `
-    <button class="fy-queue-tile" data-id="${sub.id}" style="width:100%;background:#fff;border:1.5px solid #e0e0f0;border-radius:12px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;text-align:left;transition:border-color 0.15s;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:20px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
-        <div>
-          <div style="font-size:13.5px;font-weight:700;color:#0a0a2e;">${[sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown"}</div>
-          <div style="font-size:11px;color:#64748b;margin-top:2px;">${sub.form_type.replace("_", " ").toUpperCase()} · ${new Date(sub.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
-        </div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-  `,
-    )
-    .join("");
+  const inProgressHTML = inProgress.length > 0 ? `
+    <div style="margin-bottom:10px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#b45309;margin-bottom:7px;padding:0 2px;">In Progress</div>
+      ${inProgress.map((sub: any) => {
+        const name = [sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown";
+        const accepted = sub._accepted_at ? new Date(sub._accepted_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "";
+        return `
+        <div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:12px;padding:12px 13px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <span style="font-size:18px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#0a0a2e;">${name}</div>
+              <div style="font-size:11px;color:#92400e;margin-top:2px;">${sub.form_type.replace("_", " ").toUpperCase()}${accepted ? " · Started " + accepted : ""}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="fy-ip-done" data-id="${sub.id}" style="flex:1;padding:7px 0;background:transparent;color:#94a3b8;border:1.5px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Done ✓</button>
+            <button class="fy-ip-resume" data-id="${sub.id}" style="flex:2;padding:7px 0;background:#000080;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Resume →</button>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>` : "";
 
-  list.querySelectorAll<HTMLButtonElement>(".fy-queue-tile").forEach((tile) => {
-    tile.addEventListener("click", () => {
-      const sub = data.find((s: any) => s.id === tile.dataset.id);
-      if (sub) showReviewScreen(sub);
+  if (error || !data || data.length === 0) {
+    list.innerHTML = inProgressHTML + `
+      <div style="text-align:center;color:#94a3b8;font-size:13px;padding:${inProgress.length > 0 ? "20px" : "40px"} 20px;">
+        <div style="font-size:32px;margin-bottom:12px;">✅</div>
+        No pending forms. Queue is clear.
+      </div>
+    `;
+  } else {
+    list.innerHTML = inProgressHTML + data
+      .map(
+        (sub: any) => `
+      <button class="fy-queue-tile" data-id="${sub.id}" style="width:100%;background:#fff;border:1.5px solid #e0e0f0;border-radius:12px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;text-align:left;transition:border-color 0.15s;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:20px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
+          <div>
+            <div style="font-size:13.5px;font-weight:700;color:#0a0a2e;">${[sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown"}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px;">${sub.form_type.replace("_", " ").toUpperCase()} · ${new Date(sub.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
+          </div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    `,
+      )
+      .join("");
+
+    list.querySelectorAll<HTMLButtonElement>(".fy-queue-tile").forEach((tile) => {
+      tile.addEventListener("click", () => {
+        const sub = data.find((s: any) => s.id === tile.dataset.id);
+        if (sub) showReviewScreen(sub);
+      });
+    });
+  }
+
+  // In-progress: Done button
+  list.querySelectorAll<HTMLButtonElement>(".fy-ip-done").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await removeInProgressSubmission(btn.dataset.id!);
+      await loadQueue(operatorId);
+    });
+  });
+
+  // In-progress: Resume button
+  list.querySelectorAll<HTMLButtonElement>(".fy-ip-resume").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const sub = inProgress.find((s: any) => s.id === btn.dataset.id);
+      if (!sub) return;
+      await browser.storage.session.set({
+        autofillActive: { form: sub.form_type, submission_id: sub.id, done: [] },
+      });
+      await prepareOperatorSubmission(sub);
+      window.open("https://onlineservices.proteantech.in/paam/endUserRegisterContact.html", "_blank");
     });
   });
 }
@@ -1920,8 +2075,14 @@ function showReviewScreen(sub: any): void {
     await browser.storage.session.set({
       autofillActive: { form: sub.form_type, submission_id: sub.id, done: [] },
     });
-    document.getElementById("fy-operator-review")!.style.display = "none";
-    runAutofillFromSubmission(sub);
+    await addInProgressSubmission(sub);
+    if (window.location.hostname === "onlineservices.proteantech.in") {
+      document.getElementById("fy-operator-review")!.style.display = "none";
+      runAutofillFromSubmission(sub);
+    } else {
+      await prepareOperatorSubmission(sub);
+      window.open("https://onlineservices.proteantech.in/paam/endUserRegisterContact.html", "_blank");
+    }
   };
 
   // Reject button
