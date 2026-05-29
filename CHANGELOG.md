@@ -1,5 +1,16 @@
 # FormYaar Extension — Changelog
 
+## [0.6.0] — 2026-05-30
+
+### Added
+- Operator in-progress resume flow — when an operator accepts a submission and closes the tab mid-fill, the submission is saved to `storage.local` (`fy_op_inprogress`). Reopening the panel shows an amber "In Progress" section above the queue with Resume and Done buttons. Resume re-prepares the submission data and opens NSDL in a new tab; Done manually clears it.
+- `prepareOperatorSubmission` extracted from `runAutofillFromSubmission` — shared by both the accept handler and the resume button so submission data is always staged before navigation
+
+### Fixed
+- Autofill panel jitter — programmatic clicks dispatched by the autofill engine (radio buttons, checkboxes, next-step buttons) were bubbling to `document` and triggering the click-outside handler, causing the panel to rapidly slide out and back in during fills with many skipped fields. Click-outside handler now ignores all clicks while `#fy-filling` is visible.
+- Operator accept/resume now opens NSDL in a new tab (`window.open`) instead of navigating the current page
+- Maintenance check no longer delays panel creation — panel is created immediately so autofill screen transitions work on page load; maintenance status is checked in the background and swaps content only if ON
+
 ## [0.5.0] — 2026-05-28
 
 ### Added
