@@ -1970,15 +1970,20 @@ async function loadQueue(operatorId: string): Promise<void> {
     return;
   }
 
-  let subData: any = null;
+  // Three explicit states — never fail open (would give expired operators free
+  // access) and never mislabel a network error as "expired" (audit H2).
+  let subStatus: "active" | "expired" | "unknown" = "unknown";
   try {
     const subRes = await fetch(
       `${BACKEND_URL}/operator/subscription/${session.id}`,
     );
-    subData = subRes.ok ? await subRes.json() : null;
-  } catch { /* treat fetch failure as subscription active — CORS on formyaar.in */ }
+    if (subRes.ok) {
+      const subData = await subRes.json();
+      subStatus = subData?.is_active ? "active" : "expired";
+    }
+  } catch { /* leave as unknown — handled below */ }
 
-  if (subData !== null && !subData?.is_active) {
+  if (subStatus === "expired") {
     list.innerHTML = `
       <div style="text-align:center;padding:40px 20px;">
         <div style="font-size:36px;margin-bottom:14px;">🔒</div>
@@ -1987,6 +1992,21 @@ async function loadQueue(operatorId: string): Promise<void> {
         <a href="https://formyaar.in/operator-dashboard.html" target="_blank" style="display:inline-block;padding:10px 20px;background:#000080;color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">Renew Subscription</a>
       </div>
     `;
+    return;
+  }
+
+  if (subStatus === "unknown") {
+    list.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;">
+        <div style="font-size:36px;margin-bottom:14px;">📡</div>
+        <div style="font-size:15px;font-weight:800;color:#0a0a2e;margin-bottom:8px;">Couldn't verify subscription</div>
+        <div style="font-size:12.5px;color:#64748b;line-height:1.6;margin-bottom:16px;">We couldn't reach FormYaar to confirm your subscription. Check your connection and try again.</div>
+        <button id="fy-sub-retry" style="display:inline-block;padding:10px 20px;background:#000080;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Retry</button>
+      </div>
+    `;
+    document
+      .getElementById("fy-sub-retry")
+      ?.addEventListener("click", () => loadQueue(operatorId));
     return;
   }
 
