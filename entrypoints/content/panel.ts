@@ -11,6 +11,7 @@ import {
   getOperatorSession,
   signOut,
   signInWithToken,
+  getOperatorAuthHeaders,
   OperatorSession,
 } from "./supabase";
 import { runAutofillFromSubmission, prepareOperatorSubmission } from "./autofill";
@@ -1970,12 +1971,15 @@ async function loadQueue(operatorId: string): Promise<void> {
     return;
   }
 
+  const authHeaders = await getOperatorAuthHeaders();
+
   // Three explicit states — never fail open (would give expired operators free
   // access) and never mislabel a network error as "expired" (audit H2).
   let subStatus: "active" | "expired" | "unknown" = "unknown";
   try {
     const subRes = await fetch(
       `${BACKEND_URL}/operator/subscription/${session.id}`,
+      { headers: authHeaders },
     );
     if (subRes.ok) {
       const subData = await subRes.json();
@@ -2012,7 +2016,9 @@ async function loadQueue(operatorId: string): Promise<void> {
 
   let queueRes: Response | null = null;
   try {
-    queueRes = await fetch(`${BACKEND_URL}/operator/queue/${operatorId}`);
+    queueRes = await fetch(`${BACKEND_URL}/operator/queue/${operatorId}`, {
+      headers: authHeaders,
+    });
   } catch { /* network/CORS failure */ }
 
   const inProgress = await getInProgressSubmissions(operatorId);
@@ -2095,7 +2101,7 @@ async function loadQueue(operatorId: string): Promise<void> {
       try {
         await fetch(`${BACKEND_URL}/operator/submission/${id}/status`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ status: "completed" }),
         });
       } catch { /* still remove locally even if the network call fails */ }
@@ -2165,9 +2171,10 @@ function showReviewScreen(sub: any): void {
       document.getElementById("fy-operator-login")!.style.display = "flex";
       return;
     }
+    const authHeaders = await getOperatorAuthHeaders();
     await fetch(`${BACKEND_URL}/operator/submission/${sub.id}/status`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify({ status: "filling" }),
     });
     await browser.storage.session.set({
@@ -2186,9 +2193,10 @@ function showReviewScreen(sub: any): void {
   // Reject button
   const rejectBtn = document.getElementById("fy-review-reject")!;
   rejectBtn.onclick = async () => {
+    const authHeaders = await getOperatorAuthHeaders();
     await fetch(`${BACKEND_URL}/operator/submission/${sub.id}/status`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify({ status: "rejected" }),
     });
     document.getElementById("fy-operator-review")!.style.display = "none";
