@@ -1,4 +1,4 @@
-export const VERSION = "0.6.0";
+export const VERSION = "0.6.1";
 
 export const BACKEND_URL =
   (import.meta.env.VITE_BACKEND_URL as string) ??
@@ -8,7 +8,7 @@ export const PANEL_WIDTH = 400;
 export const PANEL_TRANSITION_MS = 300;
 export const BANNER_DELAY_MS = 1500;
 export const PULSE_INITIAL_DELAY_MS = 5000;
-export const PULSE_INTERVAL_MS = 12000;
+export const PULSE_INTERVAL_MS = 10000;
 export const OVERLAY_SCROLL_PAD = 8;
 export const OVERLAY_TRANSITION_MS = 400;
 export const SKIP_FLASH_DURATION_MS = 400;

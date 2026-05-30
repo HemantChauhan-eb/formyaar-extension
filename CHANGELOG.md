@@ -1,5 +1,19 @@
 # FormYaar Extension — Changelog
 
+## [0.6.1] — 2026-05-30
+
+### Fixed
+- Operator queue stuck on "Loading queue…" — backend calls (`/operator/subscription`, `/operator/queue`) now wrapped in try/catch so a failed request no longer leaves the screen frozen; queue falls back gracefully
+- Corrected backend URL — `.env.development` / `.env.production` were pointing at the old `formyaar-backend-production.up.railway.app` host (now `-a43e`), which caused 404s and apparent CORS failures on the operator dashboard
+
+### Added
+- Open the panel from any formyaar.in button via a custom DOM event (`fy:open-panel`) — zero server load
+- DOB field auto-formats to DD/MM/YYYY (auto-inserts slashes, clamps day ≤ 31 and month ≤ 12)
+
+### Changed
+- F·Y tab shake interval 12s → 10s, scales from the right edge (no longer clipped by the screen)
+- Maintenance status check moved to run after panel creation so it never delays autofill on page load
+
 ## [0.6.0] — 2026-05-30
 
 ### Added
