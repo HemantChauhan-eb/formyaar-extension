@@ -2269,6 +2269,7 @@ function showReviewScreen(sub: any): void {
       ${row("Date of Birth", sub.dob)}
       ${row("Aadhaar Last 4", sub.aadhaar_last_4)}
       ${row("Single Parent", sub.is_single_parent === true ? "Yes" : sub.is_single_parent === false ? "No" : "")}
+      ${row("Parent on Card", sub.name_to_print === "father" ? "Father's Name" : sub.name_to_print === "mother" ? "Mother's Name" : "")}
     `)}
 
     ${section("Contact", `
