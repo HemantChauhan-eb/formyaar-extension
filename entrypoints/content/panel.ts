@@ -1182,8 +1182,8 @@ function renderUserFormScreen(form: string, data: UserData): string {
   `;
 }
 
-function escapeHtml(s: string): string {
-  return s
+function escapeHtml(s: unknown): string {
+  return String(s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -1995,7 +1995,8 @@ async function loadQueue(operatorId: string): Promise<void> {
     <div style="margin-bottom:10px;">
       <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#b45309;margin-bottom:7px;padding:0 2px;">In Progress</div>
       ${inProgress.map((sub: any) => {
-        const name = [sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown";
+        const name = escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown");
+        const formLabel = escapeHtml(String(sub.form_type ?? "").replace("_", " ").toUpperCase());
         const accepted = sub._accepted_at ? new Date(sub._accepted_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "";
         return `
         <div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:12px;padding:12px 13px;margin-bottom:6px;">
@@ -2003,12 +2004,12 @@ async function loadQueue(operatorId: string): Promise<void> {
             <span style="font-size:18px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
             <div>
               <div style="font-size:13px;font-weight:700;color:#0a0a2e;">${name}</div>
-              <div style="font-size:11px;color:#92400e;margin-top:2px;">${sub.form_type.replace("_", " ").toUpperCase()}${accepted ? " · Started " + accepted : ""}</div>
+              <div style="font-size:11px;color:#92400e;margin-top:2px;">${formLabel}${accepted ? " · Started " + accepted : ""}</div>
             </div>
           </div>
           <div style="display:flex;gap:6px;">
-            <button class="fy-ip-done" data-id="${sub.id}" style="flex:1;padding:7px 0;background:transparent;color:#94a3b8;border:1.5px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Done ✓</button>
-            <button class="fy-ip-resume" data-id="${sub.id}" style="flex:2;padding:7px 0;background:#000080;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Resume →</button>
+            <button class="fy-ip-done" data-id="${escapeHtml(sub.id)}" style="flex:1;padding:7px 0;background:transparent;color:#94a3b8;border:1.5px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Done ✓</button>
+            <button class="fy-ip-resume" data-id="${escapeHtml(sub.id)}" style="flex:2;padding:7px 0;background:#000080;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Resume →</button>
           </div>
         </div>`;
       }).join("")}
@@ -2025,12 +2026,12 @@ async function loadQueue(operatorId: string): Promise<void> {
     list.innerHTML = inProgressHTML + data
       .map(
         (sub: any) => `
-      <button class="fy-queue-tile" data-id="${sub.id}" style="width:100%;background:#fff;border:1.5px solid #e0e0f0;border-radius:12px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;text-align:left;transition:border-color 0.15s;">
+      <button class="fy-queue-tile" data-id="${escapeHtml(sub.id)}" style="width:100%;background:#fff;border:1.5px solid #e0e0f0;border-radius:12px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;text-align:left;transition:border-color 0.15s;">
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:20px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
           <div>
-            <div style="font-size:13.5px;font-weight:700;color:#0a0a2e;">${[sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown"}</div>
-            <div style="font-size:11px;color:#64748b;margin-top:2px;">${sub.form_type.replace("_", " ").toUpperCase()} · ${new Date(sub.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
+            <div style="font-size:13.5px;font-weight:700;color:#0a0a2e;">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown")}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(String(sub.form_type ?? "").replace("_", " ").toUpperCase())} · ${new Date(sub.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
           </div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -2076,20 +2077,21 @@ function showReviewScreen(sub: any): void {
 
   const body = document.getElementById("fy-review-body")!;
 
-  const row = (label: string, value: string) =>
+  // Escapes the value — customer-supplied data must never be injected as raw HTML
+  const row = (label: string, value: unknown) =>
     value
       ? `
     <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f1f5f9;">
       <span style="font-size:11.5px;color:#64748b;font-weight:500;">${label}</span>
-      <span style="font-size:12.5px;color:#0a0a2e;font-weight:600;text-align:right;max-width:60%;">${value}</span>
+      <span style="font-size:12.5px;color:#0a0a2e;font-weight:600;text-align:right;max-width:60%;">${escapeHtml(value)}</span>
     </div>
   `
       : "";
 
   body.innerHTML = `
     <div style="margin-bottom:14px;">
-      <div style="font-size:16px;font-weight:800;color:#0a0a2e;">${[sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown"}</div>
-      <div style="font-size:11.5px;color:#64748b;margin-top:2px;">${sub.form_type.replace("_", " ").toUpperCase()}</div>
+      <div style="font-size:16px;font-weight:800;color:#0a0a2e;">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown")}</div>
+      <div style="font-size:11.5px;color:#64748b;margin-top:2px;">${escapeHtml(String(sub.form_type ?? "").replace("_", " ").toUpperCase())}</div>
     </div>
     <div style="background:#f8fafc;border-radius:10px;padding:4px 12px;">
       ${row("Mobile", sub.mobile)}
