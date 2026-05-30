@@ -2250,30 +2250,56 @@ function showReviewScreen(sub: any): void {
   `
       : "";
 
-  const fatherName = [sub.father_first_name, sub.father_middle_name, sub.father_last_name].filter(Boolean).join(" ");
-  const motherName = [sub.mother_first_name, sub.mother_middle_name, sub.mother_last_name].filter(Boolean).join(" ");
+  const section = (title: string, content: string) => `
+    <div style="font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#94a3b8;padding:12px 0 4px;">${title}</div>
+    <div style="background:#f8fafc;border-radius:10px;padding:4px 12px;margin-bottom:2px;">${content}</div>
+  `;
 
   body.innerHTML = `
-    <div style="margin-bottom:14px;">
-      <div style="font-size:16px;font-weight:800;color:#0a0a2e;">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown")}</div>
-      <div style="font-size:11.5px;color:#64748b;margin-top:2px;">${escapeHtml(String(sub.form_type ?? "").replace("_", " ").toUpperCase())}</div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:16px;font-weight:800;color:#0a0a2e;">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || "Unknown")}</div>
+      <div style="font-size:11.5px;color:#64748b;margin-top:2px;">${escapeHtml(String(sub.form_type ?? "").replace(/_/g, " ").toUpperCase())}</div>
     </div>
-    <div style="background:#f8fafc;border-radius:10px;padding:4px 12px;">
-      ${row("Mobile", sub.mobile)}
-      ${row("Email", sub.email)}
+
+    ${section("Applicant", `
+      ${row("First Name", sub.first_name)}
+      ${row("Middle Name", sub.middle_name)}
+      ${row("Last Name", sub.last_name)}
+      ${row("Gender", sub.gender)}
       ${row("Date of Birth", sub.dob)}
       ${row("Aadhaar Last 4", sub.aadhaar_last_4)}
-      ${row("Father's Name", fatherName)}
-      ${row("Mother's Name", motherName)}
+      ${row("Single Parent", sub.is_single_parent === true ? "Yes" : sub.is_single_parent === false ? "No" : "")}
+    `)}
+
+    ${section("Contact", `
+      ${row("Mobile", sub.mobile)}
+      ${row("Email", sub.email)}
+    `)}
+
+    ${section("Address", `
       ${row("City", sub.city)}
       ${row("State", sub.state)}
       ${row("PIN Code", sub.pincode)}
+    `)}
+
+    ${section("Father", `
+      ${row("First Name", sub.father_first_name)}
+      ${row("Middle Name", sub.father_middle_name)}
+      ${row("Last Name", sub.father_last_name)}
+    `)}
+
+    ${section("Mother", `
+      ${row("First Name", sub.mother_first_name)}
+      ${row("Middle Name", sub.mother_middle_name)}
+      ${row("Last Name", sub.mother_last_name)}
+    `)}
+
+    ${section("Application", `
+      ${row("Form Type", String(sub.form_type ?? "").replace(/_/g, " ").toUpperCase())}
       ${row("Income Source", sub.income_source)}
-      ${row("Proof of Identity", sub.proof_of_identity)}
-      ${row("Proof of Address", sub.proof_of_address)}
       ${row("Proof of DOB", sub.proof_of_dob)}
-      ${row("Defence", sub.defence ? "Yes" : "No")}
-    </div>
+      ${row("Defence", sub.defence === true ? "Yes" : "No")}
+    `)}
   `;
 
   // Accept button
