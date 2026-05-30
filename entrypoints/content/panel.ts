@@ -1295,6 +1295,7 @@ function createTab() {
     border-radius: 8px 0 0 8px;
     box-shadow: -2px 0 12px rgba(0,0,0,0.15);
     font-family: 'DM Sans', sans-serif;
+    transform-origin: right center;
   `;
   tab.innerHTML =
     '<span style="font-weight:200;opacity:0.7;">F</span><span style="color:#E8930A;font-weight:800;">·</span><span style="font-weight:800;">Y</span>';
@@ -1303,29 +1304,29 @@ function createTab() {
     const t = document.getElementById("fy-tab");
     if (!t) return;
     t.style.transition = "transform 0.2s ease, box-shadow 0.2s ease";
-    t.style.transform = "translateY(-50%) scale(1.4)";
+    t.style.transform = "translateY(-50%) scale(2.0)";
     t.style.boxShadow = "-6px 0 24px rgba(0,0,128,0.5)";
     setTimeout(() => {
       t.style.transition = "transform 0.06s ease";
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(-8px)";
+      t.style.transform = "translateY(-50%) scale(2.0) translateX(-8px)";
     }, 220);
     setTimeout(() => {
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(8px)";
+      t.style.transform = "translateY(-50%) scale(2.0) translateX(8px)";
     }, 280);
     setTimeout(() => {
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(-8px)";
+      t.style.transform = "translateY(-50%) scale(2.0) translateX(-8px)";
     }, 340);
     setTimeout(() => {
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(8px)";
+      t.style.transform = "translateY(-50%) scale(2.0) translateX(8px)";
     }, 400);
     setTimeout(() => {
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(-6px)";
+      t.style.transform = "translateY(-50%) scale(2.0) translateX(-6px)";
     }, 460);
     setTimeout(() => {
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(6px)";
+      t.style.transform = "translateY(-50%) scale(2.0) translateX(6px)";
     }, 520);
     setTimeout(() => {
-      t.style.transform = "translateY(-50%) scale(1.4) translateX(0)";
+      t.style.transform = "translateY(-50%) scale(2.0) translateX(0)";
     }, 580);
     setTimeout(() => {
       t.style.transition = "transform 0.3s ease, box-shadow 0.3s ease";
@@ -1741,6 +1742,42 @@ function attachUserFormHandlers(
 
   if (back) back.addEventListener("click", onBack);
 
+  const dobInput = document.querySelector<HTMLInputElement>('[data-field="date_of_birth"]');
+  if (dobInput) {
+    dobInput.addEventListener("input", (e) => {
+      const input = e.target as HTMLInputElement;
+      const isDeleting = (e as InputEvent).inputType?.startsWith("delete");
+      let digits = input.value.replace(/\D/g, "");
+
+      // Clamp day to 31
+      if (digits.length >= 2) {
+        const day = parseInt(digits.slice(0, 2), 10);
+        if (day > 31) digits = "31" + digits.slice(2);
+        if (day === 0) digits = "01" + digits.slice(2);
+      }
+      // Clamp month to 12
+      if (digits.length >= 4) {
+        const month = parseInt(digits.slice(2, 4), 10);
+        if (month > 12) digits = digits.slice(0, 2) + "12" + digits.slice(4);
+        if (month === 0) digits = digits.slice(0, 2) + "01" + digits.slice(4);
+      }
+
+      let formatted = digits.slice(0, 2);
+      if (digits.length === 2 && !isDeleting) {
+        formatted += "/";
+      } else if (digits.length > 2) {
+        formatted += "/" + digits.slice(2, 4);
+        if (digits.length === 4 && !isDeleting) {
+          formatted += "/";
+        } else if (digits.length > 4) {
+          formatted += "/" + digits.slice(4, 8);
+        }
+      }
+
+      input.value = formatted;
+    });
+  }
+
   if (submit) {
     submit.addEventListener("click", async () => {
       const data = collectFormData();
@@ -1917,12 +1954,15 @@ async function loadQueue(operatorId: string): Promise<void> {
     return;
   }
 
-  const subRes = await fetch(
-    `${BACKEND_URL}/operator/subscription/${session.id}`,
-  );
-  const subData = subRes.ok ? await subRes.json() : null;
+  let subData: any = null;
+  try {
+    const subRes = await fetch(
+      `${BACKEND_URL}/operator/subscription/${session.id}`,
+    );
+    subData = subRes.ok ? await subRes.json() : null;
+  } catch { /* treat fetch failure as subscription active — CORS on formyaar.in */ }
 
-  if (!subData?.is_active) {
+  if (subData !== null && !subData?.is_active) {
     list.innerHTML = `
       <div style="text-align:center;padding:40px 20px;">
         <div style="font-size:36px;margin-bottom:14px;">🔒</div>
@@ -1934,11 +1974,13 @@ async function loadQueue(operatorId: string): Promise<void> {
     return;
   }
 
-  const [queueRes, inProgress] = await Promise.all([
-    fetch(`${BACKEND_URL}/operator/queue/${operatorId}`),
-    getInProgressSubmissions(),
-  ]);
-  const { data, error } = queueRes.ok
+  let queueRes: Response | null = null;
+  try {
+    queueRes = await fetch(`${BACKEND_URL}/operator/queue/${operatorId}`);
+  } catch { /* network/CORS failure */ }
+
+  const inProgress = await getInProgressSubmissions();
+  const { data, error } = queueRes?.ok
     ? { data: await queueRes.json(), error: null }
     : { data: null, error: true };
 

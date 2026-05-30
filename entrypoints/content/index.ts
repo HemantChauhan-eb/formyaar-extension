@@ -101,6 +101,15 @@ export default defineContentScript({
       setTimeout(() => showContextualBanner(), BANNER_DELAY_MS);
     }
 
+    // Allow formyaar.in buttons to open the panel via a custom DOM event
+    if (hostname === "formyaar.in") {
+      document.addEventListener("fy:open-panel", async () => {
+        await showContextualBanner();
+        const p = document.getElementById("formyaar-panel");
+        if (p) p.style.right = "0px";
+      });
+    }
+
     // Auto-run autofill on page load only for pages not yet seen in this flow
     if (SITE_CONFIGS[hostname]) {
       try {
