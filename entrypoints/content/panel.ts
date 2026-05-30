@@ -815,16 +815,19 @@ function renderOperatorQueueScreen(): string {
       <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Operator Queue</div>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <button id="fy-queue-refresh" style="background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.18);border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-      <svg id="fy-refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
-        <polyline points="23 4 23 10 17 10"/>
-        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-      </svg>
-    </button>
-    <button id="fy-operator-signout" style="background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.18);border-radius:7px;padding:5px 10px;color:white;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">
-      Sign out
-    </button>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button id="fy-queue-refresh" style="background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.18);border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <svg id="fy-refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+      </button>
+      <button id="fy-operator-signout" style="background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.18);border-radius:7px;padding:5px 10px;color:white;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">
+        Sign out
+      </button>
+    </div>
+    <div id="fy-op-email" style="font-size:9.5px;color:rgba(255,255,255,0.5);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
   </div>
 </div>
         <div style="height:3px;display:flex;"><div style="flex:1;background:#FF9933;"></div><div style="flex:1;background:#ffffff;"></div><div style="flex:1;background:#138808;"></div></div>
@@ -2056,6 +2059,8 @@ export async function showOperatorPanel(): Promise<void> {
   // Has session — show queue
   document.getElementById("fy-operator-login")!.style.display = "none";
   document.getElementById("fy-operator-queue")!.style.display = "flex";
+  const emailEl = document.getElementById("fy-op-email");
+  if (emailEl && session.email) emailEl.textContent = session.email;
   await loadQueue(session.id);
 }
 function isSubscriptionActive(session: OperatorSession): boolean {

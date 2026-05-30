@@ -1,6 +1,6 @@
 {
   "form": "pan_card",
-  "version": 5,
+  "version": 6,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -75,6 +75,22 @@
           "value_source": "static",
           "static_value": true,
           "explanation": "Consent to data processing."
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "page_pattern": "registerEndUser",
+      "page": "tokenGenerated",
+      "stop_message": "Token generated. Clicking Continue to proceed.",
+      "fields": [
+        {
+          "field_id": "continue_after_token",
+          "type": "button_click",
+          "selector": "#submitForm",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Continue past the token confirmation screen."
         }
       ]
     },
@@ -324,7 +340,7 @@
       "page_pattern": "endUserLogin",
       "page": "endUserLogin",
       "stepy_index": 3,
-      "stop_message": "AO Code step. Select your state and city, then click Fetch.",
+      "stop_message": "AO Code filled automatically from your PIN code.",
       "fields": [
         {
           "field_id": "ao_indian_citizen",
