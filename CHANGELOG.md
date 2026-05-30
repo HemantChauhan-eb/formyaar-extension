@@ -1,5 +1,27 @@
 # FormYaar Extension — Changelog
 
+## [0.7.0] — 2026-05-30  (UNRELEASED — on branch `fixes/operator-audit`, not yet merged)
+
+> Operator-flow security/data audit fixes + a delight feature. Pairs with the
+> backend `fixes/operator-audit` branch (operator session-token auth).
+> **Requires** the `operator_sessions` Supabase table (see backend changelog)
+> and forces existing operators to re-login once.
+
+### Security
+- **X1** — operator queue/review now HTML-escape all customer-supplied fields; a malicious QR submission could previously inject markup into the operator's extension (stored XSS)
+- **C1** — in-progress submissions are scoped per `operator_id` instead of one global key, so operators sharing a browser can no longer see each other's customer PII; `signOut()` clears transient operator keys
+- **H1** — operator API calls now send a Bearer session token (issued at login); pairs with backend auth on `/operator/*`
+
+### Fixed
+- **C2** — "Done ✓" marks the submission `completed` on the backend (was local-only), so it no longer stays stuck at `filling` and dashboard completed-stats now increment
+- **H2** — subscription check has explicit active / expired / unknown states; a failed verify shows a Retry screen instead of silently granting access (no more fail-open)
+
+### Added
+- 🎉 **Time-saved celebration** — tricolor confetti + a "⚡ Saved you ~Xm · Yh Zm total 💜" pill when a step finishes filling; cumulative total persisted locally
+
+### Chore
+- **X2** — removed unused `tabs` permission (CWS minimization); kept storage/activeTab/alarms
+
 ## [0.6.1] — 2026-05-30
 
 ### Fixed
