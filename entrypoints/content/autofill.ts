@@ -177,7 +177,7 @@ export async function prepareOperatorSubmission(sub: any): Promise<void> {
     email: sub.email ?? "",
     mobile: sub.mobile ?? "",
     aadhaar_last_4: sub.aadhaar_last_4 ?? (sub.aadhaar_number ? String(sub.aadhaar_number).replace(/\D/g, "").slice(-4) : ""),
-    gender: (sub.gender ?? "") as "M" | "F" | "T" | "",
+    gender: (({ male: "M", female: "F", transgender: "T", m: "M", f: "F", t: "T" } as Record<string, string>)[String(sub.gender ?? "").toLowerCase()] ?? sub.gender ?? "") as "M" | "F" | "T" | "",
     parent_on_card_is_father: sub.is_single_parent ? false : true,
     parent_on_card_is_mother: sub.is_single_parent ? true : false,
     aadhaar_pin_code: sub.pincode ?? "",
