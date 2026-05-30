@@ -1,6 +1,6 @@
 {
   "form": "pan_card",
-  "version": 6,
+  "version": 7,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -408,6 +408,14 @@
           "selector": "#verifierPlace",
           "value_source": "user.place",
           "explanation": "City where you're filing the application."
+        },
+        {
+          "field_id": "save_draft",
+          "type": "button_click",
+          "selector": "#saveForm",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Save Draft — preserves all filled fields before user uploads documents."
         }
       ]
     },
