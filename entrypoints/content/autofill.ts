@@ -4,6 +4,7 @@ import {
   showFillingScreen,
   showVerifyScreen,
   updateFillProgress,
+  celebrateTimeSaved,
 } from "./panel";
 import { showUploadScreen } from "./uploadScreen";
 import { getUserData, type UserData } from "./userData";
@@ -152,6 +153,9 @@ export async function runAutofill(form: string = "pan_card") {
   } else {
     showVerifyScreen();
   }
+
+  // Surprise: celebrate the time saved on this step (fields auto-filled).
+  celebrateTimeSaved(step.fields.length);
 }
 export async function prepareOperatorSubmission(sub: any): Promise<void> {
   const incomeSources: string[] = (sub.income_source ?? "")
