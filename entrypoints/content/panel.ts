@@ -2250,6 +2250,9 @@ function showReviewScreen(sub: any): void {
   `
       : "";
 
+  const fatherName = [sub.father_first_name, sub.father_middle_name, sub.father_last_name].filter(Boolean).join(" ");
+  const motherName = [sub.mother_first_name, sub.mother_middle_name, sub.mother_last_name].filter(Boolean).join(" ");
+
   body.innerHTML = `
     <div style="margin-bottom:14px;">
       <div style="font-size:16px;font-weight:800;color:#0a0a2e;">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown")}</div>
@@ -2259,12 +2262,15 @@ function showReviewScreen(sub: any): void {
       ${row("Mobile", sub.mobile)}
       ${row("Email", sub.email)}
       ${row("Date of Birth", sub.dob)}
-      ${row("Father's Name", sub.father_name)}
-      ${row("Mother's Name", sub.mother_name)}
+      ${row("Aadhaar Last 4", sub.aadhaar_last_4)}
+      ${row("Father's Name", fatherName)}
+      ${row("Mother's Name", motherName)}
       ${row("City", sub.city)}
       ${row("State", sub.state)}
       ${row("PIN Code", sub.pincode)}
       ${row("Income Source", sub.income_source)}
+      ${row("Proof of Identity", sub.proof_of_identity)}
+      ${row("Proof of Address", sub.proof_of_address)}
       ${row("Proof of DOB", sub.proof_of_dob)}
       ${row("Defence", sub.defence ? "Yes" : "No")}
     </div>
