@@ -11,8 +11,8 @@ export default defineConfig({
   manifest: {
     name: "FormYaar",
     description: "Your friend who fills government forms with you",
-    version: "0.6.1",
-    permissions: ["storage", "activeTab", "alarms", "tabs"],
+    version: "0.7.0",
+    permissions: ["storage", "activeTab", "alarms"],
     host_permissions: [
       "https://onlineservices.proteantech.in/*",
       "https://onlineservices.nsdl.com/*",

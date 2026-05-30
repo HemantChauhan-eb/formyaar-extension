@@ -11,6 +11,7 @@ import {
   getOperatorSession,
   signOut,
   signInWithToken,
+  getOperatorAuthHeaders,
   OperatorSession,
 } from "./supabase";
 import { runAutofillFromSubmission, prepareOperatorSubmission } from "./autofill";
@@ -1182,8 +1183,8 @@ function renderUserFormScreen(form: string, data: UserData): string {
   `;
 }
 
-function escapeHtml(s: string): string {
-  return s
+function escapeHtml(s: unknown): string {
+  return String(s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -1682,6 +1683,109 @@ export function showVerifyScreen() {
   const p = document.getElementById("formyaar-panel");
   if (p) p.style.right = "0px";
 }
+
+// ─── Surprise: cumulative "time saved" celebration ───────────────────
+const TIME_SAVED_KEY = "fy_time_saved";
+// Conservative estimate of manual time per field (typing + reading + tabbing).
+const SECONDS_PER_FIELD = 25;
+
+function humanizeSeconds(total: number): string {
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  if (m > 0) return `${m}m`;
+  return `${Math.max(1, Math.round(total))}s`;
+}
+
+/**
+ * Called by the autofill engine after each completed step. Accumulates an
+ * estimate of the time FormYaar saved, persists it, and shows a one-shot
+ * tricolor confetti burst with a "time saved" pill. Pure CSS — no libraries,
+ * no remote code (Chrome Web Store safe). Never throws into the fill flow.
+ */
+export async function celebrateTimeSaved(fieldsThisRun: number): Promise<void> {
+  if (!fieldsThisRun || fieldsThisRun < 1) return;
+  try {
+    const runSeconds = fieldsThisRun * SECONDS_PER_FIELD;
+    const stored = await browser.storage.local.get(TIME_SAVED_KEY);
+    const prev = (stored[TIME_SAVED_KEY] as { seconds: number } | undefined)
+      ?.seconds ?? 0;
+    const totalSeconds = prev + runSeconds;
+    await browser.storage.local.set({
+      [TIME_SAVED_KEY]: { seconds: totalSeconds },
+    });
+    renderCelebration(runSeconds, totalSeconds);
+  } catch {
+    // Celebration is best-effort — never break the fill flow
+  }
+}
+
+function renderCelebration(runSeconds: number, totalSeconds: number): void {
+  const panel = document.getElementById("formyaar-panel");
+  if (!panel) return;
+
+  // Inject keyframes once
+  if (!document.getElementById("fy-celebrate-style")) {
+    const style = document.createElement("style");
+    style.id = "fy-celebrate-style";
+    style.textContent = `
+      @keyframes fy-confetti-fall {
+        0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+        100% { transform: translateY(420px) rotate(540deg); opacity: 0; }
+      }
+      @keyframes fy-pill-in {
+        0% { transform: translate(-50%, -16px); opacity: 0; }
+        15% { transform: translate(-50%, 0); opacity: 1; }
+        85% { transform: translate(-50%, 0); opacity: 1; }
+        100% { transform: translate(-50%, -10px); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Confetti layer (tricolor + brand navy/saffron)
+  const layer = document.createElement("div");
+  layer.style.cssText = `
+    position: absolute; inset: 0; pointer-events: none;
+    overflow: hidden; z-index: 5;
+  `;
+  const colors = ["#FF9933", "#ffffff", "#138808", "#000080", "#E8930A"];
+  for (let i = 0; i < 32; i++) {
+    const piece = document.createElement("div");
+    const size = 6 + Math.random() * 6;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.cssText = `
+      position: absolute;
+      top: -20px; left: ${Math.random() * 100}%;
+      width: ${size}px; height: ${size * 0.5}px;
+      background: ${color};
+      border: ${color === "#ffffff" ? "0.5px solid #ddd" : "none"};
+      border-radius: 1px;
+      animation: fy-confetti-fall ${1.6 + Math.random() * 1.4}s ${Math.random() * 0.5}s ease-in forwards;
+    `;
+    layer.appendChild(piece);
+  }
+  panel.appendChild(layer);
+  setTimeout(() => layer.remove(), 3200);
+
+  // "Time saved" pill
+  const pill = document.createElement("div");
+  pill.style.cssText = `
+    position: absolute; top: 14px; left: 50%; transform: translate(-50%, 0);
+    z-index: 6; pointer-events: none;
+    background: #0a0a2e; color: #fff;
+    padding: 9px 15px; border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    font-family: 'DM Sans', sans-serif; white-space: nowrap;
+    animation: fy-pill-in 4.5s ease forwards;
+  `;
+  pill.innerHTML = `
+    <span style="font-size:13px;font-weight:800;">⚡ Saved you ~${humanizeSeconds(runSeconds)}</span>
+    <span style="font-size:11.5px;opacity:0.7;margin-left:6px;">${humanizeSeconds(totalSeconds)} total 💜</span>
+  `;
+  panel.appendChild(pill);
+  setTimeout(() => pill.remove(), 4600);
+}
 function showUserForm(form: string): void {
   // Hide all other screens
   const screens = [
@@ -1893,22 +1997,38 @@ export function updateFillProgress(
 }
 const OP_INPROGRESS_KEY = "fy_op_inprogress";
 
-async function getInProgressSubmissions(): Promise<any[]> {
+// In-progress submissions are tagged with the operator who accepted them and
+// only ever surfaced back to that same operator. This prevents operator B from
+// seeing operator A's customer PII when they share a browser (audit C1).
+async function getAllInProgress(): Promise<any[]> {
   const result = await browser.storage.local.get(OP_INPROGRESS_KEY);
   return (result[OP_INPROGRESS_KEY] as any[]) ?? [];
 }
 
-async function addInProgressSubmission(sub: any): Promise<void> {
-  const list = await getInProgressSubmissions();
-  if (list.some((s) => s.id === sub.id)) return;
-  list.unshift({ ...sub, _accepted_at: Date.now() });
-  await browser.storage.local.set({ [OP_INPROGRESS_KEY]: list });
+async function getInProgressSubmissions(operatorId: string): Promise<any[]> {
+  const all = await getAllInProgress();
+  return all.filter((s) => s._operator_id === operatorId);
 }
 
-async function removeInProgressSubmission(id: string): Promise<void> {
-  const list = await getInProgressSubmissions();
+async function addInProgressSubmission(
+  operatorId: string,
+  sub: any,
+): Promise<void> {
+  const all = await getAllInProgress();
+  if (all.some((s) => s.id === sub.id && s._operator_id === operatorId)) return;
+  all.unshift({ ...sub, _operator_id: operatorId, _accepted_at: Date.now() });
+  await browser.storage.local.set({ [OP_INPROGRESS_KEY]: all });
+}
+
+async function removeInProgressSubmission(
+  operatorId: string,
+  id: string,
+): Promise<void> {
+  const all = await getAllInProgress();
   await browser.storage.local.set({
-    [OP_INPROGRESS_KEY]: list.filter((s) => s.id !== id),
+    [OP_INPROGRESS_KEY]: all.filter(
+      (s) => !(s.id === id && s._operator_id === operatorId),
+    ),
   });
 }
 
@@ -1954,15 +2074,23 @@ async function loadQueue(operatorId: string): Promise<void> {
     return;
   }
 
-  let subData: any = null;
+  const authHeaders = await getOperatorAuthHeaders();
+
+  // Three explicit states — never fail open (would give expired operators free
+  // access) and never mislabel a network error as "expired" (audit H2).
+  let subStatus: "active" | "expired" | "unknown" = "unknown";
   try {
     const subRes = await fetch(
       `${BACKEND_URL}/operator/subscription/${session.id}`,
+      { headers: authHeaders },
     );
-    subData = subRes.ok ? await subRes.json() : null;
-  } catch { /* treat fetch failure as subscription active — CORS on formyaar.in */ }
+    if (subRes.ok) {
+      const subData = await subRes.json();
+      subStatus = subData?.is_active ? "active" : "expired";
+    }
+  } catch { /* leave as unknown — handled below */ }
 
-  if (subData !== null && !subData?.is_active) {
+  if (subStatus === "expired") {
     list.innerHTML = `
       <div style="text-align:center;padding:40px 20px;">
         <div style="font-size:36px;margin-bottom:14px;">🔒</div>
@@ -1974,12 +2102,29 @@ async function loadQueue(operatorId: string): Promise<void> {
     return;
   }
 
+  if (subStatus === "unknown") {
+    list.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;">
+        <div style="font-size:36px;margin-bottom:14px;">📡</div>
+        <div style="font-size:15px;font-weight:800;color:#0a0a2e;margin-bottom:8px;">Couldn't verify subscription</div>
+        <div style="font-size:12.5px;color:#64748b;line-height:1.6;margin-bottom:16px;">We couldn't reach FormYaar to confirm your subscription. Check your connection and try again.</div>
+        <button id="fy-sub-retry" style="display:inline-block;padding:10px 20px;background:#000080;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Retry</button>
+      </div>
+    `;
+    document
+      .getElementById("fy-sub-retry")
+      ?.addEventListener("click", () => loadQueue(operatorId));
+    return;
+  }
+
   let queueRes: Response | null = null;
   try {
-    queueRes = await fetch(`${BACKEND_URL}/operator/queue/${operatorId}`);
+    queueRes = await fetch(`${BACKEND_URL}/operator/queue/${operatorId}`, {
+      headers: authHeaders,
+    });
   } catch { /* network/CORS failure */ }
 
-  const inProgress = await getInProgressSubmissions();
+  const inProgress = await getInProgressSubmissions(operatorId);
   const { data, error } = queueRes?.ok
     ? { data: await queueRes.json(), error: null }
     : { data: null, error: true };
@@ -1995,7 +2140,8 @@ async function loadQueue(operatorId: string): Promise<void> {
     <div style="margin-bottom:10px;">
       <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#b45309;margin-bottom:7px;padding:0 2px;">In Progress</div>
       ${inProgress.map((sub: any) => {
-        const name = [sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown";
+        const name = escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown");
+        const formLabel = escapeHtml(String(sub.form_type ?? "").replace("_", " ").toUpperCase());
         const accepted = sub._accepted_at ? new Date(sub._accepted_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "";
         return `
         <div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:12px;padding:12px 13px;margin-bottom:6px;">
@@ -2003,12 +2149,12 @@ async function loadQueue(operatorId: string): Promise<void> {
             <span style="font-size:18px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
             <div>
               <div style="font-size:13px;font-weight:700;color:#0a0a2e;">${name}</div>
-              <div style="font-size:11px;color:#92400e;margin-top:2px;">${sub.form_type.replace("_", " ").toUpperCase()}${accepted ? " · Started " + accepted : ""}</div>
+              <div style="font-size:11px;color:#92400e;margin-top:2px;">${formLabel}${accepted ? " · Started " + accepted : ""}</div>
             </div>
           </div>
           <div style="display:flex;gap:6px;">
-            <button class="fy-ip-done" data-id="${sub.id}" style="flex:1;padding:7px 0;background:transparent;color:#94a3b8;border:1.5px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Done ✓</button>
-            <button class="fy-ip-resume" data-id="${sub.id}" style="flex:2;padding:7px 0;background:#000080;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Resume →</button>
+            <button class="fy-ip-done" data-id="${escapeHtml(sub.id)}" style="flex:1;padding:7px 0;background:transparent;color:#94a3b8;border:1.5px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Done ✓</button>
+            <button class="fy-ip-resume" data-id="${escapeHtml(sub.id)}" style="flex:2;padding:7px 0;background:#000080;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Resume →</button>
           </div>
         </div>`;
       }).join("")}
@@ -2025,12 +2171,12 @@ async function loadQueue(operatorId: string): Promise<void> {
     list.innerHTML = inProgressHTML + data
       .map(
         (sub: any) => `
-      <button class="fy-queue-tile" data-id="${sub.id}" style="width:100%;background:#fff;border:1.5px solid #e0e0f0;border-radius:12px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;text-align:left;transition:border-color 0.15s;">
+      <button class="fy-queue-tile" data-id="${escapeHtml(sub.id)}" style="width:100%;background:#fff;border:1.5px solid #e0e0f0;border-radius:12px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;text-align:left;transition:border-color 0.15s;">
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:20px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
           <div>
-            <div style="font-size:13.5px;font-weight:700;color:#0a0a2e;">${[sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown"}</div>
-            <div style="font-size:11px;color:#64748b;margin-top:2px;">${sub.form_type.replace("_", " ").toUpperCase()} · ${new Date(sub.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
+            <div style="font-size:13.5px;font-weight:700;color:#0a0a2e;">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown")}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(String(sub.form_type ?? "").replace("_", " ").toUpperCase())} · ${new Date(sub.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
           </div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -2047,10 +2193,22 @@ async function loadQueue(operatorId: string): Promise<void> {
     });
   }
 
-  // In-progress: Done button
+  // In-progress: Done button — mark completed on the backend (C2: keeps
+  // submission status accurate so dashboard "completed" stats increment and
+  // the row doesn't stay stuck at "filling" forever), then drop it locally.
   list.querySelectorAll<HTMLButtonElement>(".fy-ip-done").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      await removeInProgressSubmission(btn.dataset.id!);
+      const id = btn.dataset.id!;
+      btn.textContent = "Saving…";
+      btn.disabled = true;
+      try {
+        await fetch(`${BACKEND_URL}/operator/submission/${id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify({ status: "completed" }),
+        });
+      } catch { /* still remove locally even if the network call fails */ }
+      await removeInProgressSubmission(operatorId, id);
       await loadQueue(operatorId);
     });
   });
@@ -2076,20 +2234,21 @@ function showReviewScreen(sub: any): void {
 
   const body = document.getElementById("fy-review-body")!;
 
-  const row = (label: string, value: string) =>
+  // Escapes the value — customer-supplied data must never be injected as raw HTML
+  const row = (label: string, value: unknown) =>
     value
       ? `
     <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f1f5f9;">
       <span style="font-size:11.5px;color:#64748b;font-weight:500;">${label}</span>
-      <span style="font-size:12.5px;color:#0a0a2e;font-weight:600;text-align:right;max-width:60%;">${value}</span>
+      <span style="font-size:12.5px;color:#0a0a2e;font-weight:600;text-align:right;max-width:60%;">${escapeHtml(value)}</span>
     </div>
   `
       : "";
 
   body.innerHTML = `
     <div style="margin-bottom:14px;">
-      <div style="font-size:16px;font-weight:800;color:#0a0a2e;">${[sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown"}</div>
-      <div style="font-size:11.5px;color:#64748b;margin-top:2px;">${sub.form_type.replace("_", " ").toUpperCase()}</div>
+      <div style="font-size:16px;font-weight:800;color:#0a0a2e;">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown")}</div>
+      <div style="font-size:11.5px;color:#64748b;margin-top:2px;">${escapeHtml(String(sub.form_type ?? "").replace("_", " ").toUpperCase())}</div>
     </div>
     <div style="background:#f8fafc;border-radius:10px;padding:4px 12px;">
       ${row("Mobile", sub.mobile)}
@@ -2109,15 +2268,22 @@ function showReviewScreen(sub: any): void {
   // Accept button
   const acceptBtn = document.getElementById("fy-review-accept")!;
   acceptBtn.onclick = async () => {
+    const session = await getOperatorSession();
+    if (!session) {
+      document.getElementById("fy-operator-review")!.style.display = "none";
+      document.getElementById("fy-operator-login")!.style.display = "flex";
+      return;
+    }
+    const authHeaders = await getOperatorAuthHeaders();
     await fetch(`${BACKEND_URL}/operator/submission/${sub.id}/status`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify({ status: "filling" }),
     });
     await browser.storage.session.set({
       autofillActive: { form: sub.form_type, submission_id: sub.id, done: [] },
     });
-    await addInProgressSubmission(sub);
+    await addInProgressSubmission(session.id, sub);
     if (window.location.hostname === "onlineservices.proteantech.in") {
       document.getElementById("fy-operator-review")!.style.display = "none";
       runAutofillFromSubmission(sub);
@@ -2130,9 +2296,10 @@ function showReviewScreen(sub: any): void {
   // Reject button
   const rejectBtn = document.getElementById("fy-review-reject")!;
   rejectBtn.onclick = async () => {
+    const authHeaders = await getOperatorAuthHeaders();
     await fetch(`${BACKEND_URL}/operator/submission/${sub.id}/status`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify({ status: "rejected" }),
     });
     document.getElementById("fy-operator-review")!.style.display = "none";
