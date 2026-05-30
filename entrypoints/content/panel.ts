@@ -1893,22 +1893,38 @@ export function updateFillProgress(
 }
 const OP_INPROGRESS_KEY = "fy_op_inprogress";
 
-async function getInProgressSubmissions(): Promise<any[]> {
+// In-progress submissions are tagged with the operator who accepted them and
+// only ever surfaced back to that same operator. This prevents operator B from
+// seeing operator A's customer PII when they share a browser (audit C1).
+async function getAllInProgress(): Promise<any[]> {
   const result = await browser.storage.local.get(OP_INPROGRESS_KEY);
   return (result[OP_INPROGRESS_KEY] as any[]) ?? [];
 }
 
-async function addInProgressSubmission(sub: any): Promise<void> {
-  const list = await getInProgressSubmissions();
-  if (list.some((s) => s.id === sub.id)) return;
-  list.unshift({ ...sub, _accepted_at: Date.now() });
-  await browser.storage.local.set({ [OP_INPROGRESS_KEY]: list });
+async function getInProgressSubmissions(operatorId: string): Promise<any[]> {
+  const all = await getAllInProgress();
+  return all.filter((s) => s._operator_id === operatorId);
 }
 
-async function removeInProgressSubmission(id: string): Promise<void> {
-  const list = await getInProgressSubmissions();
+async function addInProgressSubmission(
+  operatorId: string,
+  sub: any,
+): Promise<void> {
+  const all = await getAllInProgress();
+  if (all.some((s) => s.id === sub.id && s._operator_id === operatorId)) return;
+  all.unshift({ ...sub, _operator_id: operatorId, _accepted_at: Date.now() });
+  await browser.storage.local.set({ [OP_INPROGRESS_KEY]: all });
+}
+
+async function removeInProgressSubmission(
+  operatorId: string,
+  id: string,
+): Promise<void> {
+  const all = await getAllInProgress();
   await browser.storage.local.set({
-    [OP_INPROGRESS_KEY]: list.filter((s) => s.id !== id),
+    [OP_INPROGRESS_KEY]: all.filter(
+      (s) => !(s.id === id && s._operator_id === operatorId),
+    ),
   });
 }
 
@@ -1979,7 +1995,7 @@ async function loadQueue(operatorId: string): Promise<void> {
     queueRes = await fetch(`${BACKEND_URL}/operator/queue/${operatorId}`);
   } catch { /* network/CORS failure */ }
 
-  const inProgress = await getInProgressSubmissions();
+  const inProgress = await getInProgressSubmissions(operatorId);
   const { data, error } = queueRes?.ok
     ? { data: await queueRes.json(), error: null }
     : { data: null, error: true };
@@ -2048,10 +2064,22 @@ async function loadQueue(operatorId: string): Promise<void> {
     });
   }
 
-  // In-progress: Done button
+  // In-progress: Done button — mark completed on the backend (C2: keeps
+  // submission status accurate so dashboard "completed" stats increment and
+  // the row doesn't stay stuck at "filling" forever), then drop it locally.
   list.querySelectorAll<HTMLButtonElement>(".fy-ip-done").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      await removeInProgressSubmission(btn.dataset.id!);
+      const id = btn.dataset.id!;
+      btn.textContent = "Saving…";
+      btn.disabled = true;
+      try {
+        await fetch(`${BACKEND_URL}/operator/submission/${id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "completed" }),
+        });
+      } catch { /* still remove locally even if the network call fails */ }
+      await removeInProgressSubmission(operatorId, id);
       await loadQueue(operatorId);
     });
   });
@@ -2111,6 +2139,12 @@ function showReviewScreen(sub: any): void {
   // Accept button
   const acceptBtn = document.getElementById("fy-review-accept")!;
   acceptBtn.onclick = async () => {
+    const session = await getOperatorSession();
+    if (!session) {
+      document.getElementById("fy-operator-review")!.style.display = "none";
+      document.getElementById("fy-operator-login")!.style.display = "flex";
+      return;
+    }
     await fetch(`${BACKEND_URL}/operator/submission/${sub.id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -2119,7 +2153,7 @@ function showReviewScreen(sub: any): void {
     await browser.storage.session.set({
       autofillActive: { form: sub.form_type, submission_id: sub.id, done: [] },
     });
-    await addInProgressSubmission(sub);
+    await addInProgressSubmission(session.id, sub);
     if (window.location.hostname === "onlineservices.proteantech.in") {
       document.getElementById("fy-operator-review")!.style.display = "none";
       runAutofillFromSubmission(sub);

@@ -44,6 +44,13 @@ export async function signInWithToken(
 
 export async function signOut(): Promise<void> {
   await browser.storage.local.remove(STORAGE_KEY);
+  // Clear transient operator data so it can't bleed into the next operator
+  // who signs in on this browser (audit C1). In-progress submissions in
+  // storage.local are operator-scoped by tag and intentionally preserved.
+  await browser.storage.session.remove([
+    "fy_operator_submission",
+    "autofillActive",
+  ]);
 }
 
 // Kept for backwards compat but no longer used for auth
