@@ -1,6 +1,6 @@
 {
   "form": "pan_card",
-  "version": 9,
+  "version": 10,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -194,7 +194,23 @@
           "selector": "#single_parent_yes",
           "value_source": "user.is_single_parent",
           "min_delay_ms": 2000,
-          "explanation": "Click Yes only if single parent — 2s delay lets NSDL JS enable/disable parent name fields before we fill them."
+          "explanation": "Click Yes only if single parent — 2s delay lets NSDL JS show the which-parent selector."
+        },
+        {
+          "field_id": "single_parent_father_select",
+          "type": "radio",
+          "selector": "#single_parent_father",
+          "value_source": "user.is_single_parent_father",
+          "min_delay_ms": 1500,
+          "explanation": "Select Father as single parent when applicable — 1.5s delay lets NSDL enable father fields."
+        },
+        {
+          "field_id": "single_parent_mother_select",
+          "type": "radio",
+          "selector": "#single_parent_mother",
+          "value_source": "user.is_single_parent_mother",
+          "min_delay_ms": 1500,
+          "explanation": "Select Mother as single parent when applicable — 1.5s delay lets NSDL enable mother fields."
         },
         {
           "field_id": "father_first_name",
