@@ -1,6 +1,6 @@
 {
   "form": "pan_card",
-  "version": 7,
+  "version": 8,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -187,6 +187,13 @@
           "value_source": "user.gender",
           "match_by": "value",
           "explanation": "Your gender as per Aadhaar."
+        },
+        {
+          "field_id": "single_parent_yes",
+          "type": "radio",
+          "selector": "#single_parent_yes",
+          "value_source": "user.is_single_parent",
+          "explanation": "Click Yes only if single parent — No is selected by default so no action needed for the common case."
         },
         {
           "field_id": "father_first_name",

@@ -25,6 +25,7 @@ export interface UserData {
   mother_last_name: string;
   parent_on_card_is_father: boolean;
   parent_on_card_is_mother: boolean;
+  is_single_parent: boolean;
   aadhaar_pin_code: string;
   place: string;
   is_defence: boolean;
@@ -59,6 +60,7 @@ export const EMPTY_USER_DATA: UserData = {
   mother_last_name: "",
   parent_on_card_is_father: true,
   parent_on_card_is_mother: false,
+  is_single_parent: false,
   aadhaar_pin_code: "",
   place: "",
   is_defence: false,
