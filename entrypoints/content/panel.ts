@@ -1955,6 +1955,7 @@ function collectFormData(): UserData {
     mother_last_name: get("mother_last_name").toUpperCase(),
     parent_on_card_is_father: parentOnCard === "father",
     parent_on_card_is_mother: parentOnCard === "mother",
+    is_single_parent: false,
     aadhaar_pin_code: get("aadhaar_pin_code"),
     place: get("place").toUpperCase(),
     is_defence: getRadio("is_defence") === "true",

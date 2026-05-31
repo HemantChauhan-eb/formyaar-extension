@@ -180,6 +180,7 @@ export async function prepareOperatorSubmission(sub: any): Promise<void> {
     gender: (({ male: "M", female: "F", transgender: "T", m: "M", f: "F", t: "T" } as Record<string, string>)[String(sub.gender ?? "").toLowerCase()] ?? sub.gender ?? "") as "M" | "F" | "T" | "",
     parent_on_card_is_father: sub.name_to_print === "father",
     parent_on_card_is_mother: sub.name_to_print === "mother",
+    is_single_parent: sub.is_single_parent ?? false,
     aadhaar_pin_code: sub.pincode ?? "",
     place: sub.city ?? "",
     is_defence: sub.defence ?? false,
