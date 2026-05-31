@@ -1,6 +1,6 @@
 {
   "form": "pan_card",
-  "version": 8,
+  "version": 9,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -193,7 +193,8 @@
           "type": "radio",
           "selector": "#single_parent_yes",
           "value_source": "user.is_single_parent",
-          "explanation": "Click Yes only if single parent — No is selected by default so no action needed for the common case."
+          "min_delay_ms": 2000,
+          "explanation": "Click Yes only if single parent — 2s delay lets NSDL JS enable/disable parent name fields before we fill them."
         },
         {
           "field_id": "father_first_name",
