@@ -870,12 +870,7 @@ function renderOperatorReviewScreen(): string {
       </div>
 
       <div id="fy-review-footer" style="padding:12px 16px;border-top:1px solid #e5e7eb;background:#fafafa;display:flex;gap:8px;">
-        <button id="fy-review-reject" style="flex:1;padding:11px;background:#fff;color:#ef4444;border:1.5px solid #ef4444;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
-          Reject
-        </button>
-        <button id="fy-review-accept" style="flex:2;padding:11px;background:#000080;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
-          Accept & Fill
-        </button>
+        <!-- populated by showReviewScreen -->
       </div>
     </div>
   `;
@@ -2311,6 +2306,16 @@ function showReviewScreen(sub: any): void {
   const review = document.getElementById("fy-operator-review")!;
   review.style.display = "flex";
 
+  // Always restore the view-mode footer — edit mode replaces it with
+  // Cancel/Save buttons, so re-entering view mode must reset it.
+  const footer = document.getElementById("fy-review-footer")!;
+  footer.innerHTML = `
+    <button id="fy-review-reject" style="flex:1;padding:11px;background:#fff;color:#ef4444;border:1.5px solid #ef4444;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Reject</button>
+    <button id="fy-review-accept" style="flex:2;padding:11px;background:#000080;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Accept & Fill</button>
+  `;
+  footer.style.display = "flex";
+  footer.style.gap = "8px";
+
   const body = document.getElementById("fy-review-body")!;
 
   // Escapes the value — customer-supplied data must never be injected as raw HTML
@@ -2459,7 +2464,11 @@ function showReviewScreen(sub: any): void {
           headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify(updates),
         });
-        if (!res.ok) throw new Error("Failed");
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          console.error("FormYaar: submission edit failed", res.status, errBody);
+          throw new Error("Failed");
+        }
         currentSub = { ...currentSub, ...updates };
         showReviewScreen(currentSub);
       } catch {
