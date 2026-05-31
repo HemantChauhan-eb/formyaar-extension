@@ -858,7 +858,9 @@ function renderOperatorReviewScreen(): string {
             </div>
             <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Review Form</div>
           </div>
-          <div style="width:60px;"></div>
+          <button id="fy-review-edit" style="background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.25);border-radius:7px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
         </div>
         <div style="height:3px;display:flex;"><div style="flex:1;background:#FF9933;"></div><div style="flex:1;background:#ffffff;"></div><div style="flex:1;background:#138808;"></div></div>
       </div>
@@ -867,7 +869,7 @@ function renderOperatorReviewScreen(): string {
         <!-- Populated dynamically -->
       </div>
 
-      <div style="padding:12px 16px;border-top:1px solid #e5e7eb;background:#fafafa;display:flex;gap:8px;">
+      <div id="fy-review-footer" style="padding:12px 16px;border-top:1px solid #e5e7eb;background:#fafafa;display:flex;gap:8px;">
         <button id="fy-review-reject" style="flex:1;padding:11px;background:#fff;color:#ef4444;border:1.5px solid #ef4444;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
           Reject
         </button>
@@ -2232,6 +2234,78 @@ async function loadQueue(operatorId: string): Promise<void> {
   });
 }
 
+const INPUT_STYLE = "width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;color:#0a0a2e;background:#fff;box-sizing:border-box;";
+const SELECT_STYLE = INPUT_STYLE + "cursor:pointer;";
+
+function renderEditForm(sub: any): string {
+  const inp = (field: string, value: unknown, type = "text", extra = "") =>
+    `<input data-edit="${field}" type="${type}" value="${escapeHtml(value)}" style="${INPUT_STYLE}" ${extra}>`;
+
+  const sel = (field: string, current: unknown, options: [string, string][]) =>
+    `<select data-edit="${field}" style="${SELECT_STYLE}">${options.map(([v, l]) =>
+      `<option value="${v}"${String(current) === v ? " selected" : ""}>${l}</option>`
+    ).join("")}</select>`;
+
+  const editRow = (label: string, inputHtml: string) => `
+    <div style="padding:8px 0;border-bottom:1px solid #f1f5f9;">
+      <div style="font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:5px;">${label}</div>
+      ${inputHtml}
+    </div>`;
+
+  const editSection = (title: string, content: string) => `
+    <div style="font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#94a3b8;padding:12px 0 4px;">${title}</div>
+    <div style="background:#f8fafc;border-radius:10px;padding:4px 12px;margin-bottom:2px;">${content}</div>
+  `;
+
+  return `
+    ${editSection("Applicant", `
+      ${editRow("First Name", inp("first_name", sub.first_name))}
+      ${editRow("Middle Name", inp("middle_name", sub.middle_name))}
+      ${editRow("Last Name", inp("last_name", sub.last_name))}
+      ${editRow("Gender", sel("gender", sub.gender, [["male","Male"],["female","Female"],["transgender","Transgender"]]))}
+      ${editRow("Date of Birth", inp("dob", sub.dob))}
+      ${editRow("Aadhaar Last 4", inp("aadhaar_last_4", sub.aadhaar_last_4, "text", 'maxlength="4" inputmode="numeric"'))}
+      ${editRow("Single Parent", sel("is_single_parent", String(sub.is_single_parent), [["false","No"],["true","Yes"]]))}
+      ${editRow("Parent on Card", sel("name_to_print", sub.name_to_print, [["father","Father's Name"],["mother","Mother's Name"]]))}
+    `)}
+    ${editSection("Contact", `
+      ${editRow("Mobile", inp("mobile", sub.mobile, "tel"))}
+      ${editRow("Email", inp("email", sub.email, "email"))}
+    `)}
+    ${editSection("Address", `
+      ${editRow("City", inp("city", sub.city))}
+      ${editRow("State", inp("state", sub.state))}
+      ${editRow("PIN Code", inp("pincode", sub.pincode, "text", 'maxlength="6" inputmode="numeric"'))}
+    `)}
+    ${editSection("Father", `
+      ${editRow("First Name", inp("father_first_name", sub.father_first_name))}
+      ${editRow("Middle Name", inp("father_middle_name", sub.father_middle_name))}
+      ${editRow("Last Name", inp("father_last_name", sub.father_last_name))}
+    `)}
+    ${editSection("Mother", `
+      ${editRow("First Name", inp("mother_first_name", sub.mother_first_name))}
+      ${editRow("Middle Name", inp("mother_middle_name", sub.mother_middle_name))}
+      ${editRow("Last Name", inp("mother_last_name", sub.mother_last_name))}
+    `)}
+    ${editSection("Application", `
+      ${editRow("Income Source", sel("income_source", sub.income_source, [
+        ["salary","Salary"],["business","Business"],["house_property","House Property"],
+        ["other_sources","Other Sources"],["capital_gains","Capital Gains"],["no_income","No Income"]
+      ]))}
+      ${editRow("Proof of DOB", sel("proof_of_dob", sub.proof_of_dob, [
+        ["Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate","Birth Certificate"],
+        ["Matriculation certificate","Matriculation Certificate"],
+        ["Matriculation Marksheet of recognised board","Matriculation Marksheet"],
+        ["Driving License","Driving License"],
+        ["Passport","Passport"],
+        ["Elector's photo identity card","Voter ID"],
+        ["Pension payment order","Pension Payment Order"]
+      ]))}
+      ${editRow("Defence", sel("defence", String(sub.defence ?? false), [["false","No"],["true","Yes"]]))}
+    `)}
+  `;
+}
+
 function showReviewScreen(sub: any): void {
   document.getElementById("fy-operator-queue")!.style.display = "none";
   const review = document.getElementById("fy-operator-review")!;
@@ -2342,5 +2416,57 @@ function showReviewScreen(sub: any): void {
     });
     document.getElementById("fy-operator-review")!.style.display = "none";
     document.getElementById("fy-operator-queue")!.style.display = "flex";
+  };
+
+  // Edit button — toggle edit mode
+  let currentSub = { ...sub };
+  document.getElementById("fy-review-edit")!.onclick = () => {
+    const body = document.getElementById("fy-review-body")!;
+    const footer = document.getElementById("fy-review-footer")!;
+
+    body.innerHTML = renderEditForm(currentSub);
+
+    footer.innerHTML = `
+      <button id="fy-edit-cancel" style="flex:1;padding:11px;background:#fff;color:#64748b;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>
+      <button id="fy-edit-save" style="flex:2;padding:11px;background:#000080;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Save Changes</button>
+    `;
+    footer.style.display = "flex";
+    footer.style.gap = "8px";
+
+    document.getElementById("fy-edit-cancel")!.onclick = () => {
+      showReviewScreen(currentSub);
+    };
+
+    document.getElementById("fy-edit-save")!.onclick = async () => {
+      const updates: Record<string, unknown> = {};
+      body.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-edit]").forEach((el) => {
+        const field = el.dataset.edit!;
+        let value: unknown = el.value;
+        if (field === "is_single_parent" || field === "defence") value = el.value === "true";
+        updates[field] = value;
+      });
+
+      if (!confirm(`Update ${currentSub.first_name ?? "this customer"}'s details? This will overwrite the submission.`)) return;
+
+      const saveBtn = document.getElementById("fy-edit-save") as HTMLButtonElement;
+      saveBtn.textContent = "Saving…";
+      saveBtn.disabled = true;
+
+      try {
+        const authHeaders = await getOperatorAuthHeaders();
+        const res = await fetch(`${BACKEND_URL}/operator/submission/${currentSub.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify(updates),
+        });
+        if (!res.ok) throw new Error("Failed");
+        currentSub = { ...currentSub, ...updates };
+        showReviewScreen(currentSub);
+      } catch {
+        saveBtn.textContent = "Save Changes";
+        saveBtn.disabled = false;
+        alert("Failed to save. Please try again.");
+      }
+    };
   };
 }
