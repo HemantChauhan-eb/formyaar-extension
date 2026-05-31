@@ -2422,15 +2422,24 @@ function showReviewScreen(sub: any): void {
     }
   };
 
-  // Reject button
+  // Reject button — confirms then permanently deletes the submission
   const rejectBtn = document.getElementById("fy-review-reject")!;
   rejectBtn.onclick = async () => {
-    const authHeaders = await getOperatorAuthHeaders();
-    await fetch(`${BACKEND_URL}/operator/submission/${sub.id}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...authHeaders },
-      body: JSON.stringify({ status: "rejected" }),
-    });
+    const name = escapeHtml([sub.first_name, sub.last_name].filter(Boolean).join(" ") || "this submission");
+    const confirmed = confirm(`Delete ${name}?\n\nThis will permanently remove the submission from the queue and cannot be undone.`);
+    if (!confirmed) return;
+
+    rejectBtn.textContent = "Deleting…";
+    (rejectBtn as HTMLButtonElement).disabled = true;
+
+    try {
+      const authHeaders = await getOperatorAuthHeaders();
+      await fetch(`${BACKEND_URL}/operator/submission/${sub.id}`, {
+        method: "DELETE",
+        headers: { ...authHeaders },
+      });
+    } catch { /* best effort — remove from view regardless */ }
+
     document.getElementById("fy-operator-review")!.style.display = "none";
     document.getElementById("fy-operator-queue")!.style.display = "flex";
   };
