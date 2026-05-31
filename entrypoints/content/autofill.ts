@@ -181,6 +181,8 @@ export async function prepareOperatorSubmission(sub: any): Promise<void> {
     parent_on_card_is_father: sub.name_to_print === "father",
     parent_on_card_is_mother: sub.name_to_print === "mother",
     is_single_parent: sub.is_single_parent ?? false,
+    is_single_parent_father: !!(sub.is_single_parent) && sub.name_to_print === "father",
+    is_single_parent_mother: !!(sub.is_single_parent) && sub.name_to_print === "mother",
     aadhaar_pin_code: sub.pincode ?? "",
     place: sub.city ?? "",
     is_defence: sub.defence ?? false,
