@@ -2212,9 +2212,18 @@ async function loadQueue(operatorId: string): Promise<void> {
           headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ status: "completed" }),
         });
-      } catch { /* still remove locally even if the network call fails */ }
-      await removeInProgressSubmission(operatorId, id);
-      await loadQueue(operatorId);
+        await removeInProgressSubmission(operatorId, id);
+        await loadQueue(operatorId);
+      } catch (err: any) {
+        if (err?.message?.includes("Extension context invalidated")) {
+          btn.textContent = "Refresh page ↺";
+          btn.style.color = "#e67e22";
+          btn.disabled = false;
+        } else {
+          await removeInProgressSubmission(operatorId, id).catch(() => {});
+          await loadQueue(operatorId).catch(() => {});
+        }
+      }
     });
   });
 
