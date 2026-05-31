@@ -1846,6 +1846,37 @@ function attachUserFormHandlers(
 
   if (back) back.addEventListener("click", onBack);
 
+  // Show/hide defence_branch radios dynamically when is_defence changes
+  const DEFENCE_BRANCH_HTML = `
+    <label class="fy-userform-field" id="fy-defence-branch-field">
+      <span>Defence branch</span>
+      <div class="fy-userform-radios">
+        <label class="fy-userform-radio">
+          <input type="radio" name="defence_branch" data-field="defence_branch" value="army">
+          <span>Army</span>
+        </label>
+        <label class="fy-userform-radio">
+          <input type="radio" name="defence_branch" data-field="defence_branch" value="air_force">
+          <span>Air Force</span>
+        </label>
+      </div>
+    </label>`;
+
+  document.querySelectorAll<HTMLInputElement>('input[name="is_defence"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      const isDefence = radio.value === "true" && radio.checked;
+      const existing = document.getElementById("fy-defence-branch-field");
+      if (isDefence && !existing) {
+        const anchor = radio.closest(".fy-userform-field");
+        if (anchor) {
+          anchor.insertAdjacentHTML("afterend", DEFENCE_BRANCH_HTML);
+        }
+      } else if (!isDefence && existing) {
+        existing.remove();
+      }
+    });
+  });
+
   const dobInput = document.querySelector<HTMLInputElement>('[data-field="date_of_birth"]');
   if (dobInput) {
     dobInput.addEventListener("input", (e) => {
