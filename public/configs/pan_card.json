@@ -1,6 +1,6 @@
 {
   "form": "pan_card",
-  "version": 11,
+  "version": 12,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -272,12 +272,17 @@
           "selector": "#parent_mother",
           "value_source": "user.parent_on_card_is_mother",
           "explanation": "Mother's name on PAN card."
+        },
+        {
+          "field_id": "next_personal",
+          "type": "button_click",
+          "selector": "a.button-next",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Auto-advance to Contact & other details step."
         }
       ],
-      "completion": {
-        "title": "Personal details filled!",
-        "subtitle": "Review your details, then click Next →"
-      }
+      "auto_advance": true
     },
     {
       "step": 3,
@@ -365,12 +370,17 @@
           "selector": "#tin_num",
           "value_source": "user.tin_number",
           "explanation": "TIN number (optional)."
+        },
+        {
+          "field_id": "next_contact",
+          "type": "button_click",
+          "selector": "a.button-next",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Auto-advance to AO Code step."
         }
       ],
-      "completion": {
-        "title": "Contact details filled!",
-        "subtitle": "Review your income and contact info, then click Next →"
-      }
+      "auto_advance": true
     },
     {
       "step": 4,
@@ -386,13 +396,17 @@
           "value_source": "user.is_defence",
           "explanation": "AO category — Indian Citizens (or Defence if applicable).",
           "defence_selector": "#def_aoCode"
+        },
+        {
+          "field_id": "next_ao",
+          "type": "button_click",
+          "selector": "a.button-next",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Auto-advance to Document details step."
         }
       ],
-      "completion": {
-        "title": "AO Code selected!",
-        "subtitle": "Review, then click Next →",
-        "info": "AO Code was auto-selected based on your PIN code. You can change it manually if it looks wrong."
-      }
+      "auto_advance": true
     },
     {
       "step": 5,

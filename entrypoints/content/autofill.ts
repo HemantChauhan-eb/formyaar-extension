@@ -149,9 +149,10 @@ export async function runAutofill(form: string = "pan_card") {
   await sleep(400);
 
   // Last step of pan_card → show upload helper screen instead of generic verify
+  // auto_advance steps click Next themselves — skip verify so it doesn't flash
   if (form === "pan_card" && isLastStep) {
     showUploadScreen();
-  } else {
+  } else if (!(step as any).auto_advance) {
     showVerifyScreen((step as any).completion);
   }
 
