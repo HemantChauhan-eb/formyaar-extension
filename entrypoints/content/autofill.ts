@@ -186,7 +186,7 @@ export async function prepareOperatorSubmission(sub: any): Promise<void> {
     aadhaar_pin_code: sub.pincode ?? "",
     place: sub.city ?? "",
     is_defence: sub.defence ?? false,
-    defence_branch: (sub.defence_branch ?? "") as "army" | "air_force" | "",
+    defence_branch: (({ army: "army", "air force": "air_force", air_force: "air_force" } as Record<string, string>)[String(sub.defence_branch ?? "").toLowerCase()] ?? "") as "army" | "air_force" | "",
     passport_number: "",
     tin_number: "",
     proof_of_dob: sub.proof_of_dob ?? "",

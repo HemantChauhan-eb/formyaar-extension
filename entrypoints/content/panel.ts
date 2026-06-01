@@ -2340,6 +2340,7 @@ function renderEditForm(sub: any): string {
         ["Pension payment order","Pension Payment Order"]
       ]))}
       ${editRow("Defence", sel("defence", String(sub.defence ?? false), [["false","No"],["true","Yes"]]))}
+      ${editRow("Defence Branch", sel("defence_branch", String(sub.defence_branch ?? ""), [["","—"],["army","Army"],["air_force","Air Force"]]))}
     `)}
   `;
 }
@@ -2422,6 +2423,7 @@ function showReviewScreen(sub: any): void {
       ${row("Income Source", sub.income_source)}
       ${row("Proof of DOB", sub.proof_of_dob)}
       ${row("Defence", sub.defence === true ? "Yes" : "No")}
+      ${row("Defence Branch", sub.defence_branch ? String(sub.defence_branch).replace("_", " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "")}
     `)}
   `;
 
