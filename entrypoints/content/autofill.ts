@@ -121,7 +121,8 @@ export async function runAutofill(form: string = "pan_card") {
     const field = { ...step.fields[i], _step: step.step };
     const value = resolveValue(field, userData);
     const ok = await fillField(field, value);
-    const delay = (field as any).min_delay_ms ?? (field.type === "button_click" ? 2500 : 150);
+    const baseDelay = field.type === "button_click" ? 2500 : 150;
+    const delay = (ok && (field as any).min_delay_ms) ? (field as any).min_delay_ms : baseDelay;
     await sleep(delay);
     progress[i].status = ok ? "done" : "done"; // mark done either way; missing fields aren't fatal
     updateFillProgress([...progress]);
