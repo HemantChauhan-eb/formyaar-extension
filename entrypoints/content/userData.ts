@@ -3,7 +3,6 @@
 const STORAGE_KEY = "fy_user_data";
 const SENSITIVE_KEY = "fy_sensitive_data";
 const SENSITIVE_FIELDS: (keyof UserData)[] = [
-  "aadhaar_last_4",
   "passport_number",
   "tin_number",
 ];

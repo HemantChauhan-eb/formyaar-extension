@@ -356,7 +356,6 @@ async function fillField(
   }
 }
 function fillText(input: HTMLInputElement, value: string): boolean {
-  if (!value) return false;
   // Use native setter to bypass framework value-tracking (React, etc.)
   const setter = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
