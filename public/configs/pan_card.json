@@ -1,6 +1,6 @@
 {
   "form": "pan_card",
-  "version": 12,
+  "version": 13,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -272,14 +272,6 @@
           "selector": "#parent_mother",
           "value_source": "user.parent_on_card_is_mother",
           "explanation": "Mother's name on PAN card."
-        },
-        {
-          "field_id": "next_personal",
-          "type": "button_click",
-          "selector": "a.button-next",
-          "value_source": "static",
-          "static_value": true,
-          "explanation": "Auto-advance to Contact & other details step."
         }
       ],
       "auto_advance": true
@@ -370,14 +362,6 @@
           "selector": "#tin_num",
           "value_source": "user.tin_number",
           "explanation": "TIN number (optional)."
-        },
-        {
-          "field_id": "next_contact",
-          "type": "button_click",
-          "selector": "a.button-next",
-          "value_source": "static",
-          "static_value": true,
-          "explanation": "Auto-advance to AO Code step."
         }
       ],
       "auto_advance": true
@@ -396,14 +380,6 @@
           "value_source": "user.is_defence",
           "explanation": "AO category — Indian Citizens (or Defence if applicable).",
           "defence_selector": "#def_aoCode"
-        },
-        {
-          "field_id": "next_ao",
-          "type": "button_click",
-          "selector": "a.button-next",
-          "value_source": "static",
-          "static_value": true,
-          "explanation": "Auto-advance to Document details step."
         }
       ],
       "auto_advance": true

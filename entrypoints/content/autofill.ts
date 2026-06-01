@@ -73,6 +73,14 @@ const FIELD_LABELS: Record<string, string> = {
   ao_fetch_btn: "Fetch AO code",
 };
 
+function getCurrentStepyIndex(): number {
+  let idx = -1;
+  document.querySelectorAll(".stepy-step").forEach((fs, i) => {
+    if ((fs as HTMLElement).style.display !== "none") idx = i;
+  });
+  return idx;
+}
+
 // ─── Main entry point ────────────────────────────────────────────────
 export async function runAutofill(form: string = "pan_card") {
   showFillingScreen();
@@ -148,16 +156,36 @@ export async function runAutofill(form: string = "pan_card") {
   }
   await sleep(400);
 
-  // Last step of pan_card → show upload helper screen instead of generic verify
-  // auto_advance steps click Next themselves — skip verify so it doesn't flash
   if (form === "pan_card" && isLastStep) {
     showUploadScreen();
-  } else if (!(step as any).auto_advance) {
+    celebrateTimeSaved(step.fields.length);
+  } else if ((step as any).auto_advance) {
+    // Click Next and wait for stepy to actually change before running next step.
+    // Handled here (not via index.ts click listener) to avoid infinite loops
+    // when NSDL validation errors trigger the MutationObserver on the same step.
+    celebrateTimeSaved(step.fields.length);
+    const nextBtn = document.querySelector("a.button-next") as HTMLElement | null;
+    if (nextBtn) {
+      const stepyBefore = getCurrentStepyIndex();
+      nextBtn.click();
+      // Poll until stepy changes (max 4s — if validation error, give up cleanly)
+      let elapsed = 0;
+      while (elapsed < 4000) {
+        await sleep(150);
+        elapsed += 150;
+        if (getCurrentStepyIndex() !== stepyBefore) {
+          await sleep(200); // let NSDL finish animating
+          await runAutofill(form);
+          return;
+        }
+      }
+      // Stepy didn't change — likely a validation error, show verify so user knows
+      showVerifyScreen({ title: "Review required", subtitle: "Fix any errors on the page, then click Next →" });
+    }
+  } else {
     showVerifyScreen((step as any).completion);
+    celebrateTimeSaved(step.fields.length);
   }
-
-  // Surprise: celebrate the time saved on this step (fields auto-filled).
-  celebrateTimeSaved(step.fields.length);
 }
 export async function prepareOperatorSubmission(sub: any): Promise<void> {
   const incomeSources: string[] = (sub.income_source ?? "")
