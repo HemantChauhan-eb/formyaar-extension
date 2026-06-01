@@ -1088,6 +1088,20 @@ function renderUserFormScreen(form: string, data: UserData): string {
           </label>
 
           <label class="fy-userform-field">
+            <span>Single parent?</span>
+            <div class="fy-userform-radios">
+              <label class="fy-userform-radio">
+                <input type="radio" name="is_single_parent" data-field="is_single_parent" value="false" ${!data.is_single_parent ? "checked" : ""}>
+                <span>No — both parents</span>
+              </label>
+              <label class="fy-userform-radio">
+                <input type="radio" name="is_single_parent" data-field="is_single_parent" value="true" ${data.is_single_parent ? "checked" : ""}>
+                <span>Yes — single parent</span>
+              </label>
+            </div>
+          </label>
+
+          <label class="fy-userform-field">
             <span>Whose name to print on PAN card? <em>*</em></span>
             <div class="fy-userform-radios">
               <label class="fy-userform-radio">
@@ -1986,9 +2000,9 @@ function collectFormData(): UserData {
     mother_last_name: get("mother_last_name").toUpperCase(),
     parent_on_card_is_father: parentOnCard === "father",
     parent_on_card_is_mother: parentOnCard === "mother",
-    is_single_parent: false,
-    is_single_parent_father: false,
-    is_single_parent_mother: false,
+    is_single_parent: getRadio("is_single_parent") === "true",
+    is_single_parent_father: getRadio("is_single_parent") === "true" && parentOnCard === "father",
+    is_single_parent_mother: getRadio("is_single_parent") === "true" && parentOnCard === "mother",
     aadhaar_pin_code: get("aadhaar_pin_code"),
     place: get("place").toUpperCase(),
     is_defence: getRadio("is_defence") === "true",
