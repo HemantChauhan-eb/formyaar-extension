@@ -152,7 +152,7 @@ export async function runAutofill(form: string = "pan_card") {
   if (form === "pan_card" && isLastStep) {
     showUploadScreen();
   } else {
-    showVerifyScreen();
+    showVerifyScreen((step as any).completion);
   }
 
   // Surprise: celebrate the time saved on this step (fields auto-filled).
