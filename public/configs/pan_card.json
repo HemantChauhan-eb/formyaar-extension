@@ -1,6 +1,6 @@
 {
   "form": "pan_card",
-  "version": 10,
+  "version": 11,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -76,7 +76,12 @@
           "static_value": true,
           "explanation": "Consent to data processing."
         }
-      ]
+      ],
+      "completion": {
+        "title": "Registration filled!",
+        "subtitle": "Generating your token...",
+        "info": "Your details have been submitted. Your token will appear on the next screen."
+      }
     },
     {
       "step": 1,
@@ -268,7 +273,11 @@
           "value_source": "user.parent_on_card_is_mother",
           "explanation": "Mother's name on PAN card."
         }
-      ]
+      ],
+      "completion": {
+        "title": "Personal details filled!",
+        "subtitle": "Review your details, then click Next →"
+      }
     },
     {
       "step": 3,
@@ -357,7 +366,11 @@
           "value_source": "user.tin_number",
           "explanation": "TIN number (optional)."
         }
-      ]
+      ],
+      "completion": {
+        "title": "Contact details filled!",
+        "subtitle": "Review your income and contact info, then click Next →"
+      }
     },
     {
       "step": 4,
@@ -374,7 +387,12 @@
           "explanation": "AO category — Indian Citizens (or Defence if applicable).",
           "defence_selector": "#def_aoCode"
         }
-      ]
+      ],
+      "completion": {
+        "title": "AO Code selected!",
+        "subtitle": "Review, then click Next →",
+        "info": "AO Code was auto-selected based on your PIN code. You can change it manually if it looks wrong."
+      }
     },
     {
       "step": 5,
@@ -441,7 +459,17 @@
           "static_value": true,
           "explanation": "Save Draft — preserves all filled fields before user uploads documents."
         }
-      ]
+      ],
+      "completion": {
+        "title": "Details filled & saved!",
+        "subtitle": "Now upload your documents below",
+        "manual_steps": [
+          "Upload your <strong>Aadhaar card</strong> as proof of identity & address",
+          "Upload your <strong>proof of date of birth</strong>",
+          "Upload your <strong>passport-size photo</strong> and <strong>signature</strong>",
+          "Click <strong>Submit</strong> when done"
+        ]
+      }
     },
     {
       "step": 6,
