@@ -1,6 +1,7 @@
 import { ensureFontsLoaded } from "./fonts";
 import {
   BACKEND_URL,
+  CWS_LISTING_URL,
   PANEL_WIDTH,
   PULSE_INITIAL_DELAY_MS,
   PULSE_INTERVAL_MS,
@@ -101,6 +102,28 @@ function startMaintenanceCountdown(backAt: string | null) {
   maintenanceCountdownInterval = setInterval(update, 1000);
 }
 
+function isVersionOutdated(current: string, required: string): boolean {
+  const parse = (v: string) => v.split(".").map(Number);
+  const [cMaj, cMin, cPat] = parse(current);
+  const [rMaj, rMin, rPat] = parse(required);
+  if (cMaj !== rMaj) return cMaj < rMaj;
+  if (cMin !== rMin) return cMin < rMin;
+  return cPat < rPat;
+}
+
+function renderUpdateScreen(currentVersion: string, minVersion: string): string {
+  return `
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 28px;text-align:center;background:#fff;">
+      <div style="width:64px;height:64px;border-radius:16px;background:#fff4e5;border:2px solid #f59e0b;display:flex;align-items:center;justify-content:center;margin-bottom:24px;font-size:32px;">🔄</div>
+      <div style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#b45309;margin-bottom:10px;">Update Required</div>
+      <div style="font-size:20px;font-weight:800;color:#1a1a18;line-height:1.3;margin-bottom:14px;">FormYaar needs an update</div>
+      <div style="font-size:13px;color:#64748b;line-height:1.7;max-width:272px;margin-bottom:32px;">You're on <strong style="color:#1a1a18;">v${currentVersion}</strong>. Version <strong style="color:#1a1a18;">v${minVersion}</strong> is required to continue. Please update your extension.</div>
+      <button id="fy-update-btn" style="width:100%;padding:14px;background:#000080;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:12px;">Update Extension →</button>
+      <div style="font-size:11.5px;color:#94a3b8;line-height:1.6;">After updating, refresh this page and the panel will open normally.</div>
+    </div>
+  `;
+}
+
 export function removeTab() {
   const t = document.getElementById("fy-tab");
   if (!t) return;
@@ -140,7 +163,7 @@ export async function showContextualBanner() {
   attachClickOutsideHandler();
   attachPanelEventHandlers();
 
-  // Check maintenance in background — swap content if ON (doesn't block autofill)
+  // Check maintenance + min_version in background — swaps content if needed
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 2500);
@@ -148,12 +171,18 @@ export async function showContextualBanner() {
     clearTimeout(timer);
     if (res.ok) {
       const data = await res.json();
-      if (data.enabled) {
+      // Version check takes priority — outdated extension can't interact anyway
+      if (data.min_version && isVersionOutdated(VERSION, data.min_version)) {
+        panel.innerHTML = renderUpdateScreen(VERSION, data.min_version);
+        document.getElementById("fy-update-btn")?.addEventListener("click", () => {
+          window.open(CWS_LISTING_URL || "https://formyaar.in", "_blank");
+        });
+      } else if (data.enabled) {
         panel.innerHTML = renderMaintenanceScreen(data.back_at ?? null);
         startMaintenanceCountdown(data.back_at ?? null);
       }
     }
-  } catch { /* treat fetch failure as not in maintenance */ }
+  } catch { /* treat fetch failure as neither outdated nor in maintenance */ }
 }
 
 function renderPanelHTML(): string {

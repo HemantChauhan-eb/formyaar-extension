@@ -1,4 +1,5 @@
 export const VERSION = "0.7.0";
+export const CWS_LISTING_URL = "";
 
 export const BACKEND_URL =
   (import.meta.env.VITE_BACKEND_URL as string) ??
