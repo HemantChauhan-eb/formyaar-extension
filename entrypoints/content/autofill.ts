@@ -418,7 +418,7 @@ function fillRadio(
   shouldSelect: boolean,
   forceClick = false,
 ): boolean {
-  if (!shouldSelect && !forceClick) return true;
+  if (!shouldSelect && !forceClick) return false;
   if (shouldSelect) {
     if (input.checked && !forceClick) return true;
     input.checked = true;
