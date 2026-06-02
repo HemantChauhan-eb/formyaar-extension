@@ -170,7 +170,12 @@ export async function runAutofill(form: string = "pan_card") {
     // Handled here (not via index.ts click listener) to avoid infinite loops
     // when NSDL validation errors trigger the MutationObserver on the same step.
     celebrateTimeSaved(step.fields.length);
-    const nextBtn = document.querySelector("a.button-next") as HTMLElement | null;
+    // Find Next button inside the CURRENT visible fieldset — not the first in DOM
+    // which would be inside the hidden Guidelines step
+    const visibleFieldset = Array.from(document.querySelectorAll(".stepy-step"))
+      .find(fs => (fs as HTMLElement).style.display !== "none");
+    const nextBtn = (visibleFieldset?.querySelector("a.button-next") ??
+      document.querySelector("a.button-next")) as HTMLElement | null;
     if (nextBtn) {
       const stepyBefore = getCurrentStepyIndex();
       (window as any).__fy_auto_advancing = true;
