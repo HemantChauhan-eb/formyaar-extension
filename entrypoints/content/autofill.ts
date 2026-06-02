@@ -74,6 +74,12 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 function getCurrentStepyIndex(): number {
+  // Primary: stepy header active class — most reliable indicator
+  const headers = document.querySelectorAll(".stepy-header li");
+  for (let i = 0; i < headers.length; i++) {
+    if (headers[i].classList.contains("stepy-active")) return i;
+  }
+  // Fallback: inline display style on fieldsets
   let idx = -1;
   document.querySelectorAll(".stepy-step").forEach((fs, i) => {
     if ((fs as HTMLElement).style.display !== "none") idx = i;
@@ -168,8 +174,10 @@ export async function runAutofill(form: string = "pan_card") {
     if (nextBtn) {
       const stepyBefore = getCurrentStepyIndex();
       (window as any).__fy_auto_advancing = true;
-      nextBtn.click();
-      setTimeout(() => { (window as any).__fy_auto_advancing = false; }, 100);
+      // Dispatch click with bubbles:false to reach stepy.js handlers
+      // without triggering the index.ts document listener
+      nextBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      setTimeout(() => { (window as any).__fy_auto_advancing = false; }, 200);
       // Poll until stepy changes (max 4s — if validation error, give up cleanly)
       let elapsed = 0;
       while (elapsed < 4000) {
