@@ -1,4 +1,4 @@
-export const VERSION = "0.7.0";
+export const VERSION = "0.8.0";
 export const CWS_LISTING_URL = "https://chromewebstore.google.com/detail/formyaar/anibapibnfjepjpomkpoifpolbagajag";
 
 export const BACKEND_URL =
