@@ -167,7 +167,9 @@ export async function runAutofill(form: string = "pan_card") {
     const nextBtn = document.querySelector("a.button-next") as HTMLElement | null;
     if (nextBtn) {
       const stepyBefore = getCurrentStepyIndex();
+      (window as any).__fy_auto_advancing = true;
       nextBtn.click();
+      setTimeout(() => { (window as any).__fy_auto_advancing = false; }, 100);
       // Poll until stepy changes (max 4s — if validation error, give up cleanly)
       let elapsed = 0;
       while (elapsed < 4000) {

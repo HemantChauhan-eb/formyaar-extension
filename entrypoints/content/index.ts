@@ -70,6 +70,8 @@ export default defineContentScript({
           target.classList.contains("button-next") ||
           target.closest(".button-next")
         ) {
+          // Ignore programmatic clicks from autofill auto-advance — handled there
+          if ((window as any).__fy_auto_advancing) return;
           const result = await browser.storage.session.get("autofillActive");
           const active = result.autofillActive as { form: string } | undefined;
           if (!active) return;
