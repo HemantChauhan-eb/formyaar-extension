@@ -2063,7 +2063,17 @@ function attachUserFormHandlers(
       if (errorBox) errorBox.hidden = true;
 
       // Confirmation modal before payment
-      const aoStatusHTML = document.getElementById("fy-ao-status")?.innerHTML?.trim() ?? "";
+      const aoStatusEl = document.getElementById("fy-ao-status");
+      const aoStatusHTML = aoStatusEl?.innerHTML?.trim() ?? "";
+      // AO is available if the text contains the green checkmark — no modal needed
+      const aoAvailable = aoStatusEl?.textContent?.includes("✓") ?? false;
+
+      if (aoAvailable) {
+        await saveUserData(data);
+        onSubmit();
+        return;
+      }
+
       const aoLine = aoStatusHTML
         ? `<div style="background:#fff8eb;border:1px solid #f5d27a;border-radius:10px;padding:10px 13px;margin-bottom:14px;font-size:12.5px;">${aoStatusHTML}</div>`
         : "";
