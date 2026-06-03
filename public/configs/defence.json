@@ -1,0 +1,16 @@
+{
+  "army": {
+    "description": "ITO WARD 4(3), GHQ, PNE",
+    "area_code": "PNE",
+    "ao_type": "W",
+    "range_code": "55",
+    "ao_number": "3"
+  },
+  "air_force": {
+    "description": "ITO WARD 42(2)",
+    "area_code": "DEL",
+    "ao_type": "W",
+    "range_code": "72",
+    "ao_number": "2"
+  }
+}

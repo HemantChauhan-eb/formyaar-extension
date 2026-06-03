@@ -154,13 +154,25 @@ export async function runAutofill(form: string = "pan_card") {
     const isDefence =
       userData.is_defence === true || (userData.is_defence as any) === "true";
     if (isDefence) {
-      const DEFENCE_AO: Record<string, AOCode> = {
-        army:      { area_code: "PNE", ao_type: "W", range_code: "55", ao_number: "3" },
-        air_force: { area_code: "DEL", ao_type: "W", range_code: "72", ao_number: "2" },
-      };
       const branch = (userData as any).defence_branch as string;
-      const target = DEFENCE_AO[branch];
-      if (target) fillAOCodeFields(target);
+      if (branch) {
+        try {
+          const url = (browser.runtime.getURL as (p: string) => string)("configs/defence.json");
+          const res = await fetch(url);
+          if (res.ok) {
+            const defenceAO = await res.json();
+            const target: AOCode | undefined = defenceAO[branch];
+            if (target) fillAOCodeFields(target);
+          }
+        } catch {
+          // Fallback to hardcoded if file can't be read
+          const FALLBACK: Record<string, AOCode> = {
+            army:      { area_code: "PNE", ao_type: "W", range_code: "55", ao_number: "3" },
+            air_force: { area_code: "DEL", ao_type: "W", range_code: "72", ao_number: "2" },
+          };
+          if (FALLBACK[branch]) fillAOCodeFields(FALLBACK[branch]);
+        }
+      }
     } else {
       await autoFillAOCode(userData.aadhaar_pin_code);
     }
