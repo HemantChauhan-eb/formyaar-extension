@@ -2062,6 +2062,40 @@ function attachUserFormHandlers(
 
       if (errorBox) errorBox.hidden = true;
 
+      // Confirmation modal before payment
+      const aoStatusText = document.getElementById("fy-ao-status")?.textContent?.trim() ?? "";
+      const aoLine = aoStatusText
+        ? `<div style="background:#f8fafc;border-radius:10px;padding:10px 13px;margin-bottom:14px;font-size:12.5px;">${aoStatusText}</div>`
+        : "";
+
+      const modal = document.createElement("div");
+      modal.style.cssText = `
+        position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999999;
+        display:flex;align-items:center;justify-content:center;padding:24px;
+      `;
+      modal.innerHTML = `
+        <div style="background:#fff;border-radius:16px;padding:24px;max-width:320px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+          <div style="font-size:18px;font-weight:800;color:#0a0a2e;margin-bottom:6px;">Confirm payment</div>
+          <div style="font-size:13px;color:#64748b;margin-bottom:16px;line-height:1.6;">
+            You're about to pay <strong style="color:#0a0a2e;">₹29</strong> to auto-fill your PAN card application.
+          </div>
+          ${aoLine}
+          <div style="display:flex;gap:8px;">
+            <button id="fy-modal-cancel" style="flex:1;padding:11px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>
+            <button id="fy-modal-confirm" style="flex:2;padding:11px;background:#000080;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">Pay ₹29 →</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const confirmed = await new Promise<boolean>((resolve) => {
+        document.getElementById("fy-modal-confirm")!.onclick = () => { modal.remove(); resolve(true); };
+        document.getElementById("fy-modal-cancel")!.onclick  = () => { modal.remove(); resolve(false); };
+        modal.addEventListener("click", (e) => { if (e.target === modal) { modal.remove(); resolve(false); } });
+      });
+
+      if (!confirmed) return;
+
       // Save data and continue
       await saveUserData(data);
       onSubmit();
