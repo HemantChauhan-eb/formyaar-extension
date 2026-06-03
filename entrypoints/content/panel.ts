@@ -15,7 +15,10 @@ import {
   getOperatorAuthHeaders,
   OperatorSession,
 } from "./supabase";
-import { runAutofillFromSubmission, prepareOperatorSubmission } from "./autofill";
+import {
+  runAutofillFromSubmission,
+  prepareOperatorSubmission,
+} from "./autofill";
 import { trackEvent } from "./telemetry";
 import {
   getUserData,
@@ -83,7 +86,10 @@ function startMaintenanceCountdown(backAt: string | null) {
   const update = () => {
     const el = document.getElementById("fy-maint-countdown");
     if (!el) return;
-    if (!backAt) { el.textContent = "--:--:--"; return; }
+    if (!backAt) {
+      el.textContent = "--:--:--";
+      return;
+    }
     const diff = new Date(backAt).getTime() - Date.now();
     if (diff <= 0) {
       el.textContent = "Soon";
@@ -111,7 +117,10 @@ function isVersionOutdated(current: string, required: string): boolean {
   return cPat < rPat;
 }
 
-function renderUpdateScreen(currentVersion: string, minVersion: string): string {
+function renderUpdateScreen(
+  currentVersion: string,
+  minVersion: string,
+): string {
   return `
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 28px;text-align:center;background:#fff;">
       <div style="width:64px;height:64px;border-radius:16px;background:#fff4e5;border:2px solid #f59e0b;display:flex;align-items:center;justify-content:center;margin-bottom:24px;font-size:32px;">🔄</div>
@@ -157,7 +166,9 @@ export async function showContextualBanner() {
   panel.innerHTML = renderPanelHTML();
   document.body.appendChild(panel);
 
-  setTimeout(() => { panel.style.right = "0px"; }, 100);
+  setTimeout(() => {
+    panel.style.right = "0px";
+  }, 100);
   trackEvent("banner_shown");
   createTab();
   attachClickOutsideHandler();
@@ -167,22 +178,28 @@ export async function showContextualBanner() {
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 2500);
-    const res = await fetch(`${BACKEND_URL}/maintenance/status`, { signal: ctrl.signal });
+    const res = await fetch(`${BACKEND_URL}/maintenance/status`, {
+      signal: ctrl.signal,
+    });
     clearTimeout(timer);
     if (res.ok) {
       const data = await res.json();
       // Version check takes priority — outdated extension can't interact anyway
       if (data.min_version && isVersionOutdated(VERSION, data.min_version)) {
         panel.innerHTML = renderUpdateScreen(VERSION, data.min_version);
-        document.getElementById("fy-update-btn")?.addEventListener("click", () => {
-          window.open(CWS_LISTING_URL || "https://formyaar.in", "_blank");
-        });
+        document
+          .getElementById("fy-update-btn")
+          ?.addEventListener("click", () => {
+            window.open(CWS_LISTING_URL || "https://formyaar.in", "_blank");
+          });
       } else if (data.enabled) {
         panel.innerHTML = renderMaintenanceScreen(data.back_at ?? null);
         startMaintenanceCountdown(data.back_at ?? null);
       }
     }
-  } catch { /* treat fetch failure as neither outdated nor in maintenance */ }
+  } catch {
+    /* treat fetch failure as neither outdated nor in maintenance */
+  }
 }
 
 function renderPanelHTML(): string {
@@ -1186,7 +1203,9 @@ function renderUserFormScreen(form: string, data: UserData): string {
             </div>
           </label>
 
-          ${data.is_defence ? `
+          ${
+            data.is_defence
+              ? `
           <label class="fy-userform-field">
             <span>Defence branch</span>
             <div class="fy-userform-radios">
@@ -1200,7 +1219,9 @@ function renderUserFormScreen(form: string, data: UserData): string {
               </label>
             </div>
           </label>
-          ` : ""}
+          `
+              : ""
+          }
 
           <label class="fy-userform-field">
             <span>Passport number</span>
@@ -1707,7 +1728,9 @@ export function showVerifyScreen(completion?: {
   const subEl = document.getElementById("fy-verify-subtitle");
   if (subEl) subEl.textContent = subtitle || "Step complete";
 
-  const manualCard = manualSteps.length > 0 ? `
+  const manualCard =
+    manualSteps.length > 0
+      ? `
     <div style="background:#fff8eb;border:1.5px solid #f5d27a;border-radius:12px;padding:14px 16px;margin-bottom:12px;">
       <div style="display:flex;gap:10px;align-items:flex-start;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
@@ -1718,15 +1741,19 @@ export function showVerifyScreen(completion?: {
           </div>
         </div>
       </div>
-    </div>` : "";
+    </div>`
+      : "";
 
-  const infoCard = info ? `
+  const infoCard = info
+    ? `
     <div style="background:#f0f8ff;border:1px solid #bfd4ec;border-radius:10px;padding:11px 14px;font-size:12px;color:#50507a;line-height:1.5;margin-bottom:12px;">
       ${info}
-    </div>` : "";
+    </div>`
+    : "";
 
   const body = document.getElementById("fy-verify-body");
-  if (body) body.innerHTML = `
+  if (body)
+    body.innerHTML = `
     <div style="text-align:center;margin-bottom:20px;">
       <div style="width:60px;height:60px;border-radius:50%;background:#22c55e;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;animation:fy-successPop 0.5s ease forwards;box-shadow:0 8px 20px rgba(34,197,94,0.27);">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1762,8 +1789,8 @@ export async function celebrateTimeSaved(fieldsThisRun: number): Promise<void> {
   try {
     const runSeconds = fieldsThisRun * SECONDS_PER_FIELD;
     const stored = await browser.storage.local.get(TIME_SAVED_KEY);
-    const prev = (stored[TIME_SAVED_KEY] as { seconds: number } | undefined)
-      ?.seconds ?? 0;
+    const prev =
+      (stored[TIME_SAVED_KEY] as { seconds: number } | undefined)?.seconds ?? 0;
     const totalSeconds = prev + runSeconds;
     await browser.storage.local.set({
       [TIME_SAVED_KEY]: { seconds: totalSeconds },
@@ -1916,22 +1943,26 @@ function attachUserFormHandlers(
       </div>
     </label>`;
 
-  document.querySelectorAll<HTMLInputElement>('input[name="is_defence"]').forEach((radio) => {
-    radio.addEventListener("change", () => {
-      const isDefence = radio.value === "true" && radio.checked;
-      const existing = document.getElementById("fy-defence-branch-field");
-      if (isDefence && !existing) {
-        const anchor = radio.closest(".fy-userform-field");
-        if (anchor) {
-          anchor.insertAdjacentHTML("afterend", DEFENCE_BRANCH_HTML);
+  document
+    .querySelectorAll<HTMLInputElement>('input[name="is_defence"]')
+    .forEach((radio) => {
+      radio.addEventListener("change", () => {
+        const isDefence = radio.value === "true" && radio.checked;
+        const existing = document.getElementById("fy-defence-branch-field");
+        if (isDefence && !existing) {
+          const anchor = radio.closest(".fy-userform-field");
+          if (anchor) {
+            anchor.insertAdjacentHTML("afterend", DEFENCE_BRANCH_HTML);
+          }
+        } else if (!isDefence && existing) {
+          existing.remove();
         }
-      } else if (!isDefence && existing) {
-        existing.remove();
-      }
+      });
     });
-  });
 
-  const dobInput = document.querySelector<HTMLInputElement>('[data-field="date_of_birth"]');
+  const dobInput = document.querySelector<HTMLInputElement>(
+    '[data-field="date_of_birth"]',
+  );
   if (dobInput) {
     dobInput.addEventListener("input", (e) => {
       const input = e.target as HTMLInputElement;
@@ -2041,8 +2072,10 @@ function collectFormData(): UserData {
     parent_on_card_is_father: parentOnCard === "father",
     parent_on_card_is_mother: parentOnCard === "mother",
     is_single_parent: getRadio("is_single_parent") === "true",
-    is_single_parent_father: getRadio("is_single_parent") === "true" && parentOnCard === "father",
-    is_single_parent_mother: getRadio("is_single_parent") === "true" && parentOnCard === "mother",
+    is_single_parent_father:
+      getRadio("is_single_parent") === "true" && parentOnCard === "father",
+    is_single_parent_mother:
+      getRadio("is_single_parent") === "true" && parentOnCard === "mother",
     aadhaar_pin_code: get("aadhaar_pin_code"),
     place: get("place").toUpperCase(),
     is_defence: getRadio("is_defence") === "true",
@@ -2178,7 +2211,9 @@ async function loadQueue(operatorId: string): Promise<void> {
       const subData = await subRes.json();
       subStatus = subData?.is_active ? "active" : "expired";
     }
-  } catch { /* leave as unknown — handled below */ }
+  } catch {
+    /* leave as unknown — handled below */
+  }
 
   if (subStatus === "expired") {
     list.innerHTML = `
@@ -2212,7 +2247,9 @@ async function loadQueue(operatorId: string): Promise<void> {
     queueRes = await fetch(`${BACKEND_URL}/operator/queue/${operatorId}`, {
       headers: authHeaders,
     });
-  } catch { /* network/CORS failure */ }
+  } catch {
+    /* network/CORS failure */
+  }
 
   const inProgress = await getInProgressSubmissions(operatorId);
   const { data, error } = queueRes?.ok
@@ -2226,14 +2263,32 @@ async function loadQueue(operatorId: string): Promise<void> {
     voter_id: "🗳️",
   };
 
-  const inProgressHTML = inProgress.length > 0 ? `
+  const inProgressHTML =
+    inProgress.length > 0
+      ? `
     <div style="margin-bottom:10px;">
       <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#b45309;margin-bottom:7px;padding:0 2px;">In Progress</div>
-      ${inProgress.map((sub: any) => {
-        const name = escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown");
-        const formLabel = escapeHtml(String(sub.form_type ?? "").replace("_", " ").toUpperCase());
-        const accepted = sub._accepted_at ? new Date(sub._accepted_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "";
-        return `
+      ${inProgress
+        .map((sub: any) => {
+          const name = escapeHtml(
+            [sub.first_name, sub.middle_name, sub.last_name]
+              .filter(Boolean)
+              .join(" ") ||
+              sub.name ||
+              "Unknown",
+          );
+          const formLabel = escapeHtml(
+            String(sub.form_type ?? "")
+              .replace("_", " ")
+              .toUpperCase(),
+          );
+          const accepted = sub._accepted_at
+            ? new Date(sub._accepted_at).toLocaleTimeString("en-IN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "";
+          return `
         <div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:12px;padding:12px 13px;margin-bottom:6px;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             <span style="font-size:18px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
@@ -2247,40 +2302,52 @@ async function loadQueue(operatorId: string): Promise<void> {
             <button class="fy-ip-resume" data-id="${escapeHtml(sub.id)}" style="flex:2;padding:7px 0;background:#000080;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Resume →</button>
           </div>
         </div>`;
-      }).join("")}
-    </div>` : "";
+        })
+        .join("")}
+    </div>`
+      : "";
 
   if (error || !data || data.length === 0) {
-    list.innerHTML = inProgressHTML + `
+    list.innerHTML =
+      inProgressHTML +
+      `
       <div style="text-align:center;color:#94a3b8;font-size:13px;padding:${inProgress.length > 0 ? "20px" : "40px"} 20px;">
         <div style="font-size:32px;margin-bottom:12px;">✅</div>
         No pending forms. Queue is clear.
       </div>
     `;
   } else {
-    list.innerHTML = inProgressHTML + data
-      .map(
-        (sub: any) => `
+    list.innerHTML =
+      inProgressHTML +
+      data
+        .map(
+          (sub: any) => `
       <button class="fy-queue-tile" data-id="${escapeHtml(sub.id)}" style="width:100%;background:#fff;border:1.5px solid #e0e0f0;border-radius:12px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;text-align:left;transition:border-color 0.15s;">
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:20px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
           <div>
             <div style="font-size:13.5px;font-weight:700;color:#0a0a2e;">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown")}</div>
-            <div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(String(sub.form_type ?? "").replace("_", " ").toUpperCase())} · ${new Date(sub.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(
+              String(sub.form_type ?? "")
+                .replace("_", " ")
+                .toUpperCase(),
+            )} · ${new Date(sub.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
           </div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     `,
-      )
-      .join("");
+        )
+        .join("");
 
-    list.querySelectorAll<HTMLButtonElement>(".fy-queue-tile").forEach((tile) => {
-      tile.addEventListener("click", () => {
-        const sub = data.find((s: any) => s.id === tile.dataset.id);
-        if (sub) showReviewScreen(sub);
+    list
+      .querySelectorAll<HTMLButtonElement>(".fy-queue-tile")
+      .forEach((tile) => {
+        tile.addEventListener("click", () => {
+          const sub = data.find((s: any) => s.id === tile.dataset.id);
+          if (sub) showReviewScreen(sub);
+        });
       });
-    });
   }
 
   // In-progress: Done button — mark completed on the backend (C2: keeps
@@ -2318,15 +2385,23 @@ async function loadQueue(operatorId: string): Promise<void> {
       const sub = inProgress.find((s: any) => s.id === btn.dataset.id);
       if (!sub) return;
       await browser.storage.session.set({
-        autofillActive: { form: sub.form_type, submission_id: sub.id, done: [] },
+        autofillActive: {
+          form: sub.form_type,
+          submission_id: sub.id,
+          done: [],
+        },
       });
       await prepareOperatorSubmission(sub);
-      window.open("https://onlineservices.proteantech.in/paam/endUserRegisterContact.html", "_blank");
+      window.open(
+        "https://onlineservices.proteantech.in/paam/endUserRegisterContact.html",
+        "_blank",
+      );
     });
   });
 }
 
-const INPUT_STYLE = "width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;color:#0a0a2e;background:#fff;box-sizing:border-box;";
+const INPUT_STYLE =
+  "width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;color:#0a0a2e;background:#fff;box-sizing:border-box;";
 const SELECT_STYLE = INPUT_STYLE + "cursor:pointer;";
 
 function renderEditForm(sub: any): string {
@@ -2334,9 +2409,12 @@ function renderEditForm(sub: any): string {
     `<input data-edit="${field}" type="${type}" value="${escapeHtml(value)}" style="${INPUT_STYLE}" ${extra}>`;
 
   const sel = (field: string, current: unknown, options: [string, string][]) =>
-    `<select data-edit="${field}" style="${SELECT_STYLE}">${options.map(([v, l]) =>
-      `<option value="${v}"${String(current) === v ? " selected" : ""}>${l}</option>`
-    ).join("")}</select>`;
+    `<select data-edit="${field}" style="${SELECT_STYLE}">${options
+      .map(
+        ([v, l]) =>
+          `<option value="${v}"${String(current) === v ? " selected" : ""}>${l}</option>`,
+      )
+      .join("")}</select>`;
 
   const editRow = (label: string, inputHtml: string) => `
     <div style="padding:8px 0;border-bottom:1px solid #f1f5f9;">
@@ -2350,52 +2428,118 @@ function renderEditForm(sub: any): string {
   `;
 
   return `
-    ${editSection("Applicant", `
+    ${editSection(
+      "Applicant",
+      `
       ${editRow("First Name", inp("first_name", sub.first_name))}
       ${editRow("Middle Name", inp("middle_name", sub.middle_name))}
       ${editRow("Last Name", inp("last_name", sub.last_name))}
-      ${editRow("Gender", sel("gender", sub.gender, [["male","Male"],["female","Female"],["transgender","Transgender"]]))}
+      ${editRow(
+        "Gender",
+        sel("gender", sub.gender, [
+          ["male", "Male"],
+          ["female", "Female"],
+          ["transgender", "Transgender"],
+        ]),
+      )}
       ${editRow("Date of Birth", inp("dob", sub.dob))}
       ${editRow("Aadhaar Last 4", inp("aadhaar_last_4", sub.aadhaar_last_4, "text", 'maxlength="4" inputmode="numeric"'))}
-      ${editRow("Single Parent", sel("is_single_parent", String(sub.is_single_parent), [["false","No"],["true","Yes"]]))}
-      ${editRow("Parent on Card", sel("name_to_print", sub.name_to_print, [["father","Father's Name"],["mother","Mother's Name"]]))}
-    `)}
-    ${editSection("Contact", `
+      ${editRow(
+        "Single Parent",
+        sel("is_single_parent", String(sub.is_single_parent), [
+          ["false", "No"],
+          ["true", "Yes"],
+        ]),
+      )}
+      ${editRow(
+        "Parent on Card",
+        sel("name_to_print", sub.name_to_print, [
+          ["father", "Father's Name"],
+          ["mother", "Mother's Name"],
+        ]),
+      )}
+    `,
+    )}
+    ${editSection(
+      "Contact",
+      `
       ${editRow("Mobile", inp("mobile", sub.mobile, "tel"))}
       ${editRow("Email", inp("email", sub.email, "email"))}
-    `)}
-    ${editSection("Address", `
+    `,
+    )}
+    ${editSection(
+      "Address",
+      `
       ${editRow("City", inp("city", sub.city))}
       ${editRow("State", inp("state", sub.state))}
       ${editRow("PIN Code", inp("pincode", sub.pincode, "text", 'maxlength="6" inputmode="numeric"'))}
-    `)}
-    ${editSection("Father", `
+    `,
+    )}
+    ${editSection(
+      "Father",
+      `
       ${editRow("First Name", inp("father_first_name", sub.father_first_name))}
       ${editRow("Middle Name", inp("father_middle_name", sub.father_middle_name))}
       ${editRow("Last Name", inp("father_last_name", sub.father_last_name))}
-    `)}
-    ${editSection("Mother", `
+    `,
+    )}
+    ${editSection(
+      "Mother",
+      `
       ${editRow("First Name", inp("mother_first_name", sub.mother_first_name))}
       ${editRow("Middle Name", inp("mother_middle_name", sub.mother_middle_name))}
       ${editRow("Last Name", inp("mother_last_name", sub.mother_last_name))}
-    `)}
-    ${editSection("Application", `
-      ${editRow("Income Source", sel("income_source", sub.income_source, [
-        ["salary","Salary"],["business","Business"],["house_property","House Property"],
-        ["other_sources","Other Sources"],["capital_gains","Capital Gains"],["no_income","No Income"]
-      ]))}
-      ${editRow("Proof of DOB", sel("proof_of_dob", sub.proof_of_dob, [
-        ["Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate","Birth Certificate"],
-        ["Matriculation certificate","Matriculation Certificate"],
-        ["Matriculation Marksheet of recognised board","Matriculation Marksheet"],
-        ["Driving License","Driving License"],
-        ["Passport","Passport"],
-        ["Elector's photo identity card","Voter ID"],
-        ["Pension payment order","Pension Payment Order"]
-      ]))}
-      ${editRow("Defence", sel("defence", String(sub.defence ?? false), [["false","No"],["true","Yes"]]))}
-      ${editRow("Defence Branch", sel("defence_branch", String(sub.defence_branch ?? ""), [["","—"],["army","Army"],["air_force","Air Force"]]))}
-    `)}
+    `,
+    )}
+    ${editSection(
+      "Application",
+      `
+      ${editRow(
+        "Income Source",
+        sel("income_source", sub.income_source, [
+          ["salary", "Salary"],
+          ["business", "Business"],
+          ["house_property", "House Property"],
+          ["other_sources", "Other Sources"],
+          ["capital_gains", "Capital Gains"],
+          ["no_income", "No Income"],
+        ]),
+      )}
+      ${editRow(
+        "Proof of DOB",
+        sel("proof_of_dob", sub.proof_of_dob, [
+          [
+            "Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate",
+            "Birth Certificate",
+          ],
+          ["Matriculation certificate", "Matriculation Certificate"],
+          [
+            "Matriculation Marksheet of recognised board",
+            "Matriculation Marksheet",
+          ],
+          ["Driving License", "Driving License"],
+          ["Passport", "Passport"],
+          ["Elector's photo identity card", "Voter ID"],
+          ["Pension payment order", "Pension Payment Order"],
+        ]),
+      )}
+      ${editRow(
+        "Defence",
+        sel("defence", String(sub.defence ?? false), [
+          ["false", "No"],
+          ["true", "Yes"],
+        ]),
+      )}
+      ${editRow(
+        "Defence Branch",
+        sel("defence_branch", String(sub.defence_branch ?? ""), [
+          ["", "—"],
+          ["army", "Army"],
+          ["air_force", "Air Force"],
+        ]),
+      )}
+    `,
+    )}
   `;
 }
 
@@ -2435,10 +2579,16 @@ function showReviewScreen(sub: any): void {
   body.innerHTML = `
     <div style="margin-bottom:12px;">
       <div style="font-size:16px;font-weight:800;color:#0a0a2e;">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || "Unknown")}</div>
-      <div style="font-size:11.5px;color:#64748b;margin-top:2px;">${escapeHtml(String(sub.form_type ?? "").replace(/_/g, " ").toUpperCase())}</div>
+      <div style="font-size:11.5px;color:#64748b;margin-top:2px;">${escapeHtml(
+        String(sub.form_type ?? "")
+          .replace(/_/g, " ")
+          .toUpperCase(),
+      )}</div>
     </div>
 
-    ${section("Applicant", `
+    ${section(
+      "Applicant",
+      `
       ${row("First Name", sub.first_name)}
       ${row("Middle Name", sub.middle_name)}
       ${row("Last Name", sub.last_name)}
@@ -2447,38 +2597,66 @@ function showReviewScreen(sub: any): void {
       ${row("Aadhaar Last 4", sub.aadhaar_last_4)}
       ${row("Single Parent", sub.is_single_parent === true ? "Yes" : sub.is_single_parent === false ? "No" : "")}
       ${row("Parent on Card", sub.name_to_print === "father" ? "Father's Name" : sub.name_to_print === "mother" ? "Mother's Name" : "")}
-    `)}
+    `,
+    )}
 
-    ${section("Contact", `
+    ${section(
+      "Contact",
+      `
       ${row("Mobile", sub.mobile)}
       ${row("Email", sub.email)}
-    `)}
+    `,
+    )}
 
-    ${section("Address", `
+    ${section(
+      "Address",
+      `
       ${row("City", sub.city)}
       ${row("State", sub.state)}
       ${row("PIN Code", sub.pincode)}
-    `)}
+    `,
+    )}
 
-    ${section("Father", `
+    ${section(
+      "Father",
+      `
       ${row("First Name", sub.father_first_name)}
       ${row("Middle Name", sub.father_middle_name)}
       ${row("Last Name", sub.father_last_name)}
-    `)}
+    `,
+    )}
 
-    ${section("Mother", `
+    ${section(
+      "Mother",
+      `
       ${row("First Name", sub.mother_first_name)}
       ${row("Middle Name", sub.mother_middle_name)}
       ${row("Last Name", sub.mother_last_name)}
-    `)}
+    `,
+    )}
 
-    ${section("Application", `
-      ${row("Form Type", String(sub.form_type ?? "").replace(/_/g, " ").toUpperCase())}
+    ${section(
+      "Application",
+      `
+      ${row(
+        "Form Type",
+        String(sub.form_type ?? "")
+          .replace(/_/g, " ")
+          .toUpperCase(),
+      )}
       ${row("Income Source", sub.income_source)}
       ${row("Proof of DOB", sub.proof_of_dob)}
       ${row("Defence", sub.defence === true ? "Yes" : "No")}
-      ${row("Defence Branch", sub.defence_branch ? String(sub.defence_branch).replace("_", " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "")}
-    `)}
+      ${row(
+        "Defence Branch",
+        sub.defence_branch
+          ? String(sub.defence_branch)
+              .replace("_", " ")
+              .replace(/\b\w/g, (c: string) => c.toUpperCase())
+          : "",
+      )}
+    `,
+    )}
   `;
 
   // Accept button
@@ -2505,15 +2683,23 @@ function showReviewScreen(sub: any): void {
       runAutofillFromSubmission(sub);
     } else {
       await prepareOperatorSubmission(sub);
-      window.open("https://onlineservices.proteantech.in/paam/endUserRegisterContact.html", "_blank");
+      window.open(
+        "https://onlineservices.proteantech.in/paam/endUserRegisterContact.html",
+        "_blank",
+      );
     }
   };
 
   // Reject button — confirms then permanently deletes the submission
   const rejectBtn = document.getElementById("fy-review-reject")!;
   rejectBtn.onclick = async () => {
-    const name = escapeHtml([sub.first_name, sub.last_name].filter(Boolean).join(" ") || "this submission");
-    const confirmed = confirm(`Delete ${name}?\n\nThis will permanently remove the submission from the queue and cannot be undone.`);
+    const name = escapeHtml(
+      [sub.first_name, sub.last_name].filter(Boolean).join(" ") ||
+        "this submission",
+    );
+    const confirmed = confirm(
+      `Delete ${name}?\n\nThis will permanently remove the submission from the queue and cannot be undone.`,
+    );
     if (!confirmed) return;
 
     rejectBtn.textContent = "Deleting…";
@@ -2525,7 +2711,9 @@ function showReviewScreen(sub: any): void {
         method: "DELETE",
         headers: { ...authHeaders },
       });
-    } catch { /* best effort — remove from view regardless */ }
+    } catch {
+      /* best effort — remove from view regardless */
+    }
 
     document.getElementById("fy-operator-review")!.style.display = "none";
     document.getElementById("fy-operator-queue")!.style.display = "flex";
@@ -2552,29 +2740,46 @@ function showReviewScreen(sub: any): void {
 
     document.getElementById("fy-edit-save")!.onclick = async () => {
       const updates: Record<string, unknown> = {};
-      body.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-edit]").forEach((el) => {
-        const field = el.dataset.edit!;
-        let value: unknown = el.value;
-        if (field === "is_single_parent" || field === "defence") value = el.value === "true";
-        updates[field] = value;
-      });
+      body
+        .querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-edit]")
+        .forEach((el) => {
+          const field = el.dataset.edit!;
+          let value: unknown = el.value;
+          if (field === "is_single_parent" || field === "defence")
+            value = el.value === "true";
+          updates[field] = value;
+        });
 
-      if (!confirm(`Update ${currentSub.first_name ?? "this customer"}'s details? This will overwrite the submission.`)) return;
+      if (
+        !confirm(
+          `Update ${currentSub.first_name ?? "this customer"}'s details? This will overwrite the submission.`,
+        )
+      )
+        return;
 
-      const saveBtn = document.getElementById("fy-edit-save") as HTMLButtonElement;
+      const saveBtn = document.getElementById(
+        "fy-edit-save",
+      ) as HTMLButtonElement;
       saveBtn.textContent = "Saving…";
       saveBtn.disabled = true;
 
       try {
         const authHeaders = await getOperatorAuthHeaders();
-        const res = await fetch(`${BACKEND_URL}/operator/submission/${currentSub.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", ...authHeaders },
-          body: JSON.stringify(updates),
-        });
+        const res = await fetch(
+          `${BACKEND_URL}/operator/submission/${currentSub.id}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify(updates),
+          },
+        );
         if (!res.ok) {
           const errBody = await res.json().catch(() => ({}));
-          console.error("FormYaar: submission edit failed", res.status, errBody);
+          console.error(
+            "FormYaar: submission edit failed",
+            res.status,
+            errBody,
+          );
           throw new Error("Failed");
         }
         currentSub = { ...currentSub, ...updates };
