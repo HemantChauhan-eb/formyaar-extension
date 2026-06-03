@@ -1931,15 +1931,26 @@ function attachUserFormHandlers(
   // Live AO code availability check — fires when user finishes typing PIN
   const pinInput = document.querySelector<HTMLInputElement>('[data-field="aadhaar_pin_code"]');
   const aoStatus = document.getElementById("fy-ao-status");
+  const submitBtn = document.getElementById("fy-userform-submit") as HTMLButtonElement | null;
   let aoCheckTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const setSubmitEnabled = (enabled: boolean) => {
+    if (!submitBtn) return;
+    submitBtn.disabled = !enabled;
+    submitBtn.style.opacity = enabled ? "1" : "0.45";
+    submitBtn.style.cursor = enabled ? "pointer" : "not-allowed";
+  };
+
   if (pinInput && aoStatus) {
     const checkAO = async (pin: string) => {
-      if (pin.length !== 6) { aoStatus.innerHTML = ""; return; }
+      if (pin.length !== 6) { aoStatus.innerHTML = ""; setSubmitEnabled(true); return; }
       aoStatus.innerHTML = `<span style="color:#94a3b8;">Checking AO code availability…</span>`;
+      setSubmitEnabled(false); // disable while checking
       try {
         const res = await fetch(`${BACKEND_URL}/pincode/${pin}`);
         if (!res.ok) {
           aoStatus.innerHTML = `<span style="color:#e74c3c;font-weight:600;">✗ PIN code not recognised — please double-check it</span>`;
+          setSubmitEnabled(false); // keep disabled — invalid pincode
           return;
         }
         const { ao_code } = await res.json();
@@ -1948,7 +1959,11 @@ function attachUserFormHandlers(
         } else {
           aoStatus.innerHTML = `<span style="color:#e67e22;font-weight:600;">⚠ AO code not available yet — you'll need to select it manually on the NSDL form</span>`;
         }
-      } catch { aoStatus.innerHTML = `<span style="color:#94a3b8;">Could not check — please continue</span>`; }
+        setSubmitEnabled(true);
+      } catch {
+        aoStatus.innerHTML = `<span style="color:#94a3b8;">Could not check — please continue</span>`;
+        setSubmitEnabled(true); // network error — let them proceed
+      }
     };
     pinInput.addEventListener("input", () => {
       const pin = pinInput.value.replace(/\D/g, "");
