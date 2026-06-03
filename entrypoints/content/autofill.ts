@@ -134,6 +134,11 @@ export async function runAutofill(form: string = "pan_card") {
 
     const field = { ...step.fields[i], _step: step.step };
     const value = resolveValue(field, userData);
+
+    // Scroll the target field into view so the user can follow along
+    const el = document.querySelector(field.selector);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+
     const ok = await fillField(field, value);
     const baseDelay = field.type === "button_click" ? 2500 : 150;
     const delay = (ok && (field as any).min_delay_ms) ? (field as any).min_delay_ms : baseDelay;
