@@ -1096,6 +1096,7 @@ function renderUserFormScreen(form: string, data: UserData): string {
           <label class="fy-userform-field">
             <span>PIN code as per Aadhaar <em>*</em></span>
             <input type="text" data-field="aadhaar_pin_code" value="${escapeHtml(data.aadhaar_pin_code)}" placeholder="243001" autocomplete="off" inputmode="numeric" maxlength="6">
+            <div id="fy-ao-status" style="margin-top:6px;font-size:12px;min-height:18px;"></div>
           </label>
         </div>
 
@@ -1166,7 +1167,7 @@ function renderUserFormScreen(form: string, data: UserData): string {
           <div class="fy-userform-section-title">Verification</div>
 
           <label class="fy-userform-field">
-            <span>Place (city) <em>*</em></span>
+            <span>Place (district) <em>*</em></span>
             <input type="text" data-field="place" value="${escapeHtml(data.place)}" placeholder="BAREILLY" autocomplete="off">
             <small class="fy-userform-hint">The city where you're filing this application</small>
           </label>
@@ -1926,6 +1927,34 @@ function attachUserFormHandlers(
   const errorBox = document.getElementById("fy-userform-errors");
 
   if (back) back.addEventListener("click", onBack);
+
+  // Live AO code availability check — fires when user finishes typing PIN
+  const pinInput = document.querySelector<HTMLInputElement>('[data-field="aadhaar_pin_code"]');
+  const aoStatus = document.getElementById("fy-ao-status");
+  let aoCheckTimer: ReturnType<typeof setTimeout> | null = null;
+  if (pinInput && aoStatus) {
+    const checkAO = async (pin: string) => {
+      if (pin.length !== 6) { aoStatus.innerHTML = ""; return; }
+      aoStatus.innerHTML = `<span style="color:#94a3b8;">Checking AO code availability…</span>`;
+      try {
+        const res = await fetch(`${BACKEND_URL}/pincode/${pin}`);
+        if (!res.ok) { aoStatus.innerHTML = ""; return; }
+        const { ao_code } = await res.json();
+        if (ao_code) {
+          aoStatus.innerHTML = `<span style="color:#1d9e75;font-weight:600;">✓ AO code available for your area</span>`;
+        } else {
+          aoStatus.innerHTML = `<span style="color:#e67e22;font-weight:600;">⚠ AO code not available yet — you'll need to select it manually on the NSDL form</span>`;
+        }
+      } catch { aoStatus.innerHTML = ""; }
+    };
+    pinInput.addEventListener("input", () => {
+      const pin = pinInput.value.replace(/\D/g, "");
+      if (aoCheckTimer) clearTimeout(aoCheckTimer);
+      aoCheckTimer = setTimeout(() => checkAO(pin), 600);
+    });
+    // Check immediately if PIN is already filled (e.g. resuming saved data)
+    if (pinInput.value.length === 6) checkAO(pinInput.value);
+  }
 
   // Show/hide defence_branch radios dynamically when is_defence changes
   const DEFENCE_BRANCH_HTML = `
