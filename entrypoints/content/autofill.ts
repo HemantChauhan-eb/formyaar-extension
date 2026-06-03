@@ -174,7 +174,7 @@ export async function runAutofill(form: string = "pan_card") {
         }
       }
     } else {
-      await autoFillAOCode(userData.aadhaar_pin_code);
+      await autoFillAOCode(userData.aadhaar_pin_code, userData.income_source);
     }
   }
   await sleep(400);
@@ -513,9 +513,10 @@ function fillAOCodeFields(ao: AOCode): void {
   }
 }
 
-async function autoFillAOCode(pinCode: string): Promise<boolean> {
+async function autoFillAOCode(pinCode: string, incomeSource = ""): Promise<boolean> {
   try {
-    const res = await fetch(`${BACKEND_URL}/pincode/${pinCode}`);
+    const params = incomeSource ? `?income=${encodeURIComponent(incomeSource)}` : "";
+    const res = await fetch(`${BACKEND_URL}/pincode/${pinCode}${params}`);
     if (!res.ok) return false;
     const { ao_code } = (await res.json()) as { state: string; city: string; ao_code?: AOCode };
     if (!ao_code) {
