@@ -1938,14 +1938,17 @@ function attachUserFormHandlers(
       aoStatus.innerHTML = `<span style="color:#94a3b8;">Checking AO code availability…</span>`;
       try {
         const res = await fetch(`${BACKEND_URL}/pincode/${pin}`);
-        if (!res.ok) { aoStatus.innerHTML = ""; return; }
+        if (!res.ok) {
+          aoStatus.innerHTML = `<span style="color:#e74c3c;font-weight:600;">✗ PIN code not recognised — please double-check it</span>`;
+          return;
+        }
         const { ao_code } = await res.json();
         if (ao_code) {
           aoStatus.innerHTML = `<span style="color:#1d9e75;font-weight:600;">✓ AO code available for your area</span>`;
         } else {
           aoStatus.innerHTML = `<span style="color:#e67e22;font-weight:600;">⚠ AO code not available yet — you'll need to select it manually on the NSDL form</span>`;
         }
-      } catch { aoStatus.innerHTML = ""; }
+      } catch { aoStatus.innerHTML = `<span style="color:#94a3b8;">Could not check — please continue</span>`; }
     };
     pinInput.addEventListener("input", () => {
       const pin = pinInput.value.replace(/\D/g, "");
