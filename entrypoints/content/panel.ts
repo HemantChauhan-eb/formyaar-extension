@@ -2063,9 +2063,9 @@ function attachUserFormHandlers(
       if (errorBox) errorBox.hidden = true;
 
       // Confirmation modal before payment
-      const aoStatusText = document.getElementById("fy-ao-status")?.textContent?.trim() ?? "";
-      const aoLine = aoStatusText
-        ? `<div style="background:#f8fafc;border-radius:10px;padding:10px 13px;margin-bottom:14px;font-size:12.5px;">${aoStatusText}</div>`
+      const aoStatusHTML = document.getElementById("fy-ao-status")?.innerHTML?.trim() ?? "";
+      const aoLine = aoStatusHTML
+        ? `<div style="background:#fff8eb;border:1px solid #f5d27a;border-radius:10px;padding:10px 13px;margin-bottom:14px;font-size:12.5px;">${aoStatusHTML}</div>`
         : "";
 
       const modal = document.createElement("div");
