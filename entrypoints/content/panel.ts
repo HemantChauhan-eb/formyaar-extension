@@ -1460,7 +1460,7 @@ async function refreshPendingSessions(): Promise<void> {
       const existing = await getUserData();
       if (!existing.first_name.trim()) {
         alert(
-          "Your details are not saved on this device. Please fill in your details first (tap the PAN card option on the home screen).\n\nIf you have already paid but are still seeing this message, your browser may have cleared your saved data. Please contact us and we'll let you fill your PAN form for free (one time):\n📧 formyaar@gmail.com\n📞 +91 9897031039",
+          "Your details are not saved on this device. Please fill in your details first (tap the PAN card option on the home screen).\n\nIf you have already paid but are still seeing this message:\n1. Try a hard refresh — press Ctrl+Shift+R (or Cmd+Shift+R on Mac) and click Continue again.\n\nIf that doesn't work, contact us and we'll let you fill your PAN form for free (one time):\n📧 formyaar@gmail.com\n📞 +91 9897031039",
         );
         return;
       }
