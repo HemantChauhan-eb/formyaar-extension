@@ -2272,11 +2272,6 @@ export async function showOperatorPanel(): Promise<void> {
   if (emailEl && session.email) emailEl.textContent = session.email;
   await loadQueue(session.id);
 }
-function isSubscriptionActive(session: OperatorSession): boolean {
-  if (session.subscription_status !== "active") return false;
-  if (!session.subscription_expires_at) return true;
-  return new Date(session.subscription_expires_at) > new Date();
-}
 async function loadQueue(operatorId: string): Promise<void> {
   const list = document.getElementById("fy-queue-list");
   if (!list) return;

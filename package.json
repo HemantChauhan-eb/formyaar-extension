@@ -1,6 +1,6 @@
 {
-  "name": "wxt-react-starter",
-  "description": "manifest.json description",
+  "name": "formyaar",
+  "description": "FormYaar — auto-fills Indian government forms for you",
   "private": true,
   "version": "0.8.0",
   "type": "module",
@@ -15,7 +15,6 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.105.4",
     "dotenv": "^17.4.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
