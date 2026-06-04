@@ -355,7 +355,7 @@ async function fillField(
   value: string | boolean,
 ): Promise<boolean> {
   const el = document.querySelector(field.selector) as HTMLElement | null;
-  console.log("FormYaar: fillField called for", field.selector);
+  if (import.meta.env.DEV) console.log("FormYaar: fillField called for", field.selector);
   if (!el) {
     console.warn(`FormYaar: field not found ${field.selector}`);
     trackEvent("field_fill_failed", "pan_card", {
@@ -367,7 +367,7 @@ async function fillField(
   }
 
   if ((el as HTMLInputElement).disabled) {
-    console.log(`FormYaar: skipping disabled field ${field.selector}`);
+    if (import.meta.env.DEV) console.log(`FormYaar: skipping disabled field ${field.selector}`);
     return false;
   }
 
