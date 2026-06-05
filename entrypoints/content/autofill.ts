@@ -222,8 +222,69 @@ export async function runAutofill(form: string = "pan_card") {
   } else {
     showVerifyScreen((step as any).completion);
     celebrateTimeSaved(step.fields.length);
+    // Show a page-level coach mark if the step config requests one
+    const coach = (step as any).page_coach as { selector: string; message: string } | undefined;
+    if (coach) showCoachMark(coach.selector, coach.message);
   }
 }
+
+function showCoachMark(selector: string, message: string): void {
+  const target = document.querySelector(selector) as HTMLElement | null;
+  if (!target) return;
+
+  // Subtle pulse on the target button so it's clearly the thing to click
+  const prevOutline = target.style.outline;
+  target.style.outline = "3px solid #f59e0b";
+  target.style.outlineOffset = "3px";
+
+  const mark = document.createElement("div");
+  mark.id = "fy-coach-mark";
+
+  const rect = target.getBoundingClientRect();
+  const top = rect.top + window.scrollY - 72;
+  const left = rect.left + window.scrollX + rect.width / 2;
+
+  mark.style.cssText = `
+    position: absolute;
+    top: ${top}px;
+    left: ${left}px;
+    transform: translateX(-50%);
+    background: #0a0a2e;
+    color: #fff;
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 10px 16px;
+    border-radius: 10px;
+    white-space: nowrap;
+    z-index: 2147483640;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    pointer-events: none;
+  `;
+  // Arrow pointing down toward the button
+  mark.innerHTML = `
+    ${message}
+    <div style="
+      position:absolute; bottom:-7px; left:50%; transform:translateX(-50%);
+      width:0; height:0;
+      border-left:7px solid transparent;
+      border-right:7px solid transparent;
+      border-top:7px solid #0a0a2e;
+    "></div>
+  `;
+
+  document.body.appendChild(mark);
+
+  // Remove when user clicks the target button (page will navigate anyway)
+  const cleanup = () => {
+    mark.remove();
+    target.style.outline = prevOutline;
+    target.style.outlineOffset = "";
+    target.removeEventListener("click", cleanup);
+  };
+  target.addEventListener("click", cleanup);
+}
+
 export async function prepareOperatorSubmission(sub: any): Promise<void> {
   const incomeSources: string[] = (sub.income_source ?? "")
     .split(",")
