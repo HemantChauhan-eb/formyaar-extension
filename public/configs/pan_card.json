@@ -1,6 +1,6 @@
 {
   "form": "pan_card",
-  "version": 13,
+  "version": 14,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -81,6 +81,10 @@
         "title": "Registration filled!",
         "subtitle": "Generating your token...",
         "info": "Your details have been submitted. Your token will appear on the next screen."
+      },
+      "page_coach": {
+        "selector": "#submitForm",
+        "message": "Solve the CAPTCHA first, then click Submit"
       }
     },
     {
