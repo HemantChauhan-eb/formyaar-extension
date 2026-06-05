@@ -127,7 +127,16 @@ export default defineContentScript({
                 autofillActive: { ...active, done: [...done, pageKey] },
               });
             }
-            setTimeout(() => runAutofill(active.form), 1500);
+
+            // First page of the flow (done was empty) → show start overlay
+            // so the user knows to switch to this tab and confirm before autofill starts.
+            // Subsequent pages (mid-flow) run directly — don't interrupt mid-fill.
+            const isFirstPage = done.length === 0 && !isTokenPage;
+            if (isFirstPage) {
+              showStartOverlay(active.form);
+            } else {
+              setTimeout(() => runAutofill(active.form), 1500);
+            }
           }
         }
       } catch (err) {
@@ -136,3 +145,82 @@ export default defineContentScript({
     }
   },
 });
+
+// ─── Start overlay ────────────────────────────────────────────────────
+// Shown on the very first NSDL page after payment so the user can
+// consciously kick off the autofill after switching back to this tab.
+function showStartOverlay(form: string): void {
+  const originalTitle = document.title;
+
+  // Pulse the tab title so the user notices this tab in the background
+  let pulse = true;
+  const titleInterval = setInterval(() => {
+    document.title = pulse
+      ? "⚡ FormYaar — click here!"
+      : "👆 Your PAN form is ready";
+    pulse = !pulse;
+  }, 900);
+
+  const overlay = document.createElement("div");
+  overlay.id = "fy-start-overlay";
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 2147483646;
+    background: rgba(10,10,46,0.72);
+    backdrop-filter: blur(3px);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    animation: fyOverlayIn 0.35s ease;
+  `;
+
+  const styleEl = document.createElement("style");
+  styleEl.textContent = `
+    @keyframes fyOverlayIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes fyCardIn { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    #fy-start-card { animation: fyCardIn 0.4s 0.1s ease both; }
+    #fy-start-btn:hover { background: #1a3aaa !important; }
+    #fy-start-btn:active { transform: scale(0.97); }
+  `;
+  document.head.appendChild(styleEl);
+
+  overlay.innerHTML = `
+    <div id="fy-start-card" style="
+      background:#fff; border-radius:20px; padding:40px 36px;
+      max-width:380px; width:calc(100% - 48px);
+      text-align:center; box-shadow:0 24px 64px rgba(0,0,0,0.35);
+    ">
+      <div style="font-size:52px;margin-bottom:16px;">📋</div>
+      <div style="font-size:22px;font-weight:800;color:#0a0a2e;margin-bottom:10px;line-height:1.3;">
+        Ready to fill your PAN card?
+      </div>
+      <div style="font-size:14px;color:#64748b;line-height:1.65;margin-bottom:28px;">
+        FormYaar will auto-fill the entire application for you.<br>
+        Just sit back — it takes about 2–3 minutes.
+      </div>
+      <button id="fy-start-btn" style="
+        width:100%; padding:15px; background:#000080; color:#fff;
+        border:none; border-radius:12px; font-size:16px; font-weight:800;
+        cursor:pointer; font-family:inherit; letter-spacing:0.3px;
+        transition: background 0.15s, transform 0.1s;
+      ">
+        Start filling →
+      </button>
+      <div style="margin-top:14px;font-size:12px;color:#94a3b8;">
+        Powered by FormYaar · your details are saved locally
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById("fy-start-btn")!.addEventListener("click", () => {
+    clearInterval(titleInterval);
+    document.title = originalTitle;
+    overlay.style.opacity = "0";
+    overlay.style.transition = "opacity 0.2s ease";
+    setTimeout(() => {
+      overlay.remove();
+      styleEl.remove();
+      runAutofill(form);
+    }, 200);
+  });
+}
