@@ -469,7 +469,8 @@
       "step": 6,
       "page_pattern": "fullFormSave",
       "page": "fullFormSave",
-      "stop_message": "Review complete. Proceeding automatically.",
+      "guidance_only": true,
+      "stop_message": "Make sure you've uploaded all required documents above, then click Confirm to proceed.",
       "fields": [
         {
           "field_id": "confirm_submit",
@@ -477,7 +478,7 @@
           "selector": "#confirmSubmit",
           "value_source": "static",
           "static_value": true,
-          "explanation": "Proceed to payment."
+          "explanation": "Confirm your uploaded documents and proceed to payment."
         }
       ]
     },

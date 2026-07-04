@@ -133,6 +133,10 @@ export default defineContentScript({
             // Subsequent pages (mid-flow) run directly — don't interrupt mid-fill.
             const isFirstPage = done.length === 0 && !isTokenPage;
             if (isFirstPage) {
+              // Panel must exist before showStartOverlay — showFillingScreen crashes otherwise.
+              // showContextualBanner creates the panel div synchronously before its first await,
+              // so calling it here (fire-and-forget) guarantees the panel is in the DOM.
+              showContextualBanner();
               showStartOverlay(active.form);
             } else {
               setTimeout(() => runAutofill(active.form), 1500);

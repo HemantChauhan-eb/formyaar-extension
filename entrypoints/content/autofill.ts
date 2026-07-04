@@ -1,5 +1,6 @@
 import { BACKEND_URL } from "./constants";
 import { trackEvent } from "./telemetry";
+import panCardConfig from "../../public/configs/pan_card.json";
 import {
   showFillingScreen,
   showVerifyScreen,
@@ -331,6 +332,10 @@ export async function runAutofillFromSubmission(sub: any): Promise<void> {
   await prepareOperatorSubmission(sub);
   await runAutofill(sub.form_type);
 }
+const BUNDLED_CONFIGS: Record<string, FormConfig> = {
+  pan_card: panCardConfig as unknown as FormConfig,
+};
+
 // ─── Fetch config — backend first for live updates, bundled as fallback ─
 async function fetchConfig(form: string): Promise<FormConfig | null> {
   // Backend first — allows pushing selector fixes without an extension update
@@ -340,15 +345,8 @@ async function fetchConfig(form: string): Promise<FormConfig | null> {
   } catch {
     // fall through to bundled
   }
-  // Bundled fallback — works offline, satisfies Chrome's local-copy requirement
-  try {
-    const bundledUrl = (browser.runtime.getURL as (p: string) => string)(`configs/${form}.json`);
-    const res = await fetch(bundledUrl);
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.warn("FormYaar: config fetch failed", err);
-  }
-  return null;
+  // Bundled fallback — static import, immune to extension context invalidation
+  return BUNDLED_CONFIGS[form] ?? null;
 }
 
 // ─── Match the current page to a step in the config ──────────────────

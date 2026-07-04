@@ -1,3 +1,3108 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.env.development
+.env.production
+.gitignore
+assets/react.svg
+CHANGELOG.md
+entrypoints/background.ts
+entrypoints/content/autofill.ts
+entrypoints/content/constants.ts
+entrypoints/content/fonts.ts
+entrypoints/content/index.ts
+entrypoints/content/panel.ts
+entrypoints/content/supabase.ts
+entrypoints/content/telemetry.ts
+entrypoints/content/toasts.ts
+entrypoints/content/types.ts
+entrypoints/content/uploadScreen.ts
+entrypoints/content/userData.ts
+entrypoints/popup/App.css
+entrypoints/popup/App.tsx
+entrypoints/popup/index.html
+entrypoints/popup/main.tsx
+entrypoints/popup/style.css
+package.json
+public/configs/defence.json
+public/configs/pan_card.json
+public/icon/128.png
+public/icon/16.png
+public/icon/32.png
+public/icon/48.png
+public/icon/512.png
+public/icon/96.png
+public/wxt.svg
+README.md
+tsconfig.json
+wxt.config.ts
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="assets/react.svg">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
+</file>
+
+<file path="entrypoints/content/fonts.ts">
+export function ensureFontsLoaded() {
+  if (document.getElementById("fy-fonts")) return;
+  const link = document.createElement("link");
+  link.id = "fy-fonts";
+  link.rel = "stylesheet";
+  link.href =
+    "https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Plus+Jakarta+Sans:wght@200;400;700;800&display=swap";
+  document.head.appendChild(link);
+}
+</file>
+
+<file path="entrypoints/content/toasts.ts">
+import { Z_INDEX, COMPLETION_AUTO_DISMISS_MS } from "./constants";
+
+export function showErrorMessage(message: string) {
+  const existing = document.getElementById("fy-error-msg");
+  if (existing) existing.remove();
+
+  const msg = document.createElement("div");
+  msg.id = "fy-error-msg";
+  msg.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ff4444;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: ${Z_INDEX.PANEL};
+    font-family: 'DM Sans', sans-serif;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  `;
+  msg.textContent = message;
+  document.body.appendChild(msg);
+  setTimeout(() => msg.remove(), 5000);
+}
+
+export function showCompletionMessage() {
+  if (!document.getElementById("fy-tab")) {
+    const tab = document.createElement("div");
+    tab.id = "fy-tab";
+    tab.style.cssText = `
+      position: fixed;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      background: #000080;
+      color: white;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      padding: 14px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      z-index: ${Z_INDEX.SPOTLIGHT};
+      border-radius: 8px 0 0 8px;
+      box-shadow: -2px 0 12px rgba(0,0,0,0.15);
+      font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+    `;
+    tab.innerHTML =
+      '<span style="font-weight:200;opacity:0.7;">F</span><span style="color:#E8930A;font-weight:800;">·</span><span style="font-weight:800;">Y</span>';
+    document.body.appendChild(tab);
+    tab.addEventListener("click", () => {
+      // Will be wired up by index.ts after all modules load
+      document.dispatchEvent(new CustomEvent("fy:open-panel"));
+    });
+  }
+
+  const msg = document.createElement("div");
+  msg.style.cssText = `
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ffffff;
+    border: 1px solid #e0e0f0;
+    border-top: 3px solid #138808;
+    border-radius: 12px;
+    padding: 18px 24px;
+    z-index: ${Z_INDEX.PANEL};
+    font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    text-align: center;
+    min-width: 300px;
+  `;
+  msg.innerHTML = `
+    <div style="font-size:28px;margin-bottom:8px;">✅</div>
+    <div style="font-size:15px;font-weight:800;color:#000080;margin-bottom:4px;">All fields completed!</div>
+    <div style="font-size:12px;color:#50507a;font-weight:400;margin-bottom:16px;">You are good to go. Submit the form now.</div>
+    <button id="fy-dismiss-btn" style="
+      background:#f5f5f5;color:#666;border:1px solid #e0e0e0;border-radius:8px;
+      padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;
+      font-family:'Plus Jakarta Sans','DM Sans',sans-serif;
+    ">Dismiss</button>
+  `;
+
+  document.body.appendChild(msg);
+
+  document.getElementById("fy-dismiss-btn")?.addEventListener("click", () => {
+    msg.remove();
+  });
+
+  setTimeout(() => msg?.remove(), COMPLETION_AUTO_DISMISS_MS);
+}
+</file>
+
+<file path="entrypoints/popup/index.html">
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Default Popup Title</title>
+    <meta name="manifest.type" content="browser_action" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>
+</file>
+
+<file path="entrypoints/popup/main.tsx">
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.tsx';
+import './style.css';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
+</file>
+
+<file path="public/configs/defence.json">
+{
+  "army": {
+    "description": "ITO WARD 4(3), GHQ, PNE",
+    "area_code": "PNE",
+    "ao_type": "W",
+    "range_code": "55",
+    "ao_number": "3"
+  },
+  "air_force": {
+    "description": "ITO WARD 42(2)",
+    "area_code": "DEL",
+    "ao_type": "W",
+    "range_code": "72",
+    "ao_number": "2"
+  }
+}
+</file>
+
+<file path="public/wxt.svg">
+<svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_305_516)">
+<g clip-path="url(#clip1_305_516)">
+<path d="M49.0229 69.1875C54.1272 69.1875 58.265 65.0497 58.265 59.9454V50.7033H59.9454C65.0497 50.7033 69.1875 46.5655 69.1875 41.4612C69.1875 36.357 65.0497 32.2191 59.9454 32.2191H58.265V22.9771C58.265 17.8728 54.1272 13.735 49.0229 13.735H39.7809V12.0546C39.7809 6.95032 35.643 2.8125 30.5388 2.8125C25.4345 2.8125 21.2967 6.95032 21.2967 12.0546V13.735H12.0546C6.95032 13.735 2.8125 17.8728 2.8125 22.9771V32.2191H4.49288C9.59714 32.2191 13.735 36.357 13.735 41.4612C13.735 46.5655 9.59714 50.7033 4.49288 50.7033H2.8125V69.1875H21.2967V67.5071C21.2967 62.4029 25.4345 58.265 30.5388 58.265C35.643 58.265 39.7809 62.4029 39.7809 67.5071V69.1875H49.0229Z" stroke="#67D55E" stroke-width="5.625"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_305_516">
+<rect width="72" height="72" fill="white"/>
+</clipPath>
+<clipPath id="clip1_305_516">
+<rect width="72" height="72" fill="white"/>
+</clipPath>
+</defs>
+</svg>
+</file>
+
+<file path="README.md">
+# WXT + React
+
+This template should help get you started developing with React in WXT.
+</file>
+
+<file path="tsconfig.json">
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx"
+  }
+}
+</file>
+
+<file path=".env.development">
+VITE_BACKEND_URL=https://formyaar-backend-production-777c.up.railway.app
+</file>
+
+<file path=".env.production">
+VITE_BACKEND_URL=https://formyaar-backend-production-777c.up.railway.app
+</file>
+
+<file path="entrypoints/content/uploadScreen.ts">
+import { Z_INDEX } from "./constants";
+import { trackEvent } from "./telemetry";
+import { markSessionCompleted } from "./userData";
+
+const FAQ_ITEMS: { q: string; emoji: string }[] = [
+  { q: "Where do I get my proof of DOB document?", emoji: "📄" },
+  { q: "My PDF is over 300kb — how do I compress it?", emoji: "🗜️" },
+  { q: "Which documents are accepted as proof of DOB?", emoji: "✅" },
+  { q: "How do I upload the file on this page?", emoji: "⬆️" },
+  { q: "I uploaded but it's not working — what now?", emoji: "🛠️" },
+];
+
+const COMPRESSOR_URL = "https://formyaar.in/compress";
+
+export function renderUploadScreen(): string {
+  return `
+    <div id="fy-upload" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
+      <div style="position:relative;background:#000080;overflow:hidden;flex-shrink:0;">
+        <div style="padding:13px 16px;display:flex;align-items:center;gap:10px;position:relative;z-index:1;">
+          <div style="flex:1;text-align:center;">
+            <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;line-height:1.2;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
+              <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;font-weight:800;">·</span><span style="font-weight:800;color:#ffffff;">Yaar</span>
+            </div>
+            <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">One step remaining</div>
+          </div>
+        </div>
+        <div style="height:3px;display:flex;"><div style="flex:1;background:#FF9933;"></div><div style="flex:1;background:#ffffff;"></div><div style="flex:1;background:#138808;"></div></div>
+      </div>
+
+      <div style="flex:1;overflow-y:auto;padding:18px 16px 12px;">
+
+        <!-- Status: filled -->
+        <div style="text-align:center;margin-bottom:14px;">
+          <div style="width:48px;height:48px;border-radius:50%;background:#22c55e;display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px;animation:fy-successPop 0.5s ease forwards;box-shadow:0 6px 16px rgba(34,197,94,0.25);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div style="font-size:17px;font-weight:800;color:#0a0a2e;">Form filled successfully</div>
+          <div style="margin-top:4px;font-size:12.5px;color:#50507a;line-height:1.5;">All text fields are auto-filled. Just one document upload remaining.</div>
+        </div>
+
+        <!-- Upload action card -->
+        <div style="background:#fff8eb;border:1.5px solid #f5d27a;border-radius:12px;padding:14px;margin-bottom:14px;">
+          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
+            <div style="flex-shrink:0;width:28px;height:28px;border-radius:8px;background:#f5d27a;display:flex;align-items:center;justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7a5a00" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:13.5px;color:#7a5a00;font-weight:700;margin-bottom:3px;">Upload proof of Date of Birth</div>
+              <div style="font-size:11.5px;color:#7a5a00;line-height:1.5;">PDF · max <strong>300kb per page</strong></div>
+            </div>
+          </div>
+          <button id="fy-scroll-to-upload" style="width:100%;padding:10px;background:#000080;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+            Take me to the upload section
+          </button>
+        </div>
+
+        <!-- Compressor link -->
+        <div style="background:#f0f0ff;border:1px solid #d0d0f0;border-radius:10px;padding:11px 13px;margin-bottom:16px;display:flex;gap:10px;align-items:center;">
+          <div style="flex-shrink:0;font-size:18px;">🗜️</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12.5px;font-weight:700;color:#0a0a2e;margin-bottom:1px;">File too big?</div>
+            <div style="font-size:11px;color:#50507a;line-height:1.4;">Compress it in your browser — file never leaves your device.</div>
+          </div>
+          <a href="${COMPRESSOR_URL}" target="_blank" id="fy-open-compressor" style="flex-shrink:0;padding:6px 12px;background:#000080;color:white;border-radius:6px;font-size:11.5px;font-weight:700;text-decoration:none;font-family:'DM Sans',sans-serif;">Open</a>
+        </div>
+
+        <!-- AI Help section -->
+        <div style="border-top:1px solid #e8e8f0;padding-top:14px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#94a3b8;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            Need help?
+          </div>
+
+          <!-- FAQ chips -->
+          <div id="fy-faq-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+            ${FAQ_ITEMS.map(
+              (item, i) => `
+              <button class="fy-faq-chip" data-faq-index="${i}" style="text-align:left;background:#fff;border:1px solid #e0e0f0;border-radius:8px;padding:9px 11px;font-size:12px;color:#0a0a2e;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;transition:all 0.15s ease;">
+                <span style="flex-shrink:0;">${item.emoji}</span>
+                <span style="flex:1;">${item.q}</span>
+                <svg style="flex-shrink:0;opacity:0.4;" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            `,
+            ).join("")}
+          </div>
+
+          <!-- Chat thread -->
+          <div id="fy-chat-thread" style="display:none;flex-direction:column;gap:8px;margin-bottom:10px;max-height:280px;overflow-y:auto;padding:4px 2px;"></div>
+
+          <!-- Chat input -->
+          <div style="display:flex;gap:6px;align-items:stretch;">
+            <input id="fy-chat-input" type="text" placeholder="Ask anything about uploading…" maxlength="500" style="flex:1;padding:9px 12px;border:1px solid #e0e0f0;border-radius:8px;font-size:12.5px;font-family:'DM Sans',sans-serif;outline:none;color:#0a0a2e;background:#fff;" />
+            <button id="fy-chat-send" aria-label="Send" style="flex-shrink:0;width:36px;background:#000080;color:white;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <style>
+      #fy-upload .fy-faq-chip:hover { border-color:#000080; background:#f8f8ff; }
+      #fy-upload #fy-chat-input:focus { border-color:#000080; box-shadow:0 0 0 3px rgba(0,0,128,0.1); }
+      #fy-upload .fy-chat-bubble-user {
+        align-self:flex-end; max-width:85%; background:#000080; color:white;
+        padding:8px 12px; border-radius:12px 12px 2px 12px;
+        font-size:12.5px; line-height:1.45; word-wrap:break-word;
+      }
+      #fy-upload .fy-chat-bubble-bot {
+        align-self:flex-start; max-width:90%; background:#f2f2f8; color:#0a0a2e;
+        padding:8px 12px; border-radius:12px 12px 12px 2px;
+        font-size:12.5px; line-height:1.5; word-wrap:break-word;
+      }
+      #fy-upload .fy-chat-bubble-bot.loading {
+        color:#50507a; font-style:italic;
+      }
+    </style>
+  `;
+}
+
+export function showUploadScreen(): void {
+  const screens = ["fy-home", "fy-payment", "fy-filling", "fy-verify"];
+  screens.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+  const upload = document.getElementById("fy-upload");
+  if (upload) upload.style.display = "flex";
+
+  const p = document.getElementById("formyaar-panel");
+  if (p) p.style.right = "0px";
+
+  trackEvent("upload_screen_shown", "pan_card");
+
+  // Mark this session as completed — user reached the final step
+  markSessionCompleted().catch(() => {});
+}
+
+export function attachUploadScreenHandlers(): void {
+  // Scroll to upload widget on the NSDL page
+  const scrollBtn = document.getElementById("fy-scroll-to-upload");
+  if (scrollBtn) {
+    scrollBtn.addEventListener("click", () => {
+      const target =
+        document.getElementById("docsUpload") ||
+        document.getElementById("addFile");
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Brief highlight pulse so the user can spot it
+        const orig = target.style.boxShadow;
+        target.style.transition = "box-shadow 0.4s ease";
+        target.style.boxShadow = "0 0 0 4px rgba(232,147,10,0.6)";
+        setTimeout(() => {
+          target.style.boxShadow = orig || "";
+        }, 1800);
+      } else {
+        // Fallback: scroll to bottom of the form area
+        window.scrollTo({
+          top: document.body.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+      trackEvent("upload_scroll_clicked", "pan_card");
+    });
+  }
+
+  document
+    .getElementById("fy-open-compressor")
+    ?.addEventListener("click", () => {
+      trackEvent("compressor_opened", "pan_card");
+    });
+
+  // FAQ chips → fire chat
+  document
+    .querySelectorAll<HTMLButtonElement>(".fy-faq-chip")
+    .forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const idx = Number(chip.dataset.faqIndex);
+        const item = FAQ_ITEMS[idx];
+        if (!item) return;
+        sendChatMessage(item.q);
+        trackEvent("faq_clicked", "pan_card", { question: item.q });
+      });
+    });
+
+  // Free-text input
+  const input = document.getElementById(
+    "fy-chat-input",
+  ) as HTMLInputElement | null;
+  const sendBtn = document.getElementById("fy-chat-send");
+
+  const submit = () => {
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    sendChatMessage(text);
+  };
+
+  sendBtn?.addEventListener("click", submit);
+  input?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submit();
+    }
+  });
+}
+
+async function sendChatMessage(userMessage: string): Promise<void> {
+  const thread = document.getElementById("fy-chat-thread");
+  if (!thread) return;
+  thread.style.display = "flex";
+
+  // User bubble
+  const userBubble = document.createElement("div");
+  userBubble.className = "fy-chat-bubble-user";
+  userBubble.textContent = userMessage;
+  thread.appendChild(userBubble);
+  thread.scrollTop = thread.scrollHeight;
+
+  // Loading bubble
+  const botBubble = document.createElement("div");
+  botBubble.className = "fy-chat-bubble-bot loading";
+  botBubble.textContent = "Thinking…";
+  thread.appendChild(botBubble);
+  thread.scrollTop = thread.scrollHeight;
+
+  try {
+    const res = await browser.runtime.sendMessage({
+      type: "AI_CHAT",
+      fieldId: "upload_proof_dob",
+      fieldExplanation:
+        "User is on the final step of NSDL PAN application and needs to upload proof of date of birth as a PDF, max 300kb per page. They cannot use Aadhaar as proof of DOB here. They have already filled all other form fields.",
+      userMessage,
+    });
+
+    botBubble.classList.remove("loading");
+    if (res && typeof res.response === "string" && res.response.trim()) {
+      botBubble.textContent = res.response;
+    } else {
+      botBubble.textContent =
+        "Couldn't get an answer right now. Please try again in a moment.";
+    }
+  } catch {
+    botBubble.classList.remove("loading");
+    botBubble.textContent =
+      "Network error. Please check your connection and try again.";
+  }
+
+  thread.scrollTop = thread.scrollHeight;
+}
+</file>
+
+<file path="entrypoints/popup/App.css">
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 280px;
+  font-family:
+    "Plus Jakarta Sans",
+    "DM Sans",
+    -apple-system,
+    sans-serif;
+  background: #ffffff;
+}
+
+.popup {
+  width: 280px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header h1 {
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.header h1 .form {
+  font-weight: 200;
+  color: #001845;
+}
+.header h1 .dot {
+  font-weight: 800;
+  color: #e8930a;
+  margin: 0 1px;
+}
+.header h1 .yaar {
+  font-weight: 800;
+  color: #001845;
+}
+
+.header p {
+  font-size: 11px;
+  color: #888;
+  font-style: italic;
+}
+
+.open-btn {
+  width: 100%;
+  background: #000080;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 11px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.open-btn:hover {
+  background: #000060;
+}
+
+.footer {
+  text-align: center;
+}
+
+.footer p {
+  font-size: 10px;
+  color: #ccc;
+}
+</file>
+
+<file path="entrypoints/popup/style.css">
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-width: 280px;
+  min-height: unset;
+}
+</file>
+
+<file path=".gitignore">
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+.output
+stats.html
+stats-*.json
+.wxt
+web-ext.config.ts
+text.txt
+id.html
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+</file>
+
+<file path="entrypoints/content/telemetry.ts">
+export function trackEvent(
+  event: string,
+  form = "pan_card",
+  metadata: Record<string, unknown> = {},
+): void {
+  // Route through background to bypass NSDL's CSP restrictions
+  browser.runtime
+    .sendMessage({
+      type: "TELEMETRY_EVENT",
+      payload: { event, form, metadata },
+    })
+    .catch(() => {
+      // Silently ignore — telemetry must never break user flow
+    });
+}
+</file>
+
+<file path="entrypoints/content/types.ts">
+// Extension message types for background ↔ content communication
+
+export type ExtensionMessage =
+  | { type: "START_GUIDE"; form: string }
+  | { type: "OPEN_PANEL" }
+  | { type: "STOP_GUIDE" }
+  | { type: "PAYMENT_VERIFIED" }
+  | {
+      type: "AI_CHAT";
+      fieldId: string;
+      fieldExplanation: string;
+      userMessage: string;
+    }
+  | { type: "CREATE_PAYMENT"; form: string }
+  | { type: "OPEN_RAZORPAY"; order_id: string; amount: number }
+  | { type: "OPEN_URL"; url: string }
+  | {
+      type: "TELEMETRY_EVENT";
+      payload: {
+        event: string;
+        form: string;
+        metadata: Record<string, unknown>;
+      };
+    };
+
+export type BackgroundResponse =
+  | { response: string }
+  | { success: boolean; order_id?: string; amount?: number; error?: string };
+</file>
+
+<file path="entrypoints/popup/App.tsx">
+import { useEffect, useState } from "react";
+
+type SiteStatus = "supported" | "unsupported" | "loading";
+
+const SUPPORTED_SITES: Record<string, string> = {
+  "onlineservices.proteantech.in": "PAN Card",
+  "onlineservices.nsdl.com": "PAN Card",
+  "www.utiitsl.com": "PAN Card",
+  "passporthub.gov.in": "Passport",
+  "sarathi.parivahan.gov.in": "Driving License",
+};
+
+export default function App() {
+  const [status, setStatus] = useState<SiteStatus>("loading");
+  const [formName, setFormName] = useState<string>("");
+  const [hostname, setHostname] = useState<string>("");
+
+  useEffect(() => {
+    browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+      const tab = tabs[0];
+      if (!tab?.url) {
+        setStatus("unsupported");
+        return;
+      }
+      try {
+        const host = new URL(tab.url).hostname;
+        setHostname(host);
+        if (SUPPORTED_SITES[host]) {
+          setStatus("supported");
+          setFormName(SUPPORTED_SITES[host]);
+        } else {
+          setStatus("unsupported");
+        }
+      } catch {
+        setStatus("unsupported");
+      }
+    });
+  }, []);
+
+  const openPanel = () => {
+    browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+      const tab = tabs[0];
+      if (tab?.id) {
+        browser.tabs.sendMessage(tab.id, { type: "OPEN_PANEL" });
+        window.close();
+      }
+    });
+  };
+
+  return (
+    <div
+      style={{
+        width: 280,
+        fontFamily: "'DM Sans', -apple-system, sans-serif",
+        background: "#fff",
+        overflow: "hidden",
+        borderRadius: 12,
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          background: "#000080",
+          padding: "14px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              color: "#fff",
+              letterSpacing: -0.5,
+              fontFamily: "'Plus Jakarta Sans', 'DM Sans', sans-serif",
+            }}
+          >
+            <span style={{ fontWeight: 200, opacity: 0.7 }}>Form</span>
+            <span style={{ color: "#E8930A" }}>·</span>
+            <span>Yaar</span>
+          </div>
+          <div style={{ fontSize: 10, color: "#aabbd4", fontWeight: 500 }}>
+            Your dost for every sarkari kaam
+          </div>
+        </div>
+      </div>
+
+      {/* Tricolor */}
+      <div style={{ height: 3, display: "flex" }}>
+        <div style={{ flex: 1, background: "#FF9933" }} />
+        <div
+          style={{
+            flex: 1,
+            background: "#ffffff",
+            borderTop: "1px solid #eee",
+          }}
+        />
+        <div style={{ flex: 1, background: "#138808" }} />
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: "16px" }}>
+        {status === "loading" && (
+          <div
+            style={{
+              textAlign: "center",
+              color: "#888",
+              fontSize: 13,
+              padding: "12px 0",
+            }}
+          >
+            Checking this page...
+          </div>
+        )}
+
+        {status === "supported" && (
+          <div>
+            <div
+              style={{
+                background: "#f0fff4",
+                border: "1.5px solid #86efac",
+                borderRadius: 10,
+                padding: "10px 13px",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 14,
+              }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#22c55e"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <polyline points="9 12 11 14 15 10" />
+              </svg>
+              <div>
+                <div
+                  style={{ fontSize: 12, fontWeight: 700, color: "#15803d" }}
+                >
+                  FormYaar is active
+                </div>
+                <div style={{ fontSize: 11, color: "#166534" }}>
+                  {formName} form detected
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={openPanel}
+              style={{
+                width: "100%",
+                background: "#000080",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                padding: "10px 0",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Open FormYaar
+            </button>
+          </div>
+        )}
+
+        {status === "unsupported" && (
+          <div>
+            <div
+              style={{
+                background: "#fafafa",
+                border: "1.5px solid #e0e0e0",
+                borderRadius: 10,
+                padding: "10px 13px",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 14,
+              }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#aaa"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#555" }}>
+                  Not active on this page
+                </div>
+                <div style={{ fontSize: 11, color: "#888" }}>
+                  Visit a supported government form site
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 12, color: "#666", lineHeight: 1.6 }}>
+              Visit{" "}
+              <a
+                href="https://formyaar.in"
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: "#000080", fontWeight: 700, textDecoration: "underline" }}
+              >
+                formyaar.in
+              </a>{" "}
+              to learn more about our services and get started.
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div
+        style={{
+          padding: "8px 16px 12px",
+          textAlign: "center",
+          fontSize: 10,
+          color: "#bbb",
+        }}
+      >
+        Not affiliated with any government entity
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="entrypoints/content/supabase.ts">
+import { BACKEND_URL } from "./constants";
+
+const STORAGE_KEY = "fy_operator_session";
+
+export type OperatorSession = {
+  id: string;
+  email: string;
+  subscription_status: "active" | "inactive" | "expired";
+  subscription_expires_at: string | null;
+  session_token?: string;
+};
+
+export async function getOperatorSession(): Promise<OperatorSession | null> {
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEY);
+    return (result[STORAGE_KEY] as OperatorSession) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Authorization header for authenticated operator API calls (audit H1).
+// Returns {} when there's no session token so callers can spread it safely.
+export async function getOperatorAuthHeaders(): Promise<Record<string, string>> {
+  const session = await getOperatorSession();
+  return session?.session_token
+    ? { Authorization: `Bearer ${session.session_token}` }
+    : {};
+}
+
+export async function signInWithToken(
+  token: string,
+): Promise<{ error: string | null }> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/operator/verify-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: token.trim() }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      return { error: data.error ?? "Invalid token" };
+    }
+
+    // Store operator session locally (incl. the session token for auth)
+    await browser.storage.local.set({
+      [STORAGE_KEY]: { ...data.operator, session_token: data.session_token },
+    });
+    return { error: null };
+  } catch {
+    return { error: "Network error. Check your connection." };
+  }
+}
+
+export async function signOut(): Promise<void> {
+  await browser.storage.local.remove(STORAGE_KEY);
+  // Clear transient operator data so it can't bleed into the next operator
+  // who signs in on this browser (audit C1). In-progress submissions in
+  // storage.local are operator-scoped by tag and intentionally preserved.
+  await browser.storage.session.remove([
+    "fy_operator_submission",
+    "autofillActive",
+  ]);
+}
+
+// Kept for backwards compat but no longer used for auth
+export async function signInWithGoogle(): Promise<void> {
+  browser.runtime.sendMessage({
+    type: "OPEN_URL",
+    url: "https://formyaar.in/operator-dashboard.html",
+  });
+}
+</file>
+
+<file path="CHANGELOG.md">
+# FormYaar Extension — Changelog
+
+## [0.8.1] — 2026-06-13
+
+### Changed
+- `fullFormSave` step (`#confirmSubmit`) is no longer auto-clicked — it's now `guidance_only`, requiring the user to manually click Confirm after uploading proof-of-DOB/Aadhaar/photo/signature documents. Prevents the autofill from advancing past the document-upload page before uploads are done.
+
+## [0.7.0] — 2026-05-30  (UNRELEASED — on branch `fixes/operator-audit`, not yet merged)
+
+> Operator-flow security/data audit fixes + a delight feature. Pairs with the
+> backend `fixes/operator-audit` branch (operator session-token auth).
+> **Requires** the `operator_sessions` Supabase table (see backend changelog)
+> and forces existing operators to re-login once.
+
+### Security
+- **X1** — operator queue/review now HTML-escape all customer-supplied fields; a malicious QR submission could previously inject markup into the operator's extension (stored XSS)
+- **C1** — in-progress submissions are scoped per `operator_id` instead of one global key, so operators sharing a browser can no longer see each other's customer PII; `signOut()` clears transient operator keys
+- **H1** — operator API calls now send a Bearer session token (issued at login); pairs with backend auth on `/operator/*`
+
+### Fixed
+- **C2** — "Done ✓" marks the submission `completed` on the backend (was local-only), so it no longer stays stuck at `filling` and dashboard completed-stats now increment
+- **H2** — subscription check has explicit active / expired / unknown states; a failed verify shows a Retry screen instead of silently granting access (no more fail-open)
+
+### Added
+- 🎉 **Time-saved celebration** — tricolor confetti + a "⚡ Saved you ~Xm · Yh Zm total 💜" pill when a step finishes filling; cumulative total persisted locally
+
+### Chore
+- **X2** — removed unused `tabs` permission (CWS minimization); kept storage/activeTab/alarms
+
+## [0.6.1] — 2026-05-30
+
+### Fixed
+- Operator queue stuck on "Loading queue…" — backend calls (`/operator/subscription`, `/operator/queue`) now wrapped in try/catch so a failed request no longer leaves the screen frozen; queue falls back gracefully
+- Corrected backend URL — `.env.development` / `.env.production` were pointing at the old `formyaar-backend-production.up.railway.app` host (now `-a43e`), which caused 404s and apparent CORS failures on the operator dashboard
+
+### Added
+- Open the panel from any formyaar.in button via a custom DOM event (`fy:open-panel`) — zero server load
+- DOB field auto-formats to DD/MM/YYYY (auto-inserts slashes, clamps day ≤ 31 and month ≤ 12)
+
+### Changed
+- F·Y tab shake interval 12s → 10s, scales from the right edge (no longer clipped by the screen)
+- Maintenance status check moved to run after panel creation so it never delays autofill on page load
+
+## [0.6.0] — 2026-05-30
+
+### Added
+- Operator in-progress resume flow — when an operator accepts a submission and closes the tab mid-fill, the submission is saved to `storage.local` (`fy_op_inprogress`). Reopening the panel shows an amber "In Progress" section above the queue with Resume and Done buttons. Resume re-prepares the submission data and opens NSDL in a new tab; Done manually clears it.
+- `prepareOperatorSubmission` extracted from `runAutofillFromSubmission` — shared by both the accept handler and the resume button so submission data is always staged before navigation
+
+### Fixed
+- Autofill panel jitter — programmatic clicks dispatched by the autofill engine (radio buttons, checkboxes, next-step buttons) were bubbling to `document` and triggering the click-outside handler, causing the panel to rapidly slide out and back in during fills with many skipped fields. Click-outside handler now ignores all clicks while `#fy-filling` is visible.
+- Operator accept/resume now opens NSDL in a new tab (`window.open`) instead of navigating the current page
+- Maintenance check no longer delays panel creation — panel is created immediately so autofill screen transitions work on page load; maintenance status is checked in the background and swaps content only if ON
+
+## [0.5.0] — 2026-05-28
+
+### Added
+- Defence personnel AO code selection — Army (PNE/W/55/3) and Air Force (DEL/W/72/2) hardcoded; filled directly based on `defence_branch` when `is_defence` is true
+- Defence branch radio selector in user data form (shown only when "Defence personnel" is checked)
+
+### Changed
+- AO code step completely reworked: backend already resolves the exact AO code from city configs (`/pincode/:pin`), so the state dropdown → city dropdown → Fetch button → table selection dance is gone — values are written directly into `#area_code`, `#ao_type`, `#range_code`, `#ao_num`
+- Shake animation on F·Y tab icon: amplitude doubled (±4px → ±8px) and interval halved (25s → 12s) for more visibility
+
+## [0.4.9] — 2026-05-27
+
+### Fixed
+- Operator submission flow set `autofillActive` without a `done` array — caused a crash on every page load (`TypeError: Cannot read properties of undefined (reading 'includes')`), silently breaking auto-run for the token page and first step of `endUserLogin.html`
+- Token page (`input.tokenButton`) was skipped by the URL deduplication logic because it reloads at the same URL as step 1 — added DOM-state detection to always run autofill on the token page regardless of `done`
+
+## [0.4.8] — 2026-05-25
+
+### Added
+- Clear data (trash) button on home screen — wipes `fy_user_data`, `fy_active_session`, and session-only sensitive fields in one tap with confirmation prompt
+
+### Changed
+- Real Razorpay payment flow now live and tested end-to-end
+- `flex-wrap` on home screen footer action buttons to prevent overflow on narrow panels
+- `position: relative` on home container to anchor the clear-data button
+
+## [0.4.5] — 2026-05-24
+
+### Added
+- Bundled `pan_card.json` in `public/configs/` as offline fallback; backend remains primary source so live updates still apply
+- Back button on the operator queue screen → returns to home screen
+- Form-data guard on the "Continue" button — if no local form details exist (e.g. recovered on a new browser), shows a message instead of starting a broken autofill
+- Telemetry disclosure in the panel footer
+- VERSION displayed in panel header for quick build-verification
+
+### Fixed
+- Click-outside handler closing the panel when a button removed itself from the DOM (form back button) — added `document.contains(e.target)` check
+- Post-payment flow no longer races storage writes against `window.location.href` — now awaits both `autofillActive` and `fy_active_session` writes before navigating
+- Post-payment now navigates to NSDL only when not already there (avoids infinite-loop opening of NSDL tab from the PAN card click)
+- AO code autofill: waits for `#state_aoCode` dropdown to populate via MutationObserver instead of fixed delay
+- Misleading "we never store your information" copy → now accurately reads "saved only on your device — never on our servers"
+- Unsupported-site popup: replaced specific government form list with a single formyaar.in link (less misleading, simpler)
+
+### Changed
+- `aadhaar_number` removed from `UserData` interface — extension never collects or stores full Aadhaar; only `aadhaar_last_4` (session-only)
+- `aadhaar_last_4` moved into `SENSITIVE_FIELDS` (session-only storage)
+- `runAutofillFromSubmission` derives `aadhaar_last_4` from any `aadhaar_number` field in operator submissions and discards the rest
+- `save-session` request body trimmed: only `order_id`, `mobile`, `form_type` sent to backend — never form data
+- Recover-session flow no longer restores `form_data` from server (server doesn't store it anymore)
+- Config fetch is backend-first with bundled fallback (was backend-only)
+
+### Removed
+- `scripting` permission from manifest (never used)
+- Dead `aadhaar_first_8` derived-field logic in autofill
+
+## [0.3.0] — 2026-05-23
+
+### Added
+- Version number displayed in panel header (`v{VERSION}`)
+- Pending sessions card in home screen — shows in-progress forms with **Continue** and **Discard** buttons
+- Cross-device session recovery by phone number now lands back on home screen and shows the pending card
+- Local AO code resolver: backend returns resolved `ao_code` for known cities, extension uses it to match the exact NSDL table row instead of guessing the first valid one
+
+### Fixed
+- Subscription check treated `NULL` `subscription_expires_at` as expired — now treated as never-expiring
+- AO code autofill: added MutationObserver wait for `#state_aoCode` dropdown to populate before selecting (was failing silently due to 150ms timing race)
+- Pincode API: wraps `response.json()` in its own try-catch so an HTML error page from `postalpincode.in` no longer causes an unhandled 500
+
+### Changed
+- Sensitive fields (`aadhaar_number`, `passport_number`, `tin_number`) now stored in `sessionStorage` only — cleared when browser closes, never sent to backend
+- `form_data` sent to backend on `save-session` no longer includes sensitive fields
+- Resume system fully reworked: removed the old auto-popup resume screen that appeared on NSDL visits; replaced with a persistent "In Progress" card on the main panel home screen
+- `autofillActive` in extension session storage still auto-runs autofill within an active browser session (navigating between NSDL steps); only cross-session resume requires user action
+
+### Removed
+- `renderResumeScreen` and `showResumeScreen` — replaced by `refreshPendingSessions` inline card
+- Auto-show of resume screen on NSDL page load
+</file>
+
+<file path="public/configs/pan_card.json">
+{
+  "form": "pan_card",
+  "version": 14,
+  "site": "onlineservices.proteantech.in",
+  "steps": [
+    {
+      "step": 1,
+      "page_pattern": "endUserRegisterContact",
+      "page": "registerEndUser",
+      "fields": [
+        {
+          "field_id": "application_type",
+          "type": "select",
+          "selector": "#type",
+          "value_source": "static",
+          "static_value": "49A",
+          "match_by": "value",
+          "explanation": "PAN application type — New PAN for Indian Citizens."
+        },
+        {
+          "field_id": "applicant_category",
+          "type": "select",
+          "selector": "#cat_applicant1",
+          "value_source": "static",
+          "static_value": "P",
+          "match_by": "value",
+          "explanation": "Applicant category — Individual."
+        },
+        {
+          "field_id": "first_name",
+          "type": "text",
+          "selector": "#f_name_end",
+          "value_source": "user.first_name",
+          "explanation": "Your first name as per Aadhaar."
+        },
+        {
+          "field_id": "middle_name",
+          "type": "text",
+          "selector": "#m_name_end",
+          "value_source": "user.middle_name",
+          "explanation": "Your middle name as per Aadhaar."
+        },
+        {
+          "field_id": "last_name",
+          "type": "text",
+          "selector": "#l_name_end",
+          "value_source": "user.last_name",
+          "explanation": "Your last name as per Aadhaar."
+        },
+        {
+          "field_id": "date_of_birth",
+          "type": "text",
+          "selector": "#date_of_birth_reg",
+          "value_source": "user.date_of_birth",
+          "explanation": "Your date of birth in DD/MM/YYYY format."
+        },
+        {
+          "field_id": "email",
+          "type": "text",
+          "selector": "#email_id2",
+          "value_source": "user.email",
+          "explanation": "Your email — your ePAN will be sent here."
+        },
+        {
+          "field_id": "mobile",
+          "type": "text",
+          "selector": "#rvContactNo",
+          "value_source": "user.mobile",
+          "explanation": "Your 10-digit mobile number."
+        },
+        {
+          "field_id": "consent",
+          "type": "checkbox",
+          "selector": "#consent",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Consent to data processing."
+        }
+      ],
+      "completion": {
+        "title": "Registration filled!",
+        "subtitle": "Generating your token...",
+        "info": "Your details have been submitted. Your token will appear on the next screen."
+      },
+      "page_coach": {
+        "selector": "#submitForm",
+        "message": "Solve the CAPTCHA first, then click Submit"
+      }
+    },
+    {
+      "step": 1,
+      "page_pattern": "registerEndUser",
+      "page": "tokenGenerated",
+      "stop_message": "Token generated. Clicking Continue to proceed.",
+      "fields": [
+        {
+          "field_id": "continue_after_token",
+          "type": "button_click",
+          "selector": "#submitForm",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Continue past the token confirmation screen."
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "page_pattern": "endUserLogin",
+      "page": "tokenPage",
+      "is_token_page": true,
+      "stepy_index": -1,
+      "stop_message": "Existing application found. Selecting your previous token.",
+      "fields": [
+        {
+          "field_id": "existing_token",
+          "type": "radio",
+          "selector": "input.tokenButton",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Select existing token to resume previous application."
+        },
+        {
+          "field_id": "use_token_btn",
+          "type": "button_click",
+          "selector": "#submitForm11",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Click Use above Token to proceed."
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "page_pattern": "endUserLogin",
+      "page": "endUserLogin",
+      "stepy_index": 1,
+      "stop_message": "Personal details filled. Please verify and click Next.",
+      "fields": [
+        {
+          "field_id": "submission_mode_ekyc",
+          "type": "radio",
+          "selector": "#eVerfication4",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Aadhaar-based eKYC mode."
+        },
+        {
+          "field_id": "epan_option",
+          "type": "radio",
+          "selector": "#appli_epan_op1_y",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Get both physical PAN card and digital ePAN."
+        },
+        {
+          "field_id": "aadhaar_last_4",
+          "type": "text",
+          "selector": "#aadhaarNo_2",
+          "value_source": "user.aadhaar_last_4",
+          "explanation": "Last 4 digits of your Aadhaar number."
+        },
+        {
+          "field_id": "ekyc_photo_consent",
+          "type": "select",
+          "selector": "#consentEkyc",
+          "value_source": "static",
+          "static_value": "Y",
+          "match_by": "value",
+          "explanation": "Consent to print your Aadhaar photo on PAN card."
+        },
+        {
+          "field_id": "first_name_step2",
+          "type": "text",
+          "selector": "#f_name",
+          "value_source": "user.first_name",
+          "explanation": "First name as per Aadhaar."
+        },
+        {
+          "field_id": "middle_name_step2",
+          "type": "text",
+          "selector": "#m_name",
+          "value_source": "user.middle_name",
+          "explanation": "Middle name as per Aadhaar."
+        },
+        {
+          "field_id": "last_name_step2",
+          "type": "text",
+          "selector": "#l_name",
+          "value_source": "user.last_name",
+          "explanation": "Last name as per Aadhaar."
+        },
+        {
+          "field_id": "gender",
+          "type": "select",
+          "selector": "#gender",
+          "value_source": "user.gender",
+          "match_by": "value",
+          "explanation": "Your gender as per Aadhaar."
+        },
+        {
+          "field_id": "single_parent_yes",
+          "type": "radio",
+          "selector": "#single_parent_yes",
+          "value_source": "user.is_single_parent",
+          "min_delay_ms": 2000,
+          "explanation": "Click Yes only if single parent — 2s delay lets NSDL JS show the which-parent selector."
+        },
+        {
+          "field_id": "single_parent_father_select",
+          "type": "radio",
+          "selector": "#single_parent_father",
+          "value_source": "user.is_single_parent_father",
+          "min_delay_ms": 1500,
+          "explanation": "Select Father as single parent when applicable — 1.5s delay lets NSDL enable father fields."
+        },
+        {
+          "field_id": "single_parent_mother_select",
+          "type": "radio",
+          "selector": "#single_parent_mother",
+          "value_source": "user.is_single_parent_mother",
+          "min_delay_ms": 1500,
+          "explanation": "Select Mother as single parent when applicable — 1.5s delay lets NSDL enable mother fields."
+        },
+        {
+          "field_id": "father_first_name",
+          "type": "text",
+          "selector": "#faf_name",
+          "value_source": "user.father_first_name",
+          "explanation": "Father's first name."
+        },
+        {
+          "field_id": "father_middle_name",
+          "type": "text",
+          "selector": "#fam_name",
+          "value_source": "user.father_middle_name",
+          "explanation": "Father's middle name."
+        },
+        {
+          "field_id": "father_last_name",
+          "type": "text",
+          "selector": "#fal_name",
+          "value_source": "user.father_last_name",
+          "explanation": "Father's last name."
+        },
+        {
+          "field_id": "mother_first_name",
+          "type": "text",
+          "selector": "#mof_name",
+          "value_source": "user.mother_first_name",
+          "explanation": "Mother's first name."
+        },
+        {
+          "field_id": "mother_middle_name",
+          "type": "text",
+          "selector": "#mom_name",
+          "value_source": "user.mother_middle_name",
+          "explanation": "Mother's middle name."
+        },
+        {
+          "field_id": "mother_last_name",
+          "type": "text",
+          "selector": "#mol_name",
+          "value_source": "user.mother_last_name",
+          "explanation": "Mother's last name."
+        },
+        {
+          "field_id": "parent_on_card_father",
+          "type": "radio",
+          "selector": "#parent_father",
+          "value_source": "user.parent_on_card_is_father",
+          "explanation": "Father's name on PAN card."
+        },
+        {
+          "field_id": "parent_on_card_mother",
+          "type": "radio",
+          "selector": "#parent_mother",
+          "value_source": "user.parent_on_card_is_mother",
+          "explanation": "Mother's name on PAN card."
+        }
+      ],
+      "auto_advance": true
+    },
+    {
+      "step": 3,
+      "page_pattern": "endUserLogin",
+      "page": "endUserLogin",
+      "stepy_index": 2,
+      "stop_message": "Contact details filled. Please select your source of income, then click Next.",
+      "fields": [
+        {
+          "field_id": "income_salary",
+          "type": "checkbox",
+          "selector": "#sal_id",
+          "value_source": "user.income_source",
+          "static_value": "salary",
+          "explanation": "Source of income — Salary."
+        },
+        {
+          "field_id": "income_business",
+          "type": "checkbox",
+          "selector": "#buss",
+          "value_source": "user.income_source",
+          "static_value": "business",
+          "explanation": "Source of income — Business/Profession."
+        },
+        {
+          "field_id": "income_house",
+          "type": "checkbox",
+          "selector": "#inc_house",
+          "value_source": "user.income_source",
+          "static_value": "house_property",
+          "explanation": "Source of income — House property."
+        },
+        {
+          "field_id": "income_other",
+          "type": "checkbox",
+          "selector": "#inc_other_sources",
+          "value_source": "user.income_source",
+          "static_value": "other_sources",
+          "explanation": "Source of income — Other sources."
+        },
+        {
+          "field_id": "income_capital",
+          "type": "checkbox",
+          "selector": "#capital_gains",
+          "value_source": "user.income_source",
+          "static_value": "capital_gains",
+          "explanation": "Source of income — Capital gains."
+        },
+        {
+          "field_id": "income_no_income",
+          "type": "checkbox",
+          "selector": "#no_income",
+          "value_source": "user.income_source",
+          "static_value": "no_income",
+          "explanation": "Source of income — No income."
+        },
+        {
+          "field_id": "isd_code",
+          "type": "select",
+          "selector": "#tel_num_isdcode",
+          "value_source": "static",
+          "static_value": "91",
+          "match_by": "value",
+          "explanation": "Country code — India (91)."
+        },
+        {
+          "field_id": "residential_status_resident",
+          "type": "radio",
+          "selector": "#residential_status_r",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Residential status — Resident."
+        },
+
+        {
+          "field_id": "passport_num",
+          "type": "text",
+          "selector": "#passport_num",
+          "value_source": "user.passport_number",
+          "explanation": "Passport number (optional)."
+        },
+        {
+          "field_id": "tin_num",
+          "type": "text",
+          "selector": "#tin_num",
+          "value_source": "user.tin_number",
+          "explanation": "TIN number (optional)."
+        }
+      ],
+      "auto_advance": true
+    },
+    {
+      "step": 4,
+      "page_pattern": "endUserLogin",
+      "page": "endUserLogin",
+      "stepy_index": 3,
+      "stop_message": "AO Code filled automatically from your PIN code.",
+      "fields": [
+        {
+          "field_id": "ao_indian_citizen",
+          "type": "radio",
+          "selector": "#aoSelection",
+          "value_source": "user.is_defence",
+          "explanation": "AO category — Indian Citizens (or Defence if applicable).",
+          "defence_selector": "#def_aoCode"
+        }
+      ],
+      "auto_advance": true
+    },
+    {
+      "step": 5,
+      "page_pattern": "endUserLogin",
+      "page": "endUserLogin",
+      "stepy_index": 4,
+      "stop_message": "Almost done! Review and click Submit.",
+      "fields": [
+        {
+          "field_id": "poid_code",
+          "type": "select",
+          "selector": "#poidCode",
+          "value_source": "static",
+          "static_value": "AADHAAR Card issued by the Unique Identification Authority of India",
+          "match_by": "text",
+          "explanation": "Proof of identity — Aadhaar."
+        },
+        {
+          "field_id": "poa_code",
+          "type": "select",
+          "selector": "#poaCode",
+          "value_source": "static",
+          "static_value": "AADHAAR Card issued by the Unique Identification Authority of India",
+          "match_by": "text",
+          "explanation": "Proof of address — Aadhaar."
+        },
+        {
+          "field_id": "proof_dob_code",
+          "type": "select",
+          "selector": "#proof_dob_code",
+          "value_source": "user.proof_of_dob",
+          "match_by": "text",
+          "explanation": "Proof of date of birth."
+        },
+        {
+          "field_id": "designation",
+          "type": "text",
+          "selector": "#designation",
+          "value_source": "static",
+          "static_value": "SELF",
+          "explanation": "Designation — Self."
+        },
+        {
+          "field_id": "capacity_verifier",
+          "type": "select",
+          "selector": "#capacityVerifier",
+          "value_source": "static",
+          "static_value": "01",
+          "match_by": "value",
+          "explanation": "Declaration capacity — Self."
+        },
+        {
+          "field_id": "place",
+          "type": "text",
+          "selector": "#verifierPlace",
+          "value_source": "user.place",
+          "explanation": "City where you're filing the application."
+        },
+        {
+          "field_id": "save_draft",
+          "type": "button_click",
+          "selector": "#saveForm",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Save Draft — preserves all filled fields before user uploads documents."
+        }
+      ],
+      "completion": {
+        "title": "Details filled & saved!",
+        "subtitle": "Now upload your documents below",
+        "manual_steps": [
+          "Upload your <strong>Aadhaar card</strong> as proof of identity & address",
+          "Upload your <strong>proof of date of birth</strong>",
+          "Upload your <strong>passport-size photo</strong> and <strong>signature</strong>",
+          "Click <strong>Submit</strong> when done"
+        ]
+      }
+    },
+    {
+      "step": 6,
+      "page_pattern": "fullFormSave",
+      "page": "fullFormSave",
+      "guidance_only": true,
+      "stop_message": "Make sure you've uploaded all required documents above, then click Confirm to proceed.",
+      "fields": [
+        {
+          "field_id": "confirm_submit",
+          "type": "button_click",
+          "selector": "#confirmSubmit",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Confirm your uploaded documents and proceed to payment."
+        }
+      ]
+    },
+    {
+      "step": 7,
+      "page_pattern": "fullFormSubmit",
+      "page": "fullFormSubmit",
+      "stop_message": "Agreeing to terms and proceeding to payment.",
+      "fields": [
+        {
+          "field_id": "agree_terms",
+          "type": "radio",
+          "selector": "#agree",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Agree to terms of service."
+        },
+        {
+          "field_id": "proceed_to_payment",
+          "type": "button_click",
+          "selector": "#pay",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Proceed to payment."
+        }
+      ]
+    },
+    {
+      "step": 8,
+      "page_pattern": "ddSave",
+      "page": "ddSave",
+      "guidance_only": true,
+      "stop_message": "Please review the fee and click Pay Confirm to proceed.",
+      "fields": [
+        {
+          "field_id": "pay_confirm",
+          "type": "button_click",
+          "selector": "#payConfirm",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Confirm payment to proceed to the payment gateway."
+        }
+      ]
+    },
+    {
+      "step": 9,
+      "page_pattern": "paytmResponseAfterStatus",
+      "page": "paytmResponseAfterStatus",
+      "stop_message": "Payment successful. Continuing to eKYC.",
+      "fields": [
+        {
+          "field_id": "continue_payment",
+          "type": "button_click",
+          "selector": "#continuePayment",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Continue after payment success."
+        }
+      ]
+    },
+    {
+      "step": 10,
+      "page_pattern": "continuePayment",
+      "page": "continuePayment",
+      "stop_message": "Aadhaar consent ticked. Please click Authenticate and complete the OTP.",
+      "fields": [
+        {
+          "field_id": "consent",
+          "type": "checkbox",
+          "selector": "#consent",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Consent to Aadhaar authentication for eKYC."
+        },
+        {
+          "field_id": "authenticate",
+          "type": "button_click",
+          "selector": "#submitAadhaarFullForm",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Click Authenticate to trigger OTP."
+        }
+      ]
+    },
+    {
+      "step": 11,
+      "page_pattern": "proceedAadhaarDetails",
+      "page": "proceedAadhaarDetails",
+      "stop_message": "Proceeding to OTP authentication.",
+      "fields": [
+        {
+          "field_id": "submit_esign",
+          "type": "button_click",
+          "selector": "#submitEsign",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Continue with e-KYC to proceed to OTP."
+        }
+      ]
+    }
+  ]
+}
+</file>
+
+<file path="entrypoints/content/userData.ts">
+// User data collection — types, storage, defaults
+
+const STORAGE_KEY = "fy_user_data";
+const SENSITIVE_KEY = "fy_sensitive_data";
+const SENSITIVE_FIELDS: (keyof UserData)[] = [
+  "passport_number",
+  "tin_number",
+];
+
+export interface UserData {
+  first_name: string;
+  middle_name: string;
+  last_name: string;
+  date_of_birth: string;
+  email: string;
+  mobile: string;
+  aadhaar_last_4: string;
+  gender: "M" | "F" | "T" | "";
+  father_first_name: string;
+  father_middle_name: string;
+  father_last_name: string;
+  mother_first_name: string;
+  mother_middle_name: string;
+  mother_last_name: string;
+  parent_on_card_is_father: boolean;
+  parent_on_card_is_mother: boolean;
+  is_single_parent: boolean;
+  is_single_parent_father: boolean;
+  is_single_parent_mother: boolean;
+  aadhaar_pin_code: string;
+  place: string;
+  is_defence: boolean;
+  defence_branch: "army" | "air_force" | "";
+  passport_number: string;
+  tin_number: string;
+  proof_of_dob: string;
+  income_source:
+    | "salary"
+    | "business"
+    | "house_property"
+    | "other_sources"
+    | "capital_gains"
+    | "no_income"
+    | "";
+}
+
+export const EMPTY_USER_DATA: UserData = {
+  first_name: "",
+  middle_name: "",
+  last_name: "",
+  date_of_birth: "",
+  email: "",
+  mobile: "",
+  aadhaar_last_4: "",
+  gender: "",
+  father_first_name: "",
+  father_middle_name: "",
+  father_last_name: "",
+  mother_first_name: "",
+  mother_middle_name: "",
+  mother_last_name: "",
+  parent_on_card_is_father: true,
+  parent_on_card_is_mother: false,
+  is_single_parent: false,
+  is_single_parent_father: false,
+  is_single_parent_mother: false,
+  aadhaar_pin_code: "",
+  place: "",
+  is_defence: false,
+  defence_branch: "",
+  passport_number: "",
+  tin_number: "",
+  proof_of_dob: "",
+  income_source: "",
+};
+export async function getUserData(): Promise<UserData> {
+  try {
+    // Operator override — persisted in session storage, survives navigation
+    const sessionResult = await browser.storage.session.get(OPERATOR_SUB_KEY);
+    const sessionSub = sessionResult[OPERATOR_SUB_KEY] as
+      | Partial<UserData>
+      | undefined;
+    if (sessionSub && sessionSub.first_name) {
+      return { ...EMPTY_USER_DATA, ...sessionSub };
+    }
+    // Regular user — merge localStorage (non-sensitive) + sessionStorage (sensitive)
+    const [localResult, sensitiveResult] = await Promise.all([
+      browser.storage.local.get(STORAGE_KEY),
+      browser.storage.session.get(SENSITIVE_KEY),
+    ]);
+    const saved = localResult[STORAGE_KEY] as Partial<UserData> | undefined;
+    const sensitive = sensitiveResult[SENSITIVE_KEY] as Partial<UserData> | undefined;
+    return { ...EMPTY_USER_DATA, ...(saved ?? {}), ...(sensitive ?? {}) };
+  } catch {
+    return EMPTY_USER_DATA;
+  }
+}
+export async function saveUserData(data: UserData): Promise<void> {
+  const sensitive: Partial<UserData> = {};
+  const local: Partial<UserData> = {};
+  for (const key of Object.keys(data) as (keyof UserData)[]) {
+    if (SENSITIVE_FIELDS.includes(key)) {
+      (sensitive as any)[key] = data[key];
+    } else {
+      (local as any)[key] = data[key];
+    }
+  }
+  await Promise.all([
+    browser.storage.local.set({ [STORAGE_KEY]: local }),
+    browser.storage.session.set({ [SENSITIVE_KEY]: sensitive }),
+  ]);
+}
+
+export interface ValidationError {
+  field: keyof UserData;
+  message: string;
+}
+
+export function validateUserData(data: UserData): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (!data.first_name.trim())
+    errors.push({ field: "first_name", message: "First name is required" });
+
+  if (!data.last_name.trim())
+    errors.push({ field: "last_name", message: "Last name is required" });
+
+  if (!data.date_of_birth.match(/^\d{2}\/\d{2}\/\d{4}$/))
+    errors.push({
+      field: "date_of_birth",
+      message: "Date must be DD/MM/YYYY",
+    });
+
+  if (!data.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))
+    errors.push({ field: "email", message: "Enter a valid email" });
+
+  if (!data.mobile.match(/^[6-9]\d{9}$/))
+    errors.push({
+      field: "mobile",
+      message: "Enter a valid 10-digit mobile number",
+    });
+
+  if (!data.aadhaar_last_4 || !/^\d{4}$/.test(data.aadhaar_last_4)) {
+    errors.push({
+      field: "aadhaar_last_4",
+      message: "Enter the last 4 digits of your Aadhaar",
+    });
+  }
+
+  if (!data.gender)
+    errors.push({ field: "gender", message: "Select your gender" });
+
+  if (!data.father_first_name.trim())
+    errors.push({
+      field: "father_first_name",
+      message: "Father's first name is required",
+    });
+
+  if (!data.mother_first_name.trim())
+    errors.push({
+      field: "mother_first_name",
+      message: "Mother's first name is required",
+    });
+  if (!data.parent_on_card_is_father && !data.parent_on_card_is_mother)
+    errors.push({
+      field: "parent_on_card_is_father",
+      message: "Choose whose name to print on the PAN card",
+    });
+
+  if (!data.aadhaar_pin_code.match(/^\d{6}$/))
+    errors.push({
+      field: "aadhaar_pin_code",
+      message: "Enter a valid 6-digit PIN code",
+    });
+
+  if (!data.place.trim())
+    errors.push({ field: "place", message: "Enter your city" });
+
+  if (!data.proof_of_dob)
+    errors.push({
+      field: "proof_of_dob",
+      message: "Select your proof of date of birth",
+    });
+
+  if (!data.income_source)
+    errors.push({
+      field: "income_source",
+      message: "Select your source of income",
+    });
+  return errors;
+}
+
+// ─── Active session (resume support) ─────────────────────────────────
+const SESSION_KEY = "fy_active_session";
+
+export interface ActiveSession {
+  form: string;
+  order_id: string;
+  paid_at: number;
+  completed: boolean;
+}
+
+export async function getActiveSession(): Promise<ActiveSession | null> {
+  try {
+    const result = await browser.storage.local.get(SESSION_KEY);
+    return (result[SESSION_KEY] as ActiveSession) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setActiveSession(session: ActiveSession): Promise<void> {
+  await browser.storage.local.set({ [SESSION_KEY]: session });
+}
+
+export async function markSessionCompleted(): Promise<void> {
+  const s = await getActiveSession();
+  if (!s) return;
+  await setActiveSession({ ...s, completed: true });
+}
+
+export async function clearActiveSession(): Promise<void> {
+  await browser.storage.local.remove(SESSION_KEY);
+}
+
+const OPERATOR_SUB_KEY = "fy_operator_submission";
+
+export async function setOperatorSubmission(
+  sub: Partial<UserData>,
+): Promise<void> {
+  await browser.storage.session.set({ [OPERATOR_SUB_KEY]: sub });
+}
+
+export async function clearOperatorSubmission(): Promise<void> {
+  await browser.storage.session.remove(OPERATOR_SUB_KEY);
+}
+</file>
+
+<file path="package.json">
+{
+  "name": "formyaar",
+  "description": "FormYaar — auto-fills Indian government forms for you",
+  "private": true,
+  "version": "0.8.2",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "compile": "tsc --noEmit",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@wxt-dev/module-react": "^1.1.5",
+    "typescript": "^5.9.3",
+    "wxt": "^0.20.25"
+  }
+}
+</file>
+
+<file path="entrypoints/background.ts">
+import { BACKEND_URL } from "./content/constants";
+
+const POLL_INTERVAL_MINUTES = 0.1; // ~6 seconds
+const MAX_ATTEMPTS = 60; // 5 minutes max
+import type { ExtensionMessage } from "./content/types";
+
+export default defineBackground(() => {
+  // Allow content scripts to read/write session storage
+  browser.storage.session.setAccessLevel({
+    accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS",
+  });
+
+  // Re-register alarm listener every time SW starts (MV3 requirement)
+  browser.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name !== "paymentPoll") return;
+
+    const result = await browser.storage.session.get("pendingPayment");
+    const pending = result.pendingPayment as {
+      orderId: string;
+      originTabId: number;
+      attempts: number;
+    } | null;
+
+    if (!pending) {
+      browser.alarms.clear("paymentPoll");
+      return;
+    }
+
+    const { orderId, originTabId, attempts } = pending;
+
+    if (attempts >= MAX_ATTEMPTS) {
+      console.warn("FormYaar: payment poll timed out");
+      await browser.storage.session.remove("pendingPayment");
+      browser.alarms.clear("paymentPoll");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/payment/status/${orderId}`);
+      const data = await res.json();
+
+      if (data.paid) {
+        // Payment confirmed — notify original tab
+        await browser.storage.session.remove("pendingPayment");
+        browser.alarms.clear("paymentPoll");
+        browser.tabs.sendMessage(originTabId, {
+          type: "PAYMENT_VERIFIED",
+          order_id: orderId,
+        });
+      } else {
+        // Not yet paid — increment attempts
+        await browser.storage.session.set({
+          pendingPayment: { orderId, originTabId, attempts: attempts + 1 },
+        });
+      }
+    } catch (err) {
+      console.error("FormYaar: poll error:", err);
+      await browser.storage.session.set({
+        pendingPayment: { orderId, originTabId, attempts: attempts + 1 },
+      });
+    }
+  });
+
+  // Message handler
+  browser.runtime.onMessage.addListener(
+    (message: ExtensionMessage, sender, sendResponse) => {
+      if (message.type === "AI_CHAT") {
+        fetch(`${BACKEND_URL}/ai/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fieldId: message.fieldId,
+            fieldExplanation: message.fieldExplanation,
+            userMessage: message.userMessage,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => sendResponse({ response: data.response }))
+          .catch(() =>
+            sendResponse({
+              response: "Sorry, couldn't get help right now. Please try again.",
+            }),
+          );
+        return true;
+      }
+
+      if (message.type === "CREATE_PAYMENT") {
+        fetch(`${BACKEND_URL}/payment/create-order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ form: message.form || "pan_card" }),
+        })
+          .then((res) => res.json())
+          .then((data) => sendResponse(data))
+          .catch(() =>
+            sendResponse({ success: false, error: "Network error" }),
+          );
+        return true;
+      }
+      if (message.type === "OPEN_URL") {
+        browser.tabs.create({ url: message.url });
+        return true;
+      }
+
+      if (message.type === "OPEN_RAZORPAY") {
+        const originTabId = sender.tab?.id;
+        if (!originTabId) {
+          sendResponse({ success: false });
+          return true;
+        }
+
+        const paymentUrl = `https://formyaar.in/pay?order_id=${message.order_id}`;
+
+        browser.tabs.create({ url: paymentUrl });
+
+        // Store pending payment and start alarm
+        browser.storage.session
+          .set({
+            pendingPayment: {
+              orderId: message.order_id,
+              originTabId,
+              attempts: 0,
+            },
+          })
+          .then(() => {
+            browser.alarms.create("paymentPoll", {
+              periodInMinutes: POLL_INTERVAL_MINUTES,
+            });
+          });
+
+        sendResponse({ success: true });
+        return true;
+      }
+      if (message.type === "TELEMETRY_EVENT") {
+        fetch(`${BACKEND_URL}/telemetry/event`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(message.payload),
+        }).catch(() => {});
+        return;
+      }
+    },
+  );
+});
+</file>
+
+<file path="entrypoints/content/constants.ts">
+// Single source of truth — version comes from package.json via Vite
+export const VERSION = (import.meta.env.VITE_APP_VERSION as string) ?? "0.8.2";
+export const CWS_LISTING_URL =
+  "https://chromewebstore.google.com/detail/formyaar/anibapibnfjepjpomkpoifpolbagajag";
+
+export const BACKEND_URL =
+  (import.meta.env.VITE_BACKEND_URL as string) ??
+  "formyaar-backend-production-777c.up.railway.app";
+
+export const PANEL_WIDTH = 400;
+export const PANEL_TRANSITION_MS = 300;
+export const BANNER_DELAY_MS = 1500;
+export const PULSE_INITIAL_DELAY_MS = 5000;
+export const PULSE_INTERVAL_MS = 10000;
+export const OVERLAY_SCROLL_PAD = 8;
+export const OVERLAY_TRANSITION_MS = 400;
+export const SKIP_FLASH_DURATION_MS = 400;
+export const SKIP_ADVANCE_DELAY_MS = 600;
+export const COMPLETION_AUTO_DISMISS_MS = 30000;
+export const SELECT_POLL_INTERVAL_MS = 300;
+
+export const Z_INDEX = {
+  BARS: 999997,
+  SPOTLIGHT: 999998,
+  TOOLTIP: 999999,
+  PANEL: 2147483647,
+};
+
+export const SITE_CONFIGS: Record<string, { title: string; form: string }> = {
+  "onlineservices.nsdl.com": {
+    title: "Looks like you're applying for a PAN card.",
+    form: "pan_card",
+  },
+  "onlineservices.proteantech.in": {
+    title: "Looks like you're applying for a PAN card.",
+    form: "pan_card",
+  },
+  "www.utiitsl.com": {
+    title: "Looks like you're on the PAN card portal.",
+    form: "pan_card",
+  },
+  "passporthub.gov.in": {
+    title: "Looks like you're applying for a Passport.",
+    form: "passport",
+  },
+  "sarathi.parivahan.gov.in": {
+    title: "Looks like you're on the Driving License portal.",
+    form: "driving_license",
+  },
+};
+</file>
+
+<file path="wxt.config.ts">
+import { defineConfig } from "wxt";
+import { config } from "dotenv";
+import { readFileSync } from "fs";
+config({ path: `.env.${process.env.NODE_ENV || "development"}` });
+
+const { version } = JSON.parse(readFileSync("./package.json", "utf-8"));
+const backendUrl =
+  process.env.VITE_BACKEND_URL ??
+  "https://formyaar-backend-production-a43e.up.railway.app";
+
+export default defineConfig({
+  modules: ["@wxt-dev/module-react"],
+  vite: () => ({
+    define: {
+      "import.meta.env.VITE_APP_VERSION": JSON.stringify(version),
+    },
+  }),
+  manifest: {
+    name: "FormYaar",
+    description: "Your friend who fills government forms with you",
+    version,
+    permissions: ["storage", "activeTab", "alarms"],
+    host_permissions: [
+      "https://onlineservices.proteantech.in/*",
+      "https://onlineservices.nsdl.com/*",
+      "https://www.utiitsl.com/*",
+      "https://passporthub.gov.in/*",
+      "https://sarathi.parivahan.gov.in/*",
+      "https://formyaar.in/*",
+      `${backendUrl}/*`,
+    ],
+  },
+});
+</file>
+
+<file path="entrypoints/content/index.ts">
+import { SITE_CONFIGS, BANNER_DELAY_MS, BACKEND_URL } from "./constants";
+import { showContextualBanner } from "./panel";
+import { runAutofill } from "./autofill";
+import { getUserData } from "./userData";
+
+const NSDL_START_URL = "https://onlineservices.proteantech.in/paam/endUserRegisterContact.html";
+export default defineContentScript({
+  matches: [
+    "*://*.proteantech.in/*",
+    "*://*.nsdl.com/*",
+    "*://*.utiitsl.com/*",
+    "*://*.passporthub.gov.in/*",
+    "*://*.sarathi.parivahan.gov.in/*",
+    "*://formyaar.in/*",
+  ],
+  async main() {
+    if (import.meta.env.DEV)
+      console.log("FormYaar loaded on:", window.location.href);
+
+    const hostname = window.location.hostname;
+
+    // Message listener
+    browser.runtime.onMessage.addListener((message) => {
+      if (message.type === "OPEN_PANEL") {
+        showContextualBanner();
+      }
+      if (message.type === "PAYMENT_VERIFIED") {
+        const orderId = message.order_id ?? "";
+
+        // Persist session server-side (payment proof only — no form data)
+        getUserData().then((userData) => {
+          if (!userData.mobile) return;
+          fetch(`${BACKEND_URL}/payment/save-session`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              order_id: orderId,
+              mobile: userData.mobile,
+              form_type: "pan_card",
+            }),
+          }).catch(() => {});
+        });
+
+        Promise.all([
+          browser.storage.session.set({ autofillActive: { form: "pan_card", done: [] } }),
+          browser.storage.local.set({
+            fy_active_session: {
+              form: "pan_card",
+              order_id: orderId,
+              paid_at: Date.now(),
+              completed: false,
+            },
+          }),
+        ]).then(() => {
+          if (hostname === "onlineservices.proteantech.in") {
+            // Already on NSDL — run autofill directly on this page
+            runAutofill("pan_card");
+          } else {
+            // Navigate to NSDL — autofill runs on page load via autofillActive
+            window.location.href = NSDL_START_URL;
+          }
+        }).catch((err) => console.warn("FormYaar: could not save autofill state", err));
+      }
+    });
+    // Re-run autofill when user moves to next step on endUserLogin
+    if (hostname === "onlineservices.proteantech.in") {
+      document.addEventListener("click", async (e) => {
+        const target = e.target as HTMLElement;
+        if (
+          target.classList.contains("button-next") ||
+          target.closest(".button-next")
+        ) {
+          // Ignore programmatic clicks from autofill auto-advance — handled there
+          if ((window as any).__fy_auto_advancing) return;
+          const result = await browser.storage.session.get("autofillActive");
+          const active = result.autofillActive as { form: string } | undefined;
+          if (!active) return;
+
+          // Wait for stepy to show the next fieldset
+          const observer = new MutationObserver(() => {
+            const visible = document.querySelector(
+              '.stepy-step:not([style*="display: none"])',
+            );
+            if (visible) {
+              observer.disconnect();
+              setTimeout(() => runAutofill(active.form), 300);
+            }
+          });
+
+          observer.observe(document.body, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["style"],
+          });
+
+          // Safety fallback — disconnect after 3 seconds if nothing happens
+          setTimeout(() => observer.disconnect(), 3000);
+        }
+      });
+    }
+    // Show contextual banner on supported sites + formyaar website
+    if (SITE_CONFIGS[hostname] || hostname === "formyaar.in") {
+      setTimeout(() => showContextualBanner(), BANNER_DELAY_MS);
+    }
+
+    // Allow formyaar.in buttons to open the panel via a custom DOM event
+    if (hostname === "formyaar.in") {
+      document.addEventListener("fy:open-panel", async () => {
+        await showContextualBanner();
+        const p = document.getElementById("formyaar-panel");
+        if (p) p.style.right = "0px";
+      });
+    }
+
+    // Auto-run autofill on page load only for pages not yet seen in this flow
+    if (SITE_CONFIGS[hostname]) {
+      try {
+        const result = await browser.storage.session.get("autofillActive");
+        const active = result.autofillActive as { form: string; done: string[] } | undefined;
+        if (active) {
+          const pageKey = window.location.pathname;
+          const isTokenPage = !!document.querySelector("input.tokenButton");
+          const done = active.done ?? [];
+          if (isTokenPage || !done.includes(pageKey)) {
+            if (!isTokenPage) {
+              await browser.storage.session.set({
+                autofillActive: { ...active, done: [...done, pageKey] },
+              });
+            }
+
+            // First page of the flow (done was empty) → show start overlay
+            // so the user knows to switch to this tab and confirm before autofill starts.
+            // Subsequent pages (mid-flow) run directly — don't interrupt mid-fill.
+            const isFirstPage = done.length === 0 && !isTokenPage;
+            if (isFirstPage) {
+              // Panel must exist before showStartOverlay — showFillingScreen crashes otherwise.
+              // showContextualBanner creates the panel div synchronously before its first await,
+              // so calling it here (fire-and-forget) guarantees the panel is in the DOM.
+              showContextualBanner();
+              showStartOverlay(active.form);
+            } else {
+              setTimeout(() => runAutofill(active.form), 1500);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("FormYaar: could not check autofill state", err);
+      }
+    }
+  },
+});
+
+// ─── Start overlay ────────────────────────────────────────────────────
+// Shown on the very first NSDL page after payment so the user can
+// consciously kick off the autofill after switching back to this tab.
+function showStartOverlay(form: string): void {
+  const originalTitle = document.title;
+
+  // Pulse the tab title so the user notices this tab in the background
+  let pulse = true;
+  const titleInterval = setInterval(() => {
+    document.title = pulse
+      ? "⚡ FormYaar — click here!"
+      : "👆 Your PAN form is ready";
+    pulse = !pulse;
+  }, 900);
+
+  const overlay = document.createElement("div");
+  overlay.id = "fy-start-overlay";
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 2147483646;
+    background: rgba(10,10,46,0.72);
+    backdrop-filter: blur(3px);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    animation: fyOverlayIn 0.35s ease;
+  `;
+
+  const styleEl = document.createElement("style");
+  styleEl.textContent = `
+    @keyframes fyOverlayIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes fyCardIn { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    #fy-start-card { animation: fyCardIn 0.4s 0.1s ease both; }
+    #fy-start-btn:hover { background: #1a3aaa !important; }
+    #fy-start-btn:active { transform: scale(0.97); }
+  `;
+  document.head.appendChild(styleEl);
+
+  overlay.innerHTML = `
+    <div id="fy-start-card" style="
+      background:#fff; border-radius:20px; padding:40px 36px;
+      max-width:380px; width:calc(100% - 48px);
+      text-align:center; box-shadow:0 24px 64px rgba(0,0,0,0.35);
+    ">
+      <div style="font-size:52px;margin-bottom:16px;">📋</div>
+      <div style="font-size:22px;font-weight:800;color:#0a0a2e;margin-bottom:10px;line-height:1.3;">
+        Ready to fill your PAN card?
+      </div>
+      <div style="font-size:14px;color:#64748b;line-height:1.65;margin-bottom:28px;">
+        FormYaar will auto-fill the entire application for you.<br>
+        Just sit back — it takes about 2–3 minutes.
+      </div>
+      <button id="fy-start-btn" style="
+        width:100%; padding:15px; background:#000080; color:#fff;
+        border:none; border-radius:12px; font-size:16px; font-weight:800;
+        cursor:pointer; font-family:inherit; letter-spacing:0.3px;
+        transition: background 0.15s, transform 0.1s;
+      ">
+        Start filling →
+      </button>
+      <div style="margin-top:14px;font-size:12px;color:#94a3b8;">
+        Powered by FormYaar · your details are saved locally
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById("fy-start-btn")!.addEventListener("click", () => {
+    clearInterval(titleInterval);
+    document.title = originalTitle;
+    overlay.style.opacity = "0";
+    overlay.style.transition = "opacity 0.2s ease";
+    setTimeout(() => {
+      overlay.remove();
+      styleEl.remove();
+      runAutofill(form);
+    }, 200);
+  });
+}
+</file>
+
+<file path="entrypoints/content/autofill.ts">
+import { BACKEND_URL } from "./constants";
+import { trackEvent } from "./telemetry";
+import panCardConfig from "../../public/configs/pan_card.json";
+import {
+  showFillingScreen,
+  showVerifyScreen,
+  updateFillProgress,
+  celebrateTimeSaved,
+} from "./panel";
+import { showUploadScreen } from "./uploadScreen";
+import { getUserData, type UserData } from "./userData";
+
+// ─── Types matching pan_card.json schema v2 ──────────────────────────
+interface FieldConfig {
+  field_id: string;
+  type: "text" | "select" | "checkbox" | "date" | "radio" | "button_click";
+  selector: string;
+  value_source: string;
+  static_value?: string | boolean;
+  match_by?: "value" | "text";
+  format?: string;
+  explanation: string;
+}
+
+interface StepConfig {
+  step: number;
+  page_pattern: string;
+  stop_message: string;
+  fields: FieldConfig[];
+}
+
+interface FormConfig {
+  form: string;
+  version: number;
+  site: string;
+  steps: StepConfig[];
+}
+
+// ─── Field-friendly labels (used in progress UI) ─────────────────────
+const FIELD_LABELS: Record<string, string> = {
+  // Step 1
+  application_type: "Application type",
+  applicant_category: "Applicant category",
+  first_name: "First name",
+  middle_name: "Middle name",
+  last_name: "Last name",
+  date_of_birth: "Date of birth",
+  email: "Email",
+  mobile: "Mobile number",
+  consent: "Consent",
+  // Step 2-5
+  submission_mode_ekyc: "Submission mode (eKYC)",
+  ekyc_photo_consent: "Aadhaar photo consent",
+  epan_option: "PAN delivery option",
+  aadhaar_last_4: "Aadhaar (last 4)",
+  first_name_step2: "First name",
+  middle_name_step2: "Middle name",
+  last_name_step2: "Last name",
+  gender: "Gender",
+  father_first_name: "Father's first name",
+  father_middle_name: "Father's middle name",
+  father_last_name: "Father's last name",
+  mother_first_name: "Mother's first name",
+  mother_middle_name: "Mother's middle name",
+  mother_last_name: "Mother's last name",
+  parent_on_card_father: "Father's name on card",
+  parent_on_card_mother: "Mother's name on card",
+  isd_code: "Country code",
+  residential_status_resident: "Residential status",
+  aadhaar_pin_code: "PIN code (Aadhaar)",
+  ao_indian_citizen: "AO category",
+  capacity_verifier: "Declaration capacity",
+  place: "Place",
+  ao_fetch_btn: "Fetch AO code",
+};
+
+function getCurrentStepyIndex(): number {
+  // Primary: stepy header active class — most reliable indicator
+  const headers = document.querySelectorAll(".stepy-header li");
+  for (let i = 0; i < headers.length; i++) {
+    if (headers[i].classList.contains("stepy-active")) return i;
+  }
+  // Fallback: inline display style on fieldsets
+  let idx = -1;
+  document.querySelectorAll(".stepy-step").forEach((fs, i) => {
+    if ((fs as HTMLElement).style.display !== "none") idx = i;
+  });
+  return idx;
+}
+
+// ─── Main entry point ────────────────────────────────────────────────
+export async function runAutofill(form: string = "pan_card") {
+  showFillingScreen();
+
+  const config = await fetchConfig(form);
+  const userData = await getUserData();
+  if (!config) {
+    updateFillProgress([
+      { label: "Could not load form config", status: "active" },
+    ]);
+    return;
+  }
+
+  const step = matchStep(config);
+  if (!step) {
+    updateFillProgress([{ label: "Page not recognized", status: "active" }]);
+    trackEvent("step_match_failed", form, {
+      url: window.location.pathname + window.location.search,
+    });
+    return;
+  }
+  trackEvent("guide_started", form);
+
+  // If this is the last step we have a config for, clear the active flag
+  // so autofill doesn't re-trigger on future visits
+  const isLastStep = step.step === config.steps[config.steps.length - 1].step;
+  if (isLastStep) {
+    await browser.storage.session.remove("autofillActive");
+  }
+  if ((step as any).guidance_only) {
+    showVerifyScreen();
+    return;
+  }
+  // Initial progress: all pending
+  const progress = step.fields.map((f) => ({
+    label: FIELD_LABELS[f.field_id] ?? f.field_id,
+    status: "pending" as "done" | "active" | "pending",
+  }));
+  updateFillProgress(progress);
+
+  // Fill each field with delay
+  for (let i = 0; i < step.fields.length; i++) {
+    progress[i].status = "active";
+    updateFillProgress([...progress]);
+
+    const field = { ...step.fields[i], _step: step.step };
+    const value = resolveValue(field, userData);
+
+    // Scroll the target field into view so the user can follow along
+    const el = document.querySelector(field.selector);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    const ok = await fillField(field, value);
+    const baseDelay = field.type === "button_click" ? 2500 : 150;
+    const delay = (ok && (field as any).min_delay_ms) ? (field as any).min_delay_ms : baseDelay;
+    await sleep(delay);
+    progress[i].status = ok ? "done" : "done"; // mark done either way; missing fields aren't fatal
+    updateFillProgress([...progress]);
+  }
+
+  trackEvent("guide_completed", form);
+
+  // Fill AO code fields directly on step 4
+  if ((step as any).stepy_index === 3) {
+    const isDefence =
+      userData.is_defence === true || (userData.is_defence as any) === "true";
+    if (isDefence) {
+      const branch = (userData as any).defence_branch as string;
+      if (branch) {
+        try {
+          const url = (browser.runtime.getURL as (p: string) => string)("configs/defence.json");
+          const res = await fetch(url);
+          if (res.ok) {
+            const defenceAO = await res.json();
+            const target: AOCode | undefined = defenceAO[branch];
+            if (target) fillAOCodeFields(target);
+          }
+        } catch {
+          // Fallback to hardcoded if file can't be read
+          const FALLBACK: Record<string, AOCode> = {
+            army:      { area_code: "PNE", ao_type: "W", range_code: "55", ao_number: "3" },
+            air_force: { area_code: "DEL", ao_type: "W", range_code: "72", ao_number: "2" },
+          };
+          if (FALLBACK[branch]) fillAOCodeFields(FALLBACK[branch]);
+        }
+      }
+    } else {
+      await autoFillAOCode(userData.aadhaar_pin_code, userData.income_source);
+    }
+  }
+  await sleep(400);
+
+  if (form === "pan_card" && isLastStep) {
+    showUploadScreen();
+    celebrateTimeSaved(step.fields.length);
+  } else if ((step as any).auto_advance) {
+    // Click Next and wait for stepy to actually change before running next step.
+    // Handled here (not via index.ts click listener) to avoid infinite loops
+    // when NSDL validation errors trigger the MutationObserver on the same step.
+    celebrateTimeSaved(step.fields.length);
+    // Find Next button inside the CURRENT visible fieldset — not the first in DOM
+    // which would be inside the hidden Guidelines step
+    const visibleFieldset = Array.from(document.querySelectorAll(".stepy-step"))
+      .find(fs => (fs as HTMLElement).style.display !== "none");
+    const nextBtn = (visibleFieldset?.querySelector("a.button-next") ??
+      document.querySelector("a.button-next")) as HTMLElement | null;
+    if (nextBtn) {
+      const stepyBefore = getCurrentStepyIndex();
+      (window as any).__fy_auto_advancing = true;
+      // Use jQuery trigger if available — stepy.js listens via jQuery event
+      // delegation and may not respond to raw dispatchEvent
+      const jq = (window as any).$;
+      if (jq) {
+        jq(nextBtn).trigger("click");
+      } else {
+        nextBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      }
+      setTimeout(() => { (window as any).__fy_auto_advancing = false; }, 200);
+      // Poll until stepy changes (max 4s — if validation error, give up cleanly)
+      let elapsed = 0;
+      while (elapsed < 4000) {
+        await sleep(150);
+        elapsed += 150;
+        if (getCurrentStepyIndex() !== stepyBefore) {
+          await sleep(200); // let NSDL finish animating
+          await runAutofill(form);
+          return;
+        }
+      }
+      // Stepy didn't change — likely a validation error, show verify so user knows
+      showVerifyScreen({ title: "Review required", subtitle: "Fix any errors on the page, then click Next →" });
+    }
+  } else {
+    showVerifyScreen((step as any).completion);
+    celebrateTimeSaved(step.fields.length);
+    // Show a page-level coach mark if the step config requests one
+    const coach = (step as any).page_coach as { selector: string; message: string } | undefined;
+    if (coach) showCoachMark(coach.selector, coach.message);
+  }
+}
+
+function showCoachMark(selector: string, message: string): void {
+  const target = document.querySelector(selector) as HTMLElement | null;
+  if (!target) return;
+
+  // Subtle pulse on the target button so it's clearly the thing to click
+  const prevOutline = target.style.outline;
+  target.style.outline = "3px solid #f59e0b";
+  target.style.outlineOffset = "3px";
+
+  const mark = document.createElement("div");
+  mark.id = "fy-coach-mark";
+
+  const rect = target.getBoundingClientRect();
+  const top = rect.top + window.scrollY - 72;
+  const left = rect.left + window.scrollX + rect.width / 2;
+
+  mark.style.cssText = `
+    position: absolute;
+    top: ${top}px;
+    left: ${left}px;
+    transform: translateX(-50%);
+    background: #0a0a2e;
+    color: #fff;
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 10px 16px;
+    border-radius: 10px;
+    white-space: nowrap;
+    z-index: 2147483640;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    pointer-events: none;
+  `;
+  // Arrow pointing down toward the button
+  mark.innerHTML = `
+    ${message}
+    <div style="
+      position:absolute; bottom:-7px; left:50%; transform:translateX(-50%);
+      width:0; height:0;
+      border-left:7px solid transparent;
+      border-right:7px solid transparent;
+      border-top:7px solid #0a0a2e;
+    "></div>
+  `;
+
+  document.body.appendChild(mark);
+
+  // Remove when user clicks the target button (page will navigate anyway)
+  const cleanup = () => {
+    mark.remove();
+    target.style.outline = prevOutline;
+    target.style.outlineOffset = "";
+    target.removeEventListener("click", cleanup);
+  };
+  target.addEventListener("click", cleanup);
+}
+
+export async function prepareOperatorSubmission(sub: any): Promise<void> {
+  const incomeSources: string[] = (sub.income_source ?? "")
+    .split(",")
+    .map((s: string) => s.trim())
+    .filter(Boolean);
+
+  const userData: Partial<UserData> = {
+    first_name: sub.first_name ?? "",
+    middle_name: sub.middle_name ?? "",
+    last_name: sub.last_name ?? "",
+    father_first_name: sub.father_first_name ?? "",
+    father_middle_name: sub.father_middle_name ?? "",
+    father_last_name: sub.father_last_name ?? "",
+    mother_first_name: sub.mother_first_name ?? "",
+    mother_middle_name: sub.mother_middle_name ?? "",
+    mother_last_name: sub.mother_last_name ?? "",
+    date_of_birth: sub.dob ?? "",
+    email: sub.email ?? "",
+    mobile: sub.mobile ?? "",
+    aadhaar_last_4: sub.aadhaar_last_4 ?? (sub.aadhaar_number ? String(sub.aadhaar_number).replace(/\D/g, "").slice(-4) : ""),
+    gender: (({ male: "M", female: "F", transgender: "T", m: "M", f: "F", t: "T" } as Record<string, string>)[String(sub.gender ?? "").toLowerCase()] ?? sub.gender ?? "") as "M" | "F" | "T" | "",
+    parent_on_card_is_father: sub.name_to_print === "father",
+    parent_on_card_is_mother: sub.name_to_print === "mother",
+    is_single_parent: sub.is_single_parent ?? false,
+    is_single_parent_father: !!(sub.is_single_parent) && sub.name_to_print === "father",
+    is_single_parent_mother: !!(sub.is_single_parent) && sub.name_to_print === "mother",
+    aadhaar_pin_code: sub.pincode ?? "",
+    place: sub.city ?? "",
+    is_defence: sub.defence ?? false,
+    defence_branch: (({ army: "army", "air force": "air_force", air_force: "air_force" } as Record<string, string>)[String(sub.defence_branch ?? "").toLowerCase()] ?? "") as "army" | "air_force" | "",
+    passport_number: "",
+    tin_number: "",
+    proof_of_dob: sub.proof_of_dob ?? "",
+    income_source: (incomeSources[0] as UserData["income_source"]) ?? "",
+  };
+
+  delete (window as any).__fy_operator_userdata;
+
+  const { setOperatorSubmission } = await import("./userData");
+  await setOperatorSubmission(userData);
+}
+
+export async function runAutofillFromSubmission(sub: any): Promise<void> {
+  await prepareOperatorSubmission(sub);
+  await runAutofill(sub.form_type);
+}
+const BUNDLED_CONFIGS: Record<string, FormConfig> = {
+  pan_card: panCardConfig as unknown as FormConfig,
+};
+
+// ─── Fetch config — backend first for live updates, bundled as fallback ─
+async function fetchConfig(form: string): Promise<FormConfig | null> {
+  // Backend first — allows pushing selector fixes without an extension update
+  try {
+    const res = await fetch(`${BACKEND_URL}/configs/${form}/latest`);
+    if (res.ok) return await res.json();
+  } catch {
+    // fall through to bundled
+  }
+  // Bundled fallback — static import, immune to extension context invalidation
+  return BUNDLED_CONFIGS[form] ?? null;
+}
+
+// ─── Match the current page to a step in the config ──────────────────
+function matchStep(config: FormConfig): StepConfig | null {
+  const url = window.location.pathname + window.location.search;
+
+  // Check for token page first — regardless of URL
+  // (NSDL shows this on registerEndUser.html after submission)
+  const tokenRadio = document.querySelector("input.tokenButton");
+  if (tokenRadio) {
+    return config.steps.find((s: any) => s.is_token_page === true) ?? null;
+  }
+
+  // Page 1 — registerEndUser, simple URL match
+  if (!url.includes("endUserLogin")) {
+    return config.steps.find((s) => url.includes(s.page_pattern)) ?? null;
+  }
+
+  // Page 3 — endUserLogin, detect which stepy step is visible
+  const fieldsets = document.querySelectorAll(".stepy-step");
+  let visibleIndex = -1;
+  fieldsets.forEach((fs, i) => {
+    if ((fs as HTMLElement).style.display !== "none") {
+      visibleIndex = i;
+    }
+  });
+
+  if (visibleIndex === -1) return null;
+
+  return config.steps.find((s: any) => s.stepy_index === visibleIndex) ?? null;
+}
+
+// ─── Resolve "user.first_name" or "static" to actual value ───────────
+function resolveValue(
+  field: FieldConfig,
+  userData: UserData,
+): string | boolean {
+  if (!field.value_source) {
+    console.warn(`FormYaar: missing value_source on ${field.field_id}`);
+    return "";
+  }
+  // Special case: checkbox that matches against a user value
+  if (
+    field.value_source.startsWith("user.") &&
+    field.static_value !== undefined
+  ) {
+    const key = field.value_source.slice(5) as keyof UserData;
+    const userVal = userData[key];
+    return userVal === field.static_value;
+  }
+  if (field.value_source === "static") {
+    return field.static_value ?? "";
+  }
+  if (field.value_source.startsWith("user.")) {
+    const key = field.value_source.slice(5);
+    const v = userData[key as keyof UserData];
+    return v !== undefined ? v : "";
+  }
+  return "";
+}
+
+// ─── Fill a single field based on its type ───────────────────────────
+async function fillField(
+  field: FieldConfig,
+  value: string | boolean,
+): Promise<boolean> {
+  const el = document.querySelector(field.selector) as HTMLElement | null;
+  if (import.meta.env.DEV) console.log("FormYaar: fillField called for", field.selector);
+  if (!el) {
+    console.warn(`FormYaar: field not found ${field.selector}`);
+    trackEvent("field_fill_failed", "pan_card", {
+      field_id: field.field_id,
+      selector: field.selector,
+      step: (field as any)._step ?? "unknown",
+    });
+    return false;
+  }
+
+  if ((el as HTMLInputElement).disabled) {
+    if (import.meta.env.DEV) console.log(`FormYaar: skipping disabled field ${field.selector}`);
+    return false;
+  }
+
+  switch (field.type) {
+    case "text":
+    case "date":
+      return fillText(el as HTMLInputElement, String(value));
+    case "select":
+      return fillSelect(
+        el as HTMLSelectElement,
+        String(value),
+        field.match_by ?? "value",
+      );
+    case "checkbox":
+      return fillCheckbox(el as HTMLInputElement, Boolean(value));
+    case "radio":
+      if ((field as any).defence_selector) {
+        if (value === true || value === "true") {
+          const defEl = document.querySelector(
+            (field as any).defence_selector,
+          ) as HTMLInputElement | null;
+          if (defEl) return fillRadio(defEl, true);
+          return false;
+        } else {
+          return fillRadio(el as HTMLInputElement, true, true);
+        }
+      }
+      return fillRadio(el as HTMLInputElement, Boolean(value));
+    case "button_click":
+      // Wait for button to be enabled if disabled (e.g. token page)
+      if ((el as HTMLButtonElement).disabled) {
+        await new Promise<void>((resolve) => {
+          const observer = new MutationObserver(() => {
+            if (!(el as HTMLButtonElement).disabled) {
+              observer.disconnect();
+              resolve();
+            }
+          });
+          observer.observe(el, {
+            attributes: true,
+            attributeFilter: ["disabled"],
+          });
+          setTimeout(() => {
+            observer.disconnect();
+            resolve();
+          }, 3000);
+        });
+      }
+      return clickButton(el);
+    default:
+      return false;
+  }
+}
+function fillText(input: HTMLInputElement, value: string): boolean {
+  // Use native setter to bypass framework value-tracking (React, etc.)
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "value",
+  )?.set;
+  if (setter) {
+    setter.call(input, value);
+  } else {
+    input.value = value;
+  }
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  input.dispatchEvent(new Event("blur", { bubbles: true }));
+  return true;
+}
+
+function fillSelect(
+  select: HTMLSelectElement,
+  value: string,
+  matchBy: "value" | "text",
+): boolean {
+  let matched = false;
+  for (let i = 0; i < select.options.length; i++) {
+    const opt = select.options[i];
+    const candidate = matchBy === "text" ? opt.text.trim() : opt.value;
+    if (candidate === value) {
+      select.selectedIndex = i;
+      matched = true;
+      break;
+    }
+  }
+  if (!matched) {
+    console.warn(`FormYaar: no option matches ${value} on ${select.id}`);
+    return false;
+  }
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+
+  // Trigger Select2 update if jQuery and Select2 are available
+  try {
+    const win = window as any;
+    if (win.$ && win.$(select).data("select2")) {
+      win.$(select).trigger("change");
+    }
+  } catch (e) {
+    // Select2 not present, ignore
+  }
+
+  return true;
+}
+
+function fillCheckbox(input: HTMLInputElement, checked: boolean): boolean {
+  if (input.checked === checked) return true;
+  input.checked = checked;
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  input.dispatchEvent(new Event("click", { bubbles: true }));
+  return true;
+}
+function fillRadio(
+  input: HTMLInputElement,
+  shouldSelect: boolean,
+  forceClick = false,
+): boolean {
+  if (!shouldSelect && !forceClick) return false;
+  if (shouldSelect) {
+    if (input.checked && !forceClick) return true;
+    input.checked = true;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    input.dispatchEvent(new Event("click", { bubbles: true }));
+  }
+  return true;
+}
+interface AOCode {
+  area_code: string;
+  ao_type: string;
+  range_code: string;
+  ao_number: string;
+}
+
+function fillAOCodeFields(ao: AOCode): void {
+  const map: [string, string][] = [
+    ["area_code", ao.area_code],
+    ["ao_type",   ao.ao_type],
+    ["range_code", ao.range_code],
+    ["ao_num",    ao.ao_number],
+  ];
+  for (const [id, value] of map) {
+    const el = document.getElementById(id) as HTMLInputElement | null;
+    if (el) fillText(el, value);
+  }
+}
+
+async function autoFillAOCode(pinCode: string, incomeSource = ""): Promise<boolean> {
+  try {
+    const params = incomeSource ? `?income=${encodeURIComponent(incomeSource)}` : "";
+    const res = await fetch(`${BACKEND_URL}/pincode/${pinCode}${params}`);
+    if (!res.ok) return false;
+    const { ao_code } = (await res.json()) as { state: string; city: string; ao_code?: AOCode };
+    if (!ao_code) {
+      console.warn("FormYaar: no AO code in backend response for pincode", pinCode);
+      return false;
+    }
+    fillAOCodeFields(ao_code);
+    return true;
+  } catch (err) {
+    console.error("FormYaar: AO code auto-fill failed", err);
+    trackEvent("ao_code_failed", "pan_card", {
+      pincode: pinCode,
+      reason: err instanceof Error ? err.message : "unknown",
+    });
+    return false;
+  }
+}
+function clickButton(el: HTMLElement): boolean {
+  el.click();
+  el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  return true;
+}
+// ─── Utility ─────────────────────────────────────────────────────────
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+</file>
+
+<file path="entrypoints/content/panel.ts">
 import { ensureFontsLoaded } from "./fonts";
 import {
   BACKEND_URL,
@@ -2909,3 +6014,6 @@ function showReviewScreen(sub: any): void {
     };
   };
 }
+</file>
+
+</files>

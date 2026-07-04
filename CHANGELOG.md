@@ -1,5 +1,10 @@
 # FormYaar Extension — Changelog
 
+## [0.8.1] — 2026-06-13
+
+### Changed
+- `fullFormSave` step (`#confirmSubmit`) is no longer auto-clicked — it's now `guidance_only`, requiring the user to manually click Confirm after uploading proof-of-DOB/Aadhaar/photo/signature documents. Prevents the autofill from advancing past the document-upload page before uploads are done.
+
 ## [0.7.0] — 2026-05-30  (UNRELEASED — on branch `fixes/operator-audit`, not yet merged)
 
 > Operator-flow security/data audit fixes + a delight feature. Pairs with the
