@@ -1,5 +1,10 @@
 # FormYaar Extension — Changelog
 
+## [0.8.3] — 2026-07-08
+
+### Chore
+- Split `entrypoints/content/panel.ts` (2,911 lines) into `entrypoints/content/panel/` — one module per screen (home, payment, user form, filling/verify, recover, operator login/queue/review) plus shared panel shell, maintenance, and celebration modules. Pure refactor, no behavior change; `showContextualBanner`, `showFillingScreen`, `showVerifyScreen`, `updateFillProgress`, `celebrateTimeSaved` still import from `./panel` unchanged.
+
 ## [0.8.1] — 2026-06-13
 
 ### Changed
