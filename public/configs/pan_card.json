@@ -84,7 +84,7 @@
       },
       "page_coach": {
         "selector": "#submitForm",
-        "message": "Solve the CAPTCHA first, then click Submit"
+        "message": "Solve the CAPTCHA, wait for the green check ✓, then click Submit"
       }
     },
     {

@@ -7,6 +7,14 @@ const SENSITIVE_FIELDS: (keyof UserData)[] = [
   "tin_number",
 ];
 
+export type IncomeSource =
+  | "salary"
+  | "business"
+  | "house_property"
+  | "other_sources"
+  | "capital_gains"
+  | "no_income";
+
 export interface UserData {
   first_name: string;
   middle_name: string;
@@ -34,14 +42,26 @@ export interface UserData {
   passport_number: string;
   tin_number: string;
   proof_of_dob: string;
-  income_source:
-    | "salary"
-    | "business"
-    | "house_property"
-    | "other_sources"
-    | "capital_gains"
-    | "no_income"
-    | "";
+  income_source: IncomeSource[];
+  // Whether the applicant's current address matches their Aadhaar address.
+  // Drives which PAN application mode is used: true → Aadhaar eKYC
+  // (pan_card), false → PAN application with supporting documents
+  // (adult_new_pan_card_supporting_docs), which needs the fields below.
+  address_same_as_aadhaar: boolean;
+  // Current residence address — only used by the "PAN application with
+  // supporting documents" flow, for applicants whose current address
+  // differs from their Aadhaar address. Optional everywhere else.
+  current_address_flat: string;
+  current_address_street: string;
+  current_address_post_office: string;
+  current_address_city: string;
+  current_address_district: string;
+  current_address_state: string;
+  current_address_pin_code: string;
+  // Proof documents for the "PAN application with supporting documents"
+  // flow — proof_of_address is for the current address above, not Aadhaar.
+  proof_of_identity: string;
+  proof_of_address: string;
 }
 
 export const EMPTY_USER_DATA: UserData = {
@@ -71,8 +91,30 @@ export const EMPTY_USER_DATA: UserData = {
   passport_number: "",
   tin_number: "",
   proof_of_dob: "",
-  income_source: "",
+  income_source: [],
+  address_same_as_aadhaar: true,
+  current_address_flat: "",
+  current_address_street: "",
+  current_address_post_office: "",
+  current_address_city: "",
+  current_address_district: "",
+  current_address_state: "",
+  current_address_pin_code: "",
+  proof_of_identity: "",
+  proof_of_address: "",
 };
+
+// Which NSDL/Protean config to run, based on the user's answer to
+// "is your current address the same as your Aadhaar address?" — the single
+// source of truth for this decision, used at every point that kicks off or
+// resumes autofill (payment, session resume, page-load resume) so they can't
+// drift out of sync with each other.
+export function resolveFormSlug(data: Pick<UserData, "address_same_as_aadhaar">): string {
+  return data.address_same_as_aadhaar === false
+    ? "adult_new_pan_card_supporting_docs"
+    : "pan_card";
+}
+
 export async function getUserData(): Promise<UserData> {
   try {
     // Operator override — persisted in session storage, survives navigation
@@ -182,7 +224,7 @@ export function validateUserData(data: UserData): ValidationError[] {
       message: "Select your proof of date of birth",
     });
 
-  if (!data.income_source)
+  if (!data.income_source.length)
     errors.push({
       field: "income_source",
       message: "Select your source of income",
@@ -217,6 +259,15 @@ export async function markSessionCompleted(): Promise<void> {
   const s = await getActiveSession();
   if (!s) return;
   await setActiveSession({ ...s, completed: true });
+}
+
+// Inverse of markSessionCompleted — keeps the session in the "resume" state so
+// the home-screen "Continue →" card stays visible. Used on the mid-flow
+// document-upload page, which must not look completed. No-op if already active.
+export async function markSessionActive(): Promise<void> {
+  const s = await getActiveSession();
+  if (!s || !s.completed) return;
+  await setActiveSession({ ...s, completed: false });
 }
 
 export async function clearActiveSession(): Promise<void> {

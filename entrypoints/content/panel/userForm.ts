@@ -1,450 +1,616 @@
 import { BACKEND_URL } from "../constants";
-import { getUserData, saveUserData, validateUserData, type UserData } from "../userData";
-import { escapeHtml } from "./shared";
+import {
+  getUserData,
+  saveUserData,
+  validateUserData,
+  type UserData,
+} from "../userData";
+import { escapeHtml, renderHeader } from "./shared";
 
 export const USERFORM_STYLES = `
-      /* ===== User data collection form ===== */
+      /* ===== Details wizard — one small step at a time ===== */
 .fy-userform {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #fff;
-}
-.fy-userform-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px 20px 12px;
-  border-bottom: 1px solid #e5e7eb;
-}
-.fy-userform-back {
-  background: transparent;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #475569;
-  flex-shrink: 0;
-}
-.fy-userform-back:hover { background: #f8fafc; }
-.fy-userform-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111;
-  line-height: 1.3;
-}
-.fy-userform-subtitle {
-  font-size: 12px;
-  color: #64748b;
-  margin-top: 2px;
-  line-height: 1.4;
+  background: var(--fy-bg);
 }
 .fy-userform-body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
+  padding: 26px 24px 20px;
 }
-.fy-userform-section {
-  margin-bottom: 24px;
-}
-.fy-userform-section-title {
-  font-size: 11px;
-  font-weight: 700;
+.fy-pane { display: none; }
+.fy-pane.on { display: block; animation: fy-fadeIn 0.22s ease; }
+.fy-pane-caption {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: #94a3b8;
-  margin-bottom: 12px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #f1f5f9;
+  color: var(--fy-muted);
+  margin-bottom: 7px;
+}
+.fy-pane-title {
+  font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--fy-ink);
+  letter-spacing: -0.4px;
+  line-height: 1.25;
+  margin-bottom: 6px;
+}
+.fy-pane-sub {
+  font-size: 12px;
+  color: var(--fy-muted);
+  line-height: 1.55;
+  margin-bottom: 22px;
 }
 .fy-userform-field {
   display: block;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 .fy-userform-field > span {
   display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: #334155;
-  margin-bottom: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fy-body);
+  margin-bottom: 7px;
 }
 .fy-userform-field em {
-  color: #ef4444;
+  color: var(--fy-danger);
   font-style: normal;
-  margin-left: 2px;
+  margin-left: 1px;
 }
 .fy-userform-field input[type="text"],
 .fy-userform-field input[type="email"],
-.fy-userform-field input[type="tel"] {
+.fy-userform-field input[type="tel"],
+.fy-userform-field select {
   width: 100%;
-  padding: 9px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  padding: 12px 14px;
+  border: 1.5px solid transparent;
+  border-radius: 11px;
   font-size: 14px;
   font-family: inherit;
-  color: #0f172a;
-  background: #fff;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  color: var(--fy-ink);
+  background: var(--fy-field);
+  transition: border-color 0.15s, background 0.15s;
   box-sizing: border-box;
 }
-.fy-userform-field input:focus {
+.fy-userform-field select { cursor: pointer; appearance: auto; }
+.fy-userform-field input::placeholder { color: var(--fy-faint); }
+.fy-userform-field input:focus,
+.fy-userform-field select:focus {
   outline: none;
-  border-color: #1e3a8a;
-  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+  background: var(--fy-bg);
+  border-color: var(--fy-accent);
 }
 .fy-userform-field input.fy-error {
-  border-color: #ef4444;
+  border-color: var(--fy-danger);
+  background: var(--fy-bg);
 }
 .fy-userform-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
-.fy-userform-row .fy-userform-field {
-  margin-bottom: 0;
-}
+.fy-userform-row .fy-userform-field { margin-bottom: 0; }
 .fy-userform-radios {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
+.fy-userform-radios.fy-userform-radios-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
 .fy-userform-radio {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 7px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border: 1.5px solid transparent;
+  border-radius: 11px;
   cursor: pointer;
-  font-size: 13px;
-  color: #334155;
-  transition: all 0.15s;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fy-body);
+  background: var(--fy-field);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 .fy-userform-radio:has(input:checked) {
-  border-color: #1e3a8a;
-  background: #eff6ff;
-  color: #1e3a8a;
-  font-weight: 500;
+  border-color: var(--fy-accent);
+  background: var(--fy-accent-soft);
+  color: var(--fy-accent-strong);
 }
 .fy-userform-radio input {
-  margin: 0;
-  accent-color: #1e3a8a;
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 .fy-userform-hint {
   display: block;
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 10.5px;
+  color: var(--fy-muted);
+  margin-top: 5px;
+}
+.fy-uf-optional {
   margin-top: 4px;
 }
-.fy-userform-errors {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-top: 8px;
-  font-size: 12px;
-  color: #991b1b;
-}
-.fy-userform-errors ul {
-  margin: 0;
-  padding-left: 18px;
-}
-.fy-userform-errors li { margin-bottom: 2px; }
-.fy-userform-footer {
-  padding: 14px 20px 18px;
-  border-top: 1px solid #e5e7eb;
-  background: #fafafa;
-}
-.fy-userform-submit {
-  width: 100%;
-  padding: 12px;
-  background: #1e3a8a;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
+.fy-uf-optional summary {
+  list-style: none;
   cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fy-muted);
+  padding: 8px 0;
+  transition: color 0.15s;
 }
-.fy-userform-submit:hover { background: #1e40af; }
-.fy-userform-submit:disabled {
-  background: #cbd5e1;
-  cursor: not-allowed;
+.fy-uf-optional summary:hover { color: var(--fy-ink); }
+.fy-uf-optional summary::-webkit-details-marker { display: none; }
+.fy-uf-optional[open] summary { color: var(--fy-ink); margin-bottom: 8px; }
+.fy-userform-errors {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--fy-danger);
+  line-height: 1.6;
+}
+.fy-userform-errors ul { margin: 0; padding-left: 16px; }
+.fy-userform-footer {
+  padding: 14px 24px 16px;
+  border-top: 1px solid var(--fy-line);
+  background: var(--fy-bg);
+  flex-shrink: 0;
 }
 .fy-userform-privacy {
-  text-align: center;
-  font-size: 11px;
-  color: #94a3b8;
-  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--fy-muted);
+  margin-top: 10px;
 }
 `;
 
-export function renderUserFormScreen(form: string, data: UserData): string {
-  const formLabel = form === "pan_card" ? "PAN Card" : form;
+// ── Wizard panes ────────────────────────────────────────────────────
+// Each pane asks one small group of questions. All fields stay in the DOM
+// at all times, so validation and data collection are unchanged.
 
+function paneName(data: UserData): string {
   return `
-    <div class="fy-userform">
-      <div class="fy-userform-header">
-        <button class="fy-userform-back" id="fy-userform-back" aria-label="Back">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-        </button>
-        <div>
-          <div class="fy-userform-title">Your details for ${formLabel}</div>
-          <div class="fy-userform-subtitle">We'll use this to auto-fill the form. Saved locally on your device.</div>
-        </div>
+    <div class="fy-pane on" data-pane="0">
+      <div class="fy-pane-caption">Step 1 of 5</div>
+      <div class="fy-pane-title">What's your name?</div>
+      <div class="fy-pane-sub">Exactly as printed on your Aadhaar card.</div>
+
+      <div class="fy-userform-row">
+        <label class="fy-userform-field">
+          <span>First name <em>*</em></span>
+          <input type="text" data-field="first_name" value="${escapeHtml(data.first_name)}" placeholder="HEMANT" autocomplete="off">
+        </label>
+        <label class="fy-userform-field">
+          <span>Middle name</span>
+          <input type="text" data-field="middle_name" value="${escapeHtml(data.middle_name)}" placeholder="Optional" autocomplete="off">
+        </label>
       </div>
 
-      <div class="fy-userform-body">
-        <div class="fy-userform-section">
-          <div class="fy-userform-section-title">About you</div>
+      <label class="fy-userform-field">
+        <span>Last name <em>*</em></span>
+        <input type="text" data-field="last_name" value="${escapeHtml(data.last_name)}" placeholder="CHAUHAN" autocomplete="off">
+      </label>
 
-          <div class="fy-userform-row">
-            <label class="fy-userform-field">
-              <span>First name <em>*</em></span>
-              <input type="text" data-field="first_name" value="${escapeHtml(data.first_name)}" placeholder="HEMANT" autocomplete="off">
-            </label>
-            <label class="fy-userform-field">
-              <span>Middle name</span>
-              <input type="text" data-field="middle_name" value="${escapeHtml(data.middle_name)}" placeholder="(optional)" autocomplete="off">
-            </label>
-          </div>
+      <label class="fy-userform-field">
+        <span>Date of birth <em>*</em></span>
+        <input type="text" data-field="date_of_birth" value="${escapeHtml(data.date_of_birth)}" placeholder="DD/MM/YYYY" autocomplete="off" inputmode="numeric">
+      </label>
 
-          <label class="fy-userform-field">
-            <span>Last name <em>*</em></span>
-            <input type="text" data-field="last_name" value="${escapeHtml(data.last_name)}" placeholder="CHAUHAN" autocomplete="off">
+      <label class="fy-userform-field">
+        <span>Gender <em>*</em></span>
+        <div class="fy-userform-radios">
+          <label class="fy-userform-radio">
+            <input type="radio" name="gender" data-field="gender" value="M" ${data.gender === "M" ? "checked" : ""}>
+            <span>Male</span>
           </label>
-
-          <label class="fy-userform-field">
-            <span>Date of birth <em>*</em></span>
-            <input type="text" data-field="date_of_birth" value="${escapeHtml(data.date_of_birth)}" placeholder="DD/MM/YYYY" autocomplete="off" inputmode="numeric">
+          <label class="fy-userform-radio">
+            <input type="radio" name="gender" data-field="gender" value="F" ${data.gender === "F" ? "checked" : ""}>
+            <span>Female</span>
           </label>
-
-          <label class="fy-userform-field">
-            <span>Gender <em>*</em></span>
-            <div class="fy-userform-radios">
-              <label class="fy-userform-radio">
-                <input type="radio" name="gender" data-field="gender" value="M" ${data.gender === "M" ? "checked" : ""}>
-                <span>Male</span>
-              </label>
-              <label class="fy-userform-radio">
-                <input type="radio" name="gender" data-field="gender" value="F" ${data.gender === "F" ? "checked" : ""}>
-                <span>Female</span>
-              </label>
-              <label class="fy-userform-radio">
-                <input type="radio" name="gender" data-field="gender" value="T" ${data.gender === "T" ? "checked" : ""}>
-                <span>Transgender</span>
-              </label>
-            </div>
-          </label>
-
-          <label class="fy-userform-field">
-            <span>Email <em>*</em></span>
-            <input type="email" data-field="email" value="${escapeHtml(data.email)}" placeholder="you@example.com" autocomplete="off">
-          </label>
-
-          <label class="fy-userform-field">
-            <span>Mobile number <em>*</em></span>
-            <input type="tel" data-field="mobile" value="${escapeHtml(data.mobile)}" placeholder="9876543210" autocomplete="off" inputmode="numeric" maxlength="10">
-          </label>
-          <label class="fy-userform-field">
-            <span>Source of income <em>*</em></span>
-            <div class="fy-userform-radios" style="flex-direction:column;gap:6px;">
-              <label class="fy-userform-radio">
-                <input type="radio" name="income_source" data-field="income_source" value="salary" ${data.income_source === "salary" ? "checked" : ""}>
-                <span>Salary</span>
-              </label>
-              <label class="fy-userform-radio">
-                <input type="radio" name="income_source" data-field="income_source" value="business" ${data.income_source === "business" ? "checked" : ""}>
-                <span>Business / Profession</span>
-              </label>
-              <label class="fy-userform-radio">
-                <input type="radio" name="income_source" data-field="income_source" value="house_property" ${data.income_source === "house_property" ? "checked" : ""}>
-                <span>House property</span>
-              </label>
-              <label class="fy-userform-radio">
-                <input type="radio" name="income_source" data-field="income_source" value="other_sources" ${data.income_source === "other_sources" ? "checked" : ""}>
-                <span>Other sources</span>
-              </label>
-              <label class="fy-userform-radio">
-                <input type="radio" name="income_source" data-field="income_source" value="capital_gains" ${data.income_source === "capital_gains" ? "checked" : ""}>
-                <span>Capital gains</span>
-              </label>
-              <label class="fy-userform-radio">
-                <input type="radio" name="income_source" data-field="income_source" value="no_income" ${data.income_source === "no_income" ? "checked" : ""}>
-                <span>No income</span>
-              </label>
-            </div>
+          <label class="fy-userform-radio">
+            <input type="radio" name="gender" data-field="gender" value="T" ${data.gender === "T" ? "checked" : ""}>
+            <span>Transgender</span>
           </label>
         </div>
+      </label>
+    </div>
+  `;
+}
 
-        <div class="fy-userform-section">
-          <div class="fy-userform-section-title">Aadhaar</div>
+function paneContact(data: UserData): string {
+  return `
+    <div class="fy-pane" data-pane="1">
+      <div class="fy-pane-caption">Step 2 of 5</div>
+      <div class="fy-pane-title">How do we reach you?</div>
+      <div class="fy-pane-sub">The government sends your e-PAN to this email.</div>
 
-       <label class="fy-userform-field">
-            <span>Last 4 digits of Aadhaar <em>*</em></span>
-            <input type="text" data-field="aadhaar_last_4" value="${escapeHtml(data.aadhaar_last_4 ?? "")}" placeholder="9012" autocomplete="off" inputmode="numeric" maxlength="4">
-            <small class="fy-userform-hint">Last 4 digits of your Aadhaar card</small>
+      <label class="fy-userform-field">
+        <span>Email <em>*</em></span>
+        <input type="email" data-field="email" value="${escapeHtml(data.email)}" placeholder="you@example.com" autocomplete="off">
+      </label>
+
+      <label class="fy-userform-field">
+        <span>Mobile number <em>*</em></span>
+        <input type="tel" data-field="mobile" value="${escapeHtml(data.mobile)}" placeholder="9876543210" autocomplete="off" inputmode="numeric" maxlength="10">
+      </label>
+    </div>
+  `;
+}
+
+function paneAadhaar(data: UserData): string {
+  return `
+    <div class="fy-pane" data-pane="2">
+      <div class="fy-pane-caption">Step 3 of 5</div>
+      <div class="fy-pane-title">Your Aadhaar</div>
+      <div class="fy-pane-sub">We only ask for the last 4 digits — never your full number. This stays on your device.</div>
+
+      <label class="fy-userform-field">
+        <span>Last 4 digits of Aadhaar <em>*</em></span>
+        <input type="text" data-field="aadhaar_last_4" value="${escapeHtml(data.aadhaar_last_4 ?? "")}" placeholder="9012" autocomplete="off" inputmode="numeric" maxlength="4">
+      </label>
+
+      <label class="fy-userform-field">
+        <span>PIN code as per Aadhaar <em>*</em></span>
+        <input type="text" data-field="aadhaar_pin_code" value="${escapeHtml(data.aadhaar_pin_code)}" placeholder="243001" autocomplete="off" inputmode="numeric" maxlength="6">
+        <div id="fy-ao-status" style="margin-top:7px;font-size:12px;min-height:18px;"></div>
+      </label>
+    </div>
+  `;
+}
+
+function paneFamily(data: UserData): string {
+  return `
+    <div class="fy-pane" data-pane="3">
+      <div class="fy-pane-caption">Step 4 of 5</div>
+      <div class="fy-pane-title">Your parents' names</div>
+      <div class="fy-pane-sub">The PAN form asks for both. One of them gets printed on the card.</div>
+
+      <div class="fy-userform-row">
+        <label class="fy-userform-field">
+          <span>Father's first name <em>*</em></span>
+          <input type="text" data-field="father_first_name" value="${escapeHtml(data.father_first_name)}" placeholder="RAMESH" autocomplete="off">
+        </label>
+        <label class="fy-userform-field">
+          <span>Middle</span>
+          <input type="text" data-field="father_middle_name" value="${escapeHtml(data.father_middle_name)}" placeholder="Optional" autocomplete="off">
+        </label>
+      </div>
+
+      <label class="fy-userform-field">
+        <span>Father's last name</span>
+        <input type="text" data-field="father_last_name" value="${escapeHtml(data.father_last_name)}" placeholder="Optional" autocomplete="off">
+      </label>
+
+      <div class="fy-userform-row">
+        <label class="fy-userform-field">
+          <span>Mother's first name <em>*</em></span>
+          <input type="text" data-field="mother_first_name" value="${escapeHtml(data.mother_first_name)}" placeholder="RADHA" autocomplete="off">
+        </label>
+        <label class="fy-userform-field">
+          <span>Middle</span>
+          <input type="text" data-field="mother_middle_name" value="${escapeHtml(data.mother_middle_name)}" placeholder="Optional" autocomplete="off">
+        </label>
+      </div>
+
+      <label class="fy-userform-field">
+        <span>Mother's last name</span>
+        <input type="text" data-field="mother_last_name" value="${escapeHtml(data.mother_last_name)}" placeholder="Optional" autocomplete="off">
+      </label>
+
+      <label class="fy-userform-field">
+        <span>Single parent?</span>
+        <div class="fy-userform-radios">
+          <label class="fy-userform-radio">
+            <input type="radio" name="is_single_parent" data-field="is_single_parent" value="false" ${!data.is_single_parent ? "checked" : ""}>
+            <span>No</span>
           </label>
-
-          <label class="fy-userform-field">
-            <span>PIN code as per Aadhaar <em>*</em></span>
-            <input type="text" data-field="aadhaar_pin_code" value="${escapeHtml(data.aadhaar_pin_code)}" placeholder="243001" autocomplete="off" inputmode="numeric" maxlength="6">
-            <div id="fy-ao-status" style="margin-top:6px;font-size:12px;min-height:18px;"></div>
-          </label>
-        </div>
-
-        <div class="fy-userform-section">
-          <div class="fy-userform-section-title">Family</div>
-
-        <div class="fy-userform-row">
-            <label class="fy-userform-field">
-              <span>Father's first name <em>*</em></span>
-              <input type="text" data-field="father_first_name" value="${escapeHtml(data.father_first_name)}" placeholder="RAMESH" autocomplete="off">
-            </label>
-            <label class="fy-userform-field">
-              <span>Middle</span>
-              <input type="text" data-field="father_middle_name" value="${escapeHtml(data.father_middle_name)}" placeholder="(optional)" autocomplete="off">
-            </label>
-          </div>
-
-          <label class="fy-userform-field">
-            <span>Father's last name</span>
-            <input type="text" data-field="father_last_name" value="${escapeHtml(data.father_last_name)}" placeholder="(optional)" autocomplete="off">
-          </label>
-          <div class="fy-userform-row">
-            <label class="fy-userform-field">
-              <span>Mother's first name <em>*</em></span>
-              <input type="text" data-field="mother_first_name" value="${escapeHtml(data.mother_first_name)}" placeholder="RADHA" autocomplete="off">
-            </label>
-            <label class="fy-userform-field">
-              <span>Middle</span>
-              <input type="text" data-field="mother_middle_name" value="${escapeHtml(data.mother_middle_name)}" placeholder="(optional)" autocomplete="off">
-            </label>
-          </div>
-
-          <label class="fy-userform-field">
-            <span>Mother's last name</span>
-            <input type="text" data-field="mother_last_name" value="${escapeHtml(data.mother_last_name)}" placeholder="(optional)" autocomplete="off">
-          </label>
-
-          <label class="fy-userform-field">
-            <span>Single parent?</span>
-            <div class="fy-userform-radios">
-              <label class="fy-userform-radio">
-                <input type="radio" name="is_single_parent" data-field="is_single_parent" value="false" ${!data.is_single_parent ? "checked" : ""}>
-                <span>No — both parents</span>
-              </label>
-              <label class="fy-userform-radio">
-                <input type="radio" name="is_single_parent" data-field="is_single_parent" value="true" ${data.is_single_parent ? "checked" : ""}>
-                <span>Yes — single parent</span>
-              </label>
-            </div>
-          </label>
-
-          <label class="fy-userform-field">
-            <span>Whose name to print on PAN card? <em>*</em></span>
-            <div class="fy-userform-radios">
-              <label class="fy-userform-radio">
-                <input type="radio" name="parent_on_card" data-field="parent_on_card" value="father" ${data.parent_on_card_is_father ? "checked" : ""}>
-                <span>Father's name</span>
-              </label>
-              <label class="fy-userform-radio">
-                <input type="radio" name="parent_on_card" data-field="parent_on_card" value="mother" ${data.parent_on_card_is_mother ? "checked" : ""}>
-                <span>Mother's name</span>
-              </label>
-            </div>
-          </label>
-        </div>
-
-        <div class="fy-userform-section">
-          <div class="fy-userform-section-title">Verification</div>
-
-          <label class="fy-userform-field">
-            <span>Place (district) <em>*</em></span>
-            <input type="text" data-field="place" value="${escapeHtml(data.place)}" placeholder="BAREILLY" autocomplete="off">
-            <small class="fy-userform-hint">The city where you're filing this application</small>
-          </label>
-
-          <label class="fy-userform-field">
-            <span>Proof of date of birth <em>*</em></span>
-            <select data-field="proof_of_dob" style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;color:#0f172a;background:#fff;">
-              <option value="">-- Select --</option>
-              <option value="Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate" ${data.proof_of_dob === "Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate" ? "selected" : ""}>Birth Certificate</option>
-              <option value="Matriculation certificate" ${data.proof_of_dob === "Matriculation certificate" ? "selected" : ""}>Matriculation Certificate</option>
-              <option value="Matriculation Marksheet of recognised board" ${data.proof_of_dob === "Matriculation Marksheet of recognised board" ? "selected" : ""}>Matriculation Marksheet</option>
-              <option value="Driving License" ${data.proof_of_dob === "Driving License" ? "selected" : ""}>Driving License</option>
-              <option value="Passport" ${data.proof_of_dob === "Passport" ? "selected" : ""}>Passport</option>
-              <option value="Elector's photo identity card" ${data.proof_of_dob === "Elector's photo identity card" ? "selected" : ""}>Voter ID</option>
-              <option value="Pension payment order" ${data.proof_of_dob === "Pension payment order" ? "selected" : ""}>Pension Payment Order</option>
-            </select>
+          <label class="fy-userform-radio">
+            <input type="radio" name="is_single_parent" data-field="is_single_parent" value="true" ${data.is_single_parent ? "checked" : ""}>
+            <span>Yes</span>
           </label>
         </div>
+      </label>
 
-        <div class="fy-userform-section">
-          <div class="fy-userform-section-title">Additional Details</div>
-
-          <label class="fy-userform-field">
-            <span>Are you a defence personnel?</span>
-            <div class="fy-userform-radios">
-              <label class="fy-userform-radio">
-                <input type="radio" name="is_defence" data-field="is_defence" value="false" ${!data.is_defence ? "checked" : ""}>
-                <span>No</span>
-              </label>
-              <label class="fy-userform-radio">
-                <input type="radio" name="is_defence" data-field="is_defence" value="true" ${data.is_defence ? "checked" : ""}>
-                <span>Yes</span>
-              </label>
-            </div>
+      <label class="fy-userform-field">
+        <span>Whose name on the card? <em>*</em></span>
+        <div class="fy-userform-radios">
+          <label class="fy-userform-radio">
+            <input type="radio" name="parent_on_card" data-field="parent_on_card" value="father" ${data.parent_on_card_is_father ? "checked" : ""}>
+            <span>Father's</span>
           </label>
-
-          ${
-            data.is_defence
-              ? `
-          <label class="fy-userform-field">
-            <span>Defence branch</span>
-            <div class="fy-userform-radios">
-              <label class="fy-userform-radio">
-                <input type="radio" name="defence_branch" data-field="defence_branch" value="army" ${data.defence_branch === "army" ? "checked" : ""}>
-                <span>Army</span>
-              </label>
-              <label class="fy-userform-radio">
-                <input type="radio" name="defence_branch" data-field="defence_branch" value="air_force" ${data.defence_branch === "air_force" ? "checked" : ""}>
-                <span>Air Force</span>
-              </label>
-            </div>
-          </label>
-          `
-              : ""
-          }
-
-          <label class="fy-userform-field">
-            <span>Passport number</span>
-            <input type="text" data-field="passport_number" value="${escapeHtml(data.passport_number)}" placeholder="(optional)" autocomplete="off">
-          </label>
-
-          <label class="fy-userform-field">
-            <span>TIN number</span>
-            <input type="text" data-field="tin_number" value="${escapeHtml(data.tin_number)}" placeholder="(optional)" autocomplete="off">
+          <label class="fy-userform-radio">
+            <input type="radio" name="parent_on_card" data-field="parent_on_card" value="mother" ${data.parent_on_card_is_mother ? "checked" : ""}>
+            <span>Mother's</span>
           </label>
         </div>
+      </label>
+    </div>
+  `;
+}
 
-        <div class="fy-userform-errors" id="fy-userform-errors" hidden></div>
+// Matches the NSDL/Protean site's own state naming convention (ALL CAPS),
+// used both by its residence-address State dropdown and its AO-code state
+// selector — so text-matching this against the site's <select> options works.
+const INDIAN_STATES = [
+  "ANDAMAN AND NICOBAR ISLANDS", "ANDHRA PRADESH", "ARUNACHAL PRADESH",
+  "ASSAM", "BIHAR", "CHANDIGARH", "CHHATTISGARH", "DADRA & NAGAR HAVELI",
+  "DAMAN & DIU", "DELHI", "GOA", "GUJARAT", "HARYANA", "HIMACHAL PRADESH",
+  "JAMMU AND KASHMIR", "JHARKHAND", "KARNATAKA", "KERALA", "LADAKH",
+  "LAKHSWADEEP", "MADHYA PRADESH", "MAHARASHTRA", "MANIPUR", "MEGHALAYA",
+  "MIZORAM", "NAGALAND", "ODISHA", "PONDICHERRY", "PUNJAB", "RAJASTHAN",
+  "SIKKIM", "TAMIL NADU", "TELANGANA", "TRIPURA", "UTTAR PRADESH",
+  "UTTARAKHAND", "WEST BENGAL",
+];
+
+function paneFinal(data: UserData): string {
+  return `
+    <div class="fy-pane" data-pane="4">
+      <div class="fy-pane-caption">Step 5 of 5</div>
+      <div class="fy-pane-title">Last step</div>
+      <div class="fy-pane-sub">A few details the income tax department requires.</div>
+
+      <label class="fy-userform-field">
+        <span>Source of income <em>*</em></span>
+        <small class="fy-userform-hint">Select all that apply</small>
+        <div class="fy-userform-radios fy-userform-radios-grid" id="fy-income-source-group">
+          <label class="fy-userform-radio">
+            <input type="checkbox" name="income_source" data-field="income_source" value="salary" ${data.income_source.includes("salary") ? "checked" : ""}>
+            <span>Salary</span>
+          </label>
+          <label class="fy-userform-radio">
+            <input type="checkbox" name="income_source" data-field="income_source" value="business" ${data.income_source.includes("business") ? "checked" : ""}>
+            <span>Business</span>
+          </label>
+          <label class="fy-userform-radio">
+            <input type="checkbox" name="income_source" data-field="income_source" value="house_property" ${data.income_source.includes("house_property") ? "checked" : ""}>
+            <span>House property</span>
+          </label>
+          <label class="fy-userform-radio">
+            <input type="checkbox" name="income_source" data-field="income_source" value="other_sources" ${data.income_source.includes("other_sources") ? "checked" : ""}>
+            <span>Other sources</span>
+          </label>
+          <label class="fy-userform-radio">
+            <input type="checkbox" name="income_source" data-field="income_source" value="capital_gains" ${data.income_source.includes("capital_gains") ? "checked" : ""}>
+            <span>Capital gains</span>
+          </label>
+          <label class="fy-userform-radio">
+            <input type="checkbox" name="income_source" data-field="income_source" value="no_income" ${data.income_source.includes("no_income") ? "checked" : ""}>
+            <span>No income</span>
+          </label>
+        </div>
+      </label>
+
+      <label class="fy-userform-field">
+        <span>Place (district) <em>*</em></span>
+        <input type="text" data-field="place" value="${escapeHtml(data.place)}" placeholder="BAREILLY" autocomplete="off">
+        <small class="fy-userform-hint">The city where you're filing this application</small>
+      </label>
+
+      <label class="fy-userform-field">
+        <span>Proof of date of birth <em>*</em></span>
+        <select data-field="proof_of_dob">
+          <option value="">Select a document…</option>
+          <option value="Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate" ${data.proof_of_dob === "Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate" ? "selected" : ""}>Birth Certificate</option>
+          <option value="Matriculation certificate" ${data.proof_of_dob === "Matriculation certificate" ? "selected" : ""}>Matriculation Certificate</option>
+          <option value="Matriculation Marksheet of recognised board" ${data.proof_of_dob === "Matriculation Marksheet of recognised board" ? "selected" : ""}>Matriculation Marksheet</option>
+          <option value="Driving License" ${data.proof_of_dob === "Driving License" ? "selected" : ""}>Driving License</option>
+          <option value="Passport" ${data.proof_of_dob === "Passport" ? "selected" : ""}>Passport</option>
+          <option value="Elector's photo identity card" ${data.proof_of_dob === "Elector's photo identity card" ? "selected" : ""}>Voter ID</option>
+          <option value="Pension payment order" ${data.proof_of_dob === "Pension payment order" ? "selected" : ""}>Pension Payment Order</option>
+        </select>
+        <small class="fy-userform-hint">The document you'll upload as proof</small>
+      </label>
+
+      <label class="fy-userform-field">
+        <span>Are you a defence personnel? <em>*</em></span>
+        <div class="fy-userform-radios">
+          <label class="fy-userform-radio">
+            <input type="radio" name="is_defence" data-field="is_defence" value="false" ${!data.is_defence ? "checked" : ""}>
+            <span>No</span>
+          </label>
+          <label class="fy-userform-radio">
+            <input type="radio" name="is_defence" data-field="is_defence" value="true" ${data.is_defence ? "checked" : ""}>
+            <span>Yes</span>
+          </label>
+        </div>
+      </label>
+
+      ${
+        data.is_defence
+          ? `
+      <label class="fy-userform-field" id="fy-defence-branch-field">
+        <span>Defence branch</span>
+        <div class="fy-userform-radios">
+          <label class="fy-userform-radio">
+            <input type="radio" name="defence_branch" data-field="defence_branch" value="army" ${data.defence_branch === "army" ? "checked" : ""}>
+            <span>Army</span>
+          </label>
+          <label class="fy-userform-radio">
+            <input type="radio" name="defence_branch" data-field="defence_branch" value="air_force" ${data.defence_branch === "air_force" ? "checked" : ""}>
+            <span>Air Force</span>
+          </label>
+        </div>
+      </label>
+      `
+          : ""
+      }
+
+      <label class="fy-userform-field">
+        <span>Is your current address the same as your Aadhaar address? <em>*</em></span>
+        <div class="fy-userform-radios" id="fy-address-match-group">
+          <label class="fy-userform-radio">
+            <input type="radio" name="address_same_as_aadhaar" data-field="address_same_as_aadhaar" value="true" ${data.address_same_as_aadhaar !== false ? "checked" : ""}>
+            <span>Yes</span>
+          </label>
+          <label class="fy-userform-radio">
+            <input type="radio" name="address_same_as_aadhaar" data-field="address_same_as_aadhaar" value="false" ${data.address_same_as_aadhaar === false ? "checked" : ""}>
+            <span>No</span>
+          </label>
+        </div>
+        <small class="fy-userform-hint">"Yes" uses the regular Aadhaar eKYC application. "No" switches to the PAN application with supporting documents, so you can enter your current address.</small>
+      </label>
+
+      <div id="fy-current-address-block" style="display:${data.address_same_as_aadhaar === false ? "block" : "none"};">
+
+      <label class="fy-userform-field">
+        <span>Proof of identity</span>
+        <select data-field="proof_of_identity">
+          <option value="">Select a document…</option>
+          <option value="AADHAAR Card issued by the Unique Identification Authority of India" ${data.proof_of_identity === "AADHAAR Card issued by the Unique Identification Authority of India" ? "selected" : ""}>Aadhaar Card</option>
+          <option value="Driving License" ${data.proof_of_identity === "Driving License" ? "selected" : ""}>Driving License</option>
+          <option value="Passport" ${data.proof_of_identity === "Passport" ? "selected" : ""}>Passport</option>
+          <option value="Elector's photo identity card" ${data.proof_of_identity === "Elector's photo identity card" ? "selected" : ""}>Voter ID</option>
+          <option value="Central Government Health Scheme Card" ${data.proof_of_identity === "Central Government Health Scheme Card" ? "selected" : ""}>Central Government Health Scheme Card</option>
+          <option value="Ex-Servicemen Contributory Health Scheme photo card" ${data.proof_of_identity === "Ex-Servicemen Contributory Health Scheme photo card" ? "selected" : ""}>Ex-Servicemen Contributory Health Scheme Card</option>
+          <option value="Pensioner Card having photograph of the applicant" ${data.proof_of_identity === "Pensioner Card having photograph of the applicant" ? "selected" : ""}>Pensioner Card</option>
+          <option value="Ration card having photograph of the applicant" ${data.proof_of_identity === "Ration card having photograph of the applicant" ? "selected" : ""}>Ration Card</option>
+          <option value="Photo identity card issued by the Central Government or State Government or Public Sector Undertaking." ${data.proof_of_identity === "Photo identity card issued by the Central Government or State Government or Public Sector Undertaking." ? "selected" : ""}>Govt./PSU Photo ID Card</option>
+          <option value="Transgender Identity Card / Certificate issued under the Transgender Persons (Protection of Rights) Act 2019 having photograph of the applicant" ${data.proof_of_identity === "Transgender Identity Card / Certificate issued under the Transgender Persons (Protection of Rights) Act 2019 having photograph of the applicant" ? "selected" : ""}>Transgender Identity Card</option>
+          <option value="Bank certificate in Original on letter head from the branch (along with name and stamp of the issuing officer) containing duly attested photograph and bank account number of the applicant" ${data.proof_of_identity === "Bank certificate in Original on letter head from the branch (along with name and stamp of the issuing officer) containing duly attested photograph and bank account number of the applicant" ? "selected" : ""}>Bank Certificate (Original)</option>
+          <option value="Certificate of Identity signed by a Gazetted Officer" ${data.proof_of_identity === "Certificate of Identity signed by a Gazetted Officer" ? "selected" : ""}>Certificate of Identity — Gazetted Officer</option>
+          <option value="Certificate of Identity signed by a Member of Parliament" ${data.proof_of_identity === "Certificate of Identity signed by a Member of Parliament" ? "selected" : ""}>Certificate of Identity — MP</option>
+          <option value="Certificate of Identity signed by a Member of Legislative Assembly" ${data.proof_of_identity === "Certificate of Identity signed by a Member of Legislative Assembly" ? "selected" : ""}>Certificate of Identity — MLA</option>
+          <option value="Certificate of Identity signed by a Municipal Councillor" ${data.proof_of_identity === "Certificate of Identity signed by a Municipal Councillor" ? "selected" : ""}>Certificate of Identity — Municipal Councillor</option>
+        </select>
+        <small class="fy-userform-hint">For "PAN application with supporting documents" — not needed for the Aadhaar eKYC option</small>
+      </label>
+
+      <label class="fy-userform-field">
+        <span>Proof of address (current address)</span>
+        <select data-field="proof_of_address">
+          <option value="">Select a document…</option>
+          <option value="AADHAAR Card issued by the Unique Identification Authority of India" ${data.proof_of_address === "AADHAAR Card issued by the Unique Identification Authority of India" ? "selected" : ""}>Aadhaar Card</option>
+          <option value="Driving License" ${data.proof_of_address === "Driving License" ? "selected" : ""}>Driving License</option>
+          <option value="Passport" ${data.proof_of_address === "Passport" ? "selected" : ""}>Passport</option>
+          <option value="Passport of the spouse" ${data.proof_of_address === "Passport of the spouse" ? "selected" : ""}>Passport of Spouse</option>
+          <option value="Elector's photo identity card" ${data.proof_of_address === "Elector's photo identity card" ? "selected" : ""}>Voter ID</option>
+          <option value="Electricity Bill (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Electricity Bill (Not more than 3 months old from the date of application)" ? "selected" : ""}>Electricity Bill (≤3 months)</option>
+          <option value="Water Bill (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Water Bill (Not more than 3 months old from the date of application)" ? "selected" : ""}>Water Bill (≤3 months)</option>
+          <option value="Landline Telephone Bill (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Landline Telephone Bill (Not more than 3 months old from the date of application)" ? "selected" : ""}>Landline Bill (≤3 months)</option>
+          <option value="Broadband Connection Bill (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Broadband Connection Bill (Not more than 3 months old from the date of application)" ? "selected" : ""}>Broadband Bill (≤3 months)</option>
+          <option value="Consumer gas connection card or book or piped gas bill(Not more than 3 months old from date of application)" ${data.proof_of_address === "Consumer gas connection card or book or piped gas bill(Not more than 3 months old from date of application)" ? "selected" : ""}>Gas Connection Card/Bill (≤3 months)</option>
+          <option value="Bank account statement/passbook (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Bank account statement/passbook (Not more than 3 months old from the date of application)" ? "selected" : ""}>Bank Statement/Passbook (≤3 months)</option>
+          <option value="Post office passbook having address of the applicant" ${data.proof_of_address === "Post office passbook having address of the applicant" ? "selected" : ""}>Post Office Passbook</option>
+          <option value="Depository account statement (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Depository account statement (Not more than 3 months old from the date of application)" ? "selected" : ""}>Depository Account Statement (≤3 months)</option>
+          <option value="Credit card statement (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Credit card statement (Not more than 3 months old from the date of application)" ? "selected" : ""}>Credit Card Statement (≤3 months)</option>
+          <option value="Property Registration Document" ${data.proof_of_address === "Property Registration Document" ? "selected" : ""}>Property Registration Document</option>
+          <option value="Latest property tax assessment order" ${data.proof_of_address === "Latest property tax assessment order" ? "selected" : ""}>Property Tax Assessment Order</option>
+          <option value="Domicile certificate issued by the Government" ${data.proof_of_address === "Domicile certificate issued by the Government" ? "selected" : ""}>Domicile Certificate</option>
+          <option value="Allotment letter of accommodation issued by Central or State Government of not more than three years old" ${data.proof_of_address === "Allotment letter of accommodation issued by Central or State Government of not more than three years old" ? "selected" : ""}>Govt. Accommodation Allotment Letter (≤3 years)</option>
+          <option value="Employer certificate in original" ${data.proof_of_address === "Employer certificate in original" ? "selected" : ""}>Employer Certificate (Original)</option>
+          <option value="Certificate of Address signed by a Gazetted Officer" ${data.proof_of_address === "Certificate of Address signed by a Gazetted Officer" ? "selected" : ""}>Certificate of Address — Gazetted Officer</option>
+          <option value="Certificate of Address signed by a Member of Parliament" ${data.proof_of_address === "Certificate of Address signed by a Member of Parliament" ? "selected" : ""}>Certificate of Address — MP</option>
+          <option value="Certificate of Address signed by a Member of Legislative Assembly" ${data.proof_of_address === "Certificate of Address signed by a Member of Legislative Assembly" ? "selected" : ""}>Certificate of Address — MLA</option>
+          <option value="Certificate of Address signed by a Municipal Councillor" ${data.proof_of_address === "Certificate of Address signed by a Municipal Councillor" ? "selected" : ""}>Certificate of Address — Municipal Councillor</option>
+          <option value="Bank Account Statement in the country of residence (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Bank Account Statement in the country of residence (Not more than 3 months old from the date of application)" ? "selected" : ""}>Bank Statement — Country of Residence (≤3 months)</option>
+          <option value="NRE bank account statement (Not more than 3 months old from the date of application)" ${data.proof_of_address === "NRE bank account statement (Not more than 3 months old from the date of application)" ? "selected" : ""}>NRE Bank Account Statement (≤3 months)</option>
+        </select>
+        <small class="fy-userform-hint">Proof for your current address — used only in the "supporting documents" option</small>
+      </label>
+
+        <label class="fy-userform-field">
+          <span>Flat / Door / Building</span>
+          <input type="text" data-field="current_address_flat" value="${escapeHtml(data.current_address_flat)}" placeholder="Optional" autocomplete="off">
+        </label>
+
+        <label class="fy-userform-field">
+          <span>Road / Street / Block / Sector</span>
+          <input type="text" data-field="current_address_street" value="${escapeHtml(data.current_address_street)}" placeholder="Optional" autocomplete="off">
+        </label>
+
+        <label class="fy-userform-field">
+          <span>Post Office</span>
+          <input type="text" data-field="current_address_post_office" value="${escapeHtml(data.current_address_post_office)}" placeholder="Optional" autocomplete="off">
+        </label>
+
+        <label class="fy-userform-field">
+          <span>Area / Locality / Town / City</span>
+          <input type="text" data-field="current_address_city" value="${escapeHtml(data.current_address_city)}" placeholder="Optional" autocomplete="off">
+        </label>
+
+        <label class="fy-userform-field">
+          <span>District</span>
+          <input type="text" data-field="current_address_district" value="${escapeHtml(data.current_address_district)}" placeholder="Optional" autocomplete="off">
+        </label>
+
+        <label class="fy-userform-field">
+          <span>State / Union Territory</span>
+          <select data-field="current_address_state">
+            <option value="">Select a state…</option>
+            ${INDIAN_STATES.map(
+              (state) =>
+                `<option value="${state}" ${data.current_address_state === state ? "selected" : ""}>${state}</option>`,
+            ).join("")}
+          </select>
+        </label>
+
+        <label class="fy-userform-field">
+          <span>PIN Code</span>
+          <input type="text" data-field="current_address_pin_code" value="${escapeHtml(data.current_address_pin_code)}" placeholder="Optional" maxlength="6" inputmode="numeric" autocomplete="off">
+        </label>
+
+      </div>
+
+      <details class="fy-uf-optional"${data.passport_number || data.tin_number ? " open" : ""}>
+        <summary>+ Optional — passport, TIN</summary>
+
+        <label class="fy-userform-field">
+          <span>Passport number</span>
+          <input type="text" data-field="passport_number" value="${escapeHtml(data.passport_number)}" placeholder="Optional" autocomplete="off">
+        </label>
+
+        <label class="fy-userform-field">
+          <span>TIN number</span>
+          <input type="text" data-field="tin_number" value="${escapeHtml(data.tin_number)}" placeholder="Optional" autocomplete="off">
+        </label>
+      </details>
+
+      <div class="fy-userform-errors" id="fy-userform-errors" hidden></div>
+    </div>
+  `;
+}
+
+export function renderUserFormScreen(form: string, data: UserData): string {
+  return `
+    <div class="fy-userform">
+      ${renderHeader({
+        subtitle: "Your details · ~5 min",
+        leftHtml: `
+          <button class="fy-hdr-back" id="fy-userform-back" aria-label="Back">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>`,
+      })}
+      <div class="fy-flowbar"><div class="fy-flowbar-fill" id="fy-uf-bar" style="width:20%;"></div></div>
+
+      <div class="fy-userform-body" id="fy-uf-body">
+        ${paneName(data)}
+        ${paneContact(data)}
+        ${paneAadhaar(data)}
+        ${paneFamily(data)}
+        ${paneFinal(data)}
       </div>
 
       <div class="fy-userform-footer">
-        <button class="fy-userform-submit" id="fy-userform-submit">
-          Continue to Pay ₹29
+        <button class="fy-btn fy-btn-primary fy-btn-block" id="fy-userform-next">
+          Continue
         </button>
-        <div class="fy-userform-privacy">🔒 Saved on your device. Never sent to our servers.</div>
+        <button class="fy-btn fy-btn-primary fy-btn-block" id="fy-userform-submit" style="display:none;">
+          Save &amp; continue →
+        </button>
+        <div class="fy-userform-privacy">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>
+          Saved on your device only — never sent to us
+        </div>
       </div>
     </div>
   `;
@@ -507,9 +673,43 @@ function attachUserFormHandlers(
 ): void {
   const back = document.getElementById("fy-userform-back");
   const submit = document.getElementById("fy-userform-submit");
+  const next = document.getElementById(
+    "fy-userform-next",
+  ) as HTMLButtonElement | null;
   const errorBox = document.getElementById("fy-userform-errors");
 
-  if (back) back.addEventListener("click", onBack);
+  // ── Wizard navigation (pure presentation — all fields stay in the DOM) ──
+  const panes = Array.from(
+    document.querySelectorAll<HTMLElement>(".fy-userform .fy-pane"),
+  );
+  const bar = document.getElementById("fy-uf-bar");
+  const bodyEl = document.getElementById("fy-uf-body");
+  let paneIdx = 0;
+
+  const showPane = (i: number) => {
+    paneIdx = Math.max(0, Math.min(panes.length - 1, i));
+    panes.forEach((p, idx) => p.classList.toggle("on", idx === paneIdx));
+    if (bar) bar.style.width = `${((paneIdx + 1) / panes.length) * 100}%`;
+    const isLast = paneIdx === panes.length - 1;
+    if (next) next.style.display = isLast ? "none" : "flex";
+    if (submit) submit.style.display = isLast ? "flex" : "none";
+    if (bodyEl) bodyEl.scrollTop = 0;
+  };
+
+  next?.addEventListener("click", () => showPane(paneIdx + 1));
+  back?.addEventListener("click", () => {
+    if (paneIdx > 0) showPane(paneIdx - 1);
+    else onBack();
+  });
+
+  const jumpToField = (field: HTMLElement) => {
+    const pane = field.closest<HTMLElement>(".fy-pane");
+    if (pane) showPane(Number(pane.dataset.pane ?? 0));
+    const details = field.closest<HTMLDetailsElement>("details.fy-uf-optional");
+    if (details) details.open = true;
+    field.scrollIntoView({ behavior: "smooth", block: "center" });
+    field.focus();
+  };
 
   // Live AO code availability check — fires when user finishes typing PIN
   const pinInput = document.querySelector<HTMLInputElement>(
@@ -522,10 +722,8 @@ function attachUserFormHandlers(
   let aoCheckTimer: ReturnType<typeof setTimeout> | null = null;
 
   const setSubmitEnabled = (enabled: boolean) => {
-    if (!submitBtn) return;
-    submitBtn.disabled = !enabled;
-    submitBtn.style.opacity = enabled ? "1" : "0.45";
-    submitBtn.style.cursor = enabled ? "pointer" : "not-allowed";
+    if (submitBtn) submitBtn.disabled = !enabled;
+    if (next) next.disabled = !enabled;
   };
 
   if (pinInput && aoStatus) {
@@ -535,24 +733,24 @@ function attachUserFormHandlers(
         setSubmitEnabled(true);
         return;
       }
-      aoStatus.innerHTML = `<span style="color:#94a3b8;">Checking AO code availability…</span>`;
+      aoStatus.innerHTML = `<span style="color:#8a92a3;">Checking AO code availability…</span>`;
       setSubmitEnabled(false); // disable while checking
       try {
         const res = await fetch(`${BACKEND_URL}/pincode/${pin}`);
         if (!res.ok) {
-          aoStatus.innerHTML = `<span style="color:#e74c3c;font-weight:600;">✗ PIN code not recognised — please double-check it</span>`;
+          aoStatus.innerHTML = `<span style="color:#d43c33;font-weight:600;">✗ PIN code not recognised — please double-check it</span>`;
           setSubmitEnabled(false); // keep disabled — invalid pincode
           return;
         }
         const { ao_code } = await res.json();
         if (ao_code) {
-          aoStatus.innerHTML = `<span style="color:#1d9e75;font-weight:600;">✓ AO code available for your area</span>`;
+          aoStatus.innerHTML = `<span style="color:#157347;font-weight:600;">✓ AO code available for your area</span>`;
         } else {
-          aoStatus.innerHTML = `<span style="color:#e67e22;font-weight:600;">⚠ AO code not available yet — you'll need to select it manually on the NSDL form</span>`;
+          aoStatus.innerHTML = `<span style="color:#424b5e;font-weight:600;">AO code not available yet — you'll select it manually on the NSDL form</span>`;
         }
         setSubmitEnabled(true);
       } catch {
-        aoStatus.innerHTML = `<span style="color:#94a3b8;">Could not check — please continue</span>`;
+        aoStatus.innerHTML = `<span style="color:#8a92a3;">Could not check — please continue</span>`;
         setSubmitEnabled(true); // network error — let them proceed
       }
     };
@@ -597,6 +795,46 @@ function attachUserFormHandlers(
         }
       });
     });
+
+  // Show/hide current address + proof-of-identity/address fields based on
+  // whether the applicant's current address matches Aadhaar.
+  const currentAddressBlock = document.getElementById(
+    "fy-current-address-block",
+  );
+  if (currentAddressBlock) {
+    document
+      .querySelectorAll<HTMLInputElement>('input[name="address_same_as_aadhaar"]')
+      .forEach((radio) => {
+        radio.addEventListener("change", () => {
+          const sameAsAadhaar = radio.value === "true" && radio.checked;
+          currentAddressBlock.style.display = sameAsAadhaar ? "none" : "block";
+        });
+      });
+  }
+
+  // Income source: "No income" is mutually exclusive with every other
+  // source — mirrors the real PAN form's own behavior (and the tax rule
+  // that you can't have income sources and no income at once).
+  const incomeGroup = document.getElementById("fy-income-source-group");
+  if (incomeGroup) {
+    const incomeBoxes = Array.from(
+      incomeGroup.querySelectorAll<HTMLInputElement>(
+        'input[name="income_source"]',
+      ),
+    );
+    const noIncomeBox = incomeBoxes.find((b) => b.value === "no_income");
+    incomeBoxes.forEach((box) => {
+      box.addEventListener("change", () => {
+        if (box === noIncomeBox && box.checked) {
+          incomeBoxes.forEach((b) => {
+            if (b !== noIncomeBox) b.checked = false;
+          });
+        } else if (box !== noIncomeBox && box.checked && noIncomeBox) {
+          noIncomeBox.checked = false;
+        }
+      });
+    });
+  }
 
   const dobInput = document.querySelector<HTMLInputElement>(
     '[data-field="date_of_birth"]',
@@ -653,15 +891,14 @@ function attachUserFormHandlers(
             .map((e) => `<li>${e.message}</li>`)
             .join("")}</ul>`;
         }
-        // Highlight first error field and scroll to it
+        // Jump to the pane containing the first error field
         const firstError = errors[0];
         const firstField = document.querySelector(
           `[data-field="${firstError.field}"]`,
         ) as HTMLElement | null;
         if (firstField) {
           firstField.classList.add("fy-error");
-          firstField.scrollIntoView({ behavior: "smooth", block: "center" });
-          firstField.focus();
+          jumpToField(firstField);
         }
         return;
       }
@@ -681,24 +918,24 @@ function attachUserFormHandlers(
       }
 
       const aoLine = aoStatusHTML
-        ? `<div style="background:#fff8eb;border:1px solid #f5d27a;border-radius:10px;padding:10px 13px;margin-bottom:14px;font-size:12.5px;">${aoStatusHTML}</div>`
+        ? `<div style="background:#f3f5f9;border-radius:10px;padding:10px 13px;margin-bottom:14px;font-size:12px;line-height:1.5;">${aoStatusHTML}</div>`
         : "";
 
       const modal = document.createElement("div");
       modal.style.cssText = `
-        position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999999;
+        position:fixed;inset:0;background:rgba(12,19,34,0.5);z-index:9999999;
         display:flex;align-items:center;justify-content:center;padding:24px;
       `;
       modal.innerHTML = `
-        <div style="background:#fff;border-radius:16px;padding:24px;max-width:320px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
-          <div style="font-size:18px;font-weight:800;color:#0a0a2e;margin-bottom:6px;">Confirm payment</div>
-          <div style="font-size:13px;color:#64748b;margin-bottom:16px;line-height:1.6;">
-            You're about to pay <strong style="color:#0a0a2e;">₹29</strong> to auto-fill your PAN card application.
+        <div style="background:#fff;border-radius:16px;padding:22px;max-width:320px;width:100%;box-shadow:0 20px 60px rgba(12,19,34,0.3);font-family:'DM Sans',sans-serif;">
+          <div style="font-size:16px;font-weight:800;color:#0c1322;margin-bottom:6px;letter-spacing:-0.2px;">Details saved</div>
+          <div style="font-size:12.5px;color:#8a92a3;margin-bottom:14px;line-height:1.6;">
+            Next is a one-time payment of <strong style="color:#0c1322;">₹29</strong>, then FormYaar fills your entire form.
           </div>
           ${aoLine}
           <div style="display:flex;gap:8px;">
-            <button id="fy-modal-cancel" style="flex:1;padding:11px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>
-            <button id="fy-modal-confirm" style="flex:2;padding:11px;background:#000080;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">Pay ₹29 →</button>
+            <button id="fy-modal-cancel" style="flex:1;padding:12px;background:#f3f5f9;color:#424b5e;border:none;border-radius:11px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Go back</button>
+            <button id="fy-modal-confirm" style="flex:2;padding:12px;background:#305eff;color:#fff;border:none;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Continue</button>
           </div>
         </div>
       `;
@@ -745,6 +982,11 @@ function collectFormData(): UserData {
     return el ? el.value : "";
   };
 
+  const getCheckboxGroup = (name: string): string[] =>
+    Array.from(
+      document.querySelectorAll(`input[name="${name}"]:checked`),
+    ).map((el) => (el as HTMLInputElement).value);
+
   const parentOnCard = getRadio("parent_on_card");
 
   return {
@@ -776,6 +1018,20 @@ function collectFormData(): UserData {
     passport_number: get("passport_number"),
     tin_number: get("tin_number"),
     proof_of_dob: get("proof_of_dob"),
-    income_source: getRadio("income_source") as UserData["income_source"],
+    income_source: getCheckboxGroup(
+      "income_source",
+    ) as UserData["income_source"],
+    address_same_as_aadhaar: getRadio("address_same_as_aadhaar") !== "false",
+    current_address_flat: get("current_address_flat").toUpperCase(),
+    current_address_street: get("current_address_street").toUpperCase(),
+    current_address_post_office: get(
+      "current_address_post_office",
+    ).toUpperCase(),
+    current_address_city: get("current_address_city").toUpperCase(),
+    current_address_district: get("current_address_district").toUpperCase(),
+    current_address_state: get("current_address_state").toUpperCase(),
+    current_address_pin_code: get("current_address_pin_code"),
+    proof_of_identity: get("proof_of_identity"),
+    proof_of_address: get("proof_of_address"),
   };
 }

@@ -1,55 +1,50 @@
 import { getOperatorSession, signInWithToken } from "../../supabase";
+import { renderHeader } from "../shared";
 import { loadQueue } from "./queueScreen";
 
 export function renderOperatorLoginScreen(): string {
   return `
-    <div id="fy-operator-login" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
-      <div style="position:relative;background:#000080;overflow:hidden;flex-shrink:0;">
-        <div style="padding:13px 16px;display:flex;align-items:center;gap:10px;position:relative;z-index:1;">
-          <div style="flex:1;text-align:center;">
-            <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;line-height:1.2;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
-              <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;font-weight:800;">·</span><span style="font-weight:800;color:#ffffff;">Yaar</span>
-            </div>
-            <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Operator Portal</div>
+    <div id="fy-operator-login" class="fy-screen" style="display:none;flex-direction:column;height:100%;background:var(--fy-bg-alt);">
+      ${renderHeader({ subtitle: "Operator portal" })}
+
+      <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:22px 16px;gap:12px;">
+        <div style="text-align:center;margin-bottom:4px;">
+          <div style="width:52px;height:52px;border-radius:14px;background:var(--fy-accent-soft);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#305eff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l1.5-4h13L20 8"/><path d="M4 8h16v3a3 3 0 0 1-5.3 1.9A3 3 0 0 1 12 14a3 3 0 0 1-2.7-1.1A3 3 0 0 1 4 11z"/><path d="M5.5 14v6.5h13V14M10 20.5v-4h4v4"/></svg>
           </div>
-        </div>
-        <div style="height:3px;display:flex;"><div style="flex:1;background:#FF9933;"></div><div style="flex:1;background:#ffffff;"></div><div style="flex:1;background:#138808;"></div></div>
-      </div>
-
-      <div style="flex:1;display:flex;flex-direction:column;padding:24px 20px;gap:14px;">
-        <div style="text-align:center;margin-bottom:6px;">
-          <div style="font-size:40px;margin-bottom:10px;">🏪</div>
-          <div style="font-size:17px;font-weight:800;color:#0a0a2e;margin-bottom:5px;">Operator Sign In</div>
-          <div style="font-size:12px;color:#50507a;line-height:1.6;">Go to your FormYaar dashboard, open Settings, and generate a token. Paste it below.</div>
+          <div style="font-size:16px;font-weight:800;color:var(--fy-ink);margin-bottom:5px;letter-spacing:-0.3px;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">Operator sign in</div>
+          <div style="font-size:12px;color:var(--fy-muted);line-height:1.6;max-width:270px;margin:0 auto;">Open your FormYaar dashboard, go to Settings, generate a token — then paste it below.</div>
         </div>
 
-        <button id="fy-open-operator-login" style="width:100%;padding:12px 16px;background:#f8fafc;color:#000080;border:1.5px solid #e0e0f0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000080" stroke-width="2.2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          Open Dashboard
+        <button id="fy-open-operator-login" class="fy-btn fy-btn-ghost fy-btn-block" style="font-size:12.5px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open my dashboard
         </button>
 
         <div style="display:flex;align-items:center;gap:8px;margin:2px 0;">
-          <div style="flex:1;height:1px;background:#e5e7eb;"></div>
-          <span style="font-size:11px;color:#94a3b8;font-weight:500;">paste your token below</span>
-          <div style="flex:1;height:1px;background:#e5e7eb;"></div>
+          <div style="flex:1;height:1px;background:var(--fy-line);"></div>
+          <span style="font-size:10.5px;color:var(--fy-muted);font-weight:600;">then paste your token</span>
+          <div style="flex:1;height:1px;background:var(--fy-line);"></div>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="fy-card" style="padding:14px;display:flex;flex-direction:column;gap:9px;">
           <input
             id="fy-token-input"
             type="text"
-            placeholder="e.g. K7XQ3MNPLVRB"
+            placeholder="K7XQ3MNPLVRB"
             maxlength="12"
-            style="width:100%;padding:14px;border:1.5px solid #e0e0f0;border-radius:10px;font-size:20px;font-family:monospace;font-weight:800;letter-spacing:3px;color:#000080;text-align:center;text-transform:uppercase;outline:none;"
+            style="width:100%;padding:13px;border:1px solid var(--fy-line);border-radius:10px;font-size:18px;font-family:monospace;font-weight:800;letter-spacing:3px;color:var(--fy-accent-strong);text-align:center;text-transform:uppercase;outline:none;box-sizing:border-box;"
+            onfocus="this.style.borderColor='#305eff';this.style.boxShadow='0 0 0 3px rgba(48,94,255,0.22)';"
+            onblur="this.style.borderColor='#e6e9f1';this.style.boxShadow='none';"
           />
-          <button id="fy-token-submit" style="width:100%;padding:11px;background:#000080;color:white;border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;">
-            Connect Extension
+          <button id="fy-token-submit" class="fy-btn fy-btn-primary fy-btn-block">
+            Connect extension
           </button>
         </div>
 
-        <div id="fy-token-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:12px;color:#991b1b;text-align:center;"></div>
+        <div id="fy-token-error" style="display:none;background:var(--fy-danger-bg);border:1px solid var(--fy-danger-line);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--fy-danger);text-align:center;line-height:1.5;"></div>
 
-        <div style="font-size:11px;color:#94a3b8;text-align:center;line-height:1.5;margin-top:auto;">
+        <div style="font-size:10.5px;color:var(--fy-muted);text-align:center;line-height:1.5;margin-top:auto;">
           Only for cafe operators with a FormYaar subscription.
         </div>
       </div>
@@ -88,7 +83,7 @@ export function attachOperatorLoginHandlers() {
         return;
       }
 
-      btn.textContent = "Connecting...";
+      btn.textContent = "Connecting…";
       btn.disabled = true;
       errorEl.style.display = "none";
 
@@ -102,7 +97,7 @@ export function attachOperatorLoginHandlers() {
             : error === "Token already used"
               ? "This token has already been used. Generate a new one from your dashboard."
               : "Invalid token. Please check and try again.";
-        btn.textContent = "Connect Extension";
+        btn.textContent = "Connect extension";
         btn.disabled = false;
         return;
       }

@@ -36,6 +36,17 @@ interface FormConfig {
   steps: StepConfig[];
 }
 
+// Forms whose last config step ends on the NSDL/Protean "Save Draft" →
+// fullFormSave.html document-upload page. index.ts independently detects
+// that page by URL pattern (not by form), so this only controls whether the
+// panel jumps straight to the upload-guidance screen the moment this last
+// step's fields are filled, vs. showing the generic verify screen for the
+// brief instant before the page navigates there.
+const FORMS_WITH_DOC_UPLOAD_PAGE = new Set([
+  "pan_card",
+  "adult_new_pan_card_supporting_docs",
+]);
+
 // ─── Field-friendly labels (used in progress UI) ─────────────────────
 const FIELD_LABELS: Record<string, string> = {
   // Step 1
@@ -72,6 +83,25 @@ const FIELD_LABELS: Record<string, string> = {
   capacity_verifier: "Declaration capacity",
   place: "Place",
   ao_fetch_btn: "Fetch AO code",
+  // adult_new_pan_card_supporting_docs
+  submission_mode_supporting_docs: "Submission mode (supporting documents)",
+  esign_vendor: "e-Sign vendor",
+  address_for_communication: "Address for communication",
+  current_address_flat: "Flat/Door/Building",
+  current_address_street: "Road/Street/Block/Sector",
+  current_address_post_office: "Post office",
+  current_address_city: "Area/Locality/Town/City",
+  current_address_district: "District",
+  current_address_country: "Country",
+  current_address_state: "State",
+  current_address_pin_code: "PIN code (current address)",
+  mobile_num: "Mobile number",
+  rep_ase_no: "Representative Assessee",
+  poid_code: "Proof of identity",
+  poa_code: "Proof of address",
+  verifier_name: "Declarant name (\"I, ___\")",
+  declaration_name: "Declarant name",
+  name_as_per_aadhaar: "Name as per Aadhaar",
 };
 
 function getCurrentStepyIndex(): number {
@@ -175,13 +205,16 @@ export async function runAutofill(form: string = "pan_card") {
         }
       }
     } else {
-      await autoFillAOCode(userData.aadhaar_pin_code, userData.income_source);
+      await autoFillAOCode(
+        userData.aadhaar_pin_code,
+        primaryIncomeSource(userData.income_source),
+      );
     }
   }
   await sleep(400);
 
-  if (form === "pan_card" && isLastStep) {
-    showUploadScreen();
+  if (FORMS_WITH_DOC_UPLOAD_PAGE.has(form) && isLastStep) {
+    showUploadScreen({ markCompleted: true });
     celebrateTimeSaved(step.fields.length);
   } else if ((step as any).auto_advance) {
     // Click Next and wait for stepy to actually change before running next step.
@@ -319,7 +352,7 @@ export async function prepareOperatorSubmission(sub: any): Promise<void> {
     passport_number: "",
     tin_number: "",
     proof_of_dob: sub.proof_of_dob ?? "",
-    income_source: (incomeSources[0] as UserData["income_source"]) ?? "",
+    income_source: incomeSources as UserData["income_source"],
   };
 
   delete (window as any).__fy_operator_userdata;
@@ -388,6 +421,13 @@ function resolveValue(
     console.warn(`FormYaar: missing value_source on ${field.field_id}`);
     return "";
   }
+  // Computed values — derived from more than one UserData field, so they
+  // can't be expressed as a plain "user.<key>" lookup.
+  if (field.value_source === "computed.full_name") {
+    return [userData.first_name, userData.middle_name, userData.last_name]
+      .filter(Boolean)
+      .join(" ");
+  }
   // Special case: checkbox that matches against a user value
   if (
     field.value_source.startsWith("user.") &&
@@ -395,6 +435,11 @@ function resolveValue(
   ) {
     const key = field.value_source.slice(5) as keyof UserData;
     const userVal = userData[key];
+    // Multi-select fields (e.g. income_source) store an array — check
+    // membership rather than exact equality, so more than one checkbox
+    // on the target site can end up checked.
+    if (Array.isArray(userVal))
+      return (userVal as string[]).includes(field.static_value as string);
     return userVal === field.static_value;
   }
   if (field.value_source === "static") {
@@ -403,7 +448,9 @@ function resolveValue(
   if (field.value_source.startsWith("user.")) {
     const key = field.value_source.slice(5);
     const v = userData[key as keyof UserData];
-    return v !== undefined ? v : "";
+    // Array-valued fields (income_source) only make sense via the
+    // static_value/checkbox branch above — never as a plain text/select fill.
+    return typeof v === "string" || typeof v === "boolean" ? v : "";
   }
   return "";
 }
@@ -426,8 +473,18 @@ async function fillField(
   }
 
   if ((el as HTMLInputElement).disabled) {
-    if (import.meta.env.DEV) console.log(`FormYaar: skipping disabled field ${field.selector}`);
-    return false;
+    // Some NSDL fields are disabled by a one-time $(document).ready() check
+    // that runs before our script switches the submission-mode radio, and
+    // nothing re-enables them afterward. force_enable is an explicit opt-in
+    // per field (set only where we've confirmed via the site's own source
+    // that the field should legitimately be editable in our flow) — a plain
+    // .disabled skip stays the default for everything else.
+    if ((field as any).force_enable) {
+      (el as HTMLInputElement).disabled = false;
+    } else {
+      if (import.meta.env.DEV) console.log(`FormYaar: skipping disabled field ${field.selector}`);
+      return false;
+    }
   }
 
   switch (field.type) {
@@ -570,6 +627,25 @@ function fillAOCodeFields(ao: AOCode): void {
     const el = document.getElementById(id) as HTMLInputElement | null;
     if (el) fillText(el, value);
   }
+}
+
+// AO jurisdiction rules (cities-ao-code/*.json) key on a single income
+// source. When the applicant has multiple, business/professional income
+// determines the ward/circle over salary-only, per IT dept convention —
+// pick the most "senior" source present rather than an arbitrary one.
+const INCOME_SOURCE_PRIORITY: readonly string[] = [
+  "business",
+  "salary",
+  "house_property",
+  "capital_gains",
+  "other_sources",
+  "no_income",
+];
+function primaryIncomeSource(sources: readonly string[]): string {
+  for (const candidate of INCOME_SOURCE_PRIORITY) {
+    if (sources.includes(candidate)) return candidate;
+  }
+  return sources[0] ?? "";
 }
 
 async function autoFillAOCode(pinCode: string, incomeSource = ""): Promise<boolean> {

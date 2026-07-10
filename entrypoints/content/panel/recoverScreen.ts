@@ -1,50 +1,45 @@
 import { BACKEND_URL } from "../constants";
 import { setActiveSession } from "../userData";
 import { refreshPendingSessions } from "./homeScreen";
+import { renderHeader } from "./shared";
 
 export function renderRecoverScreen(): string {
   return `
-    <div id="fy-recover" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
-      <div style="position:relative;background:#000080;overflow:hidden;flex-shrink:0;">
-        <div style="padding:13px 16px;display:flex;align-items:center;gap:10px;position:relative;z-index:1;">
-          <button id="fy-recover-back" style="background:none;border:none;cursor:pointer;color:white;display:flex;align-items:center;padding:4px 0;opacity:0.85;font-family:inherit;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <div style="flex:1;text-align:center;">
-            <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
-              <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;font-weight:800;">·</span><span style="font-weight:800;color:#ffffff;">Yaar</span>
-            </div>
-          </div>
-          <div style="width:24px;"></div>
-        </div>
-        <div style="height:3px;display:flex;">
-          <div style="flex:1;background:#FF9933;"></div>
-          <div style="flex:1;background:#ffffff;"></div>
-          <div style="flex:1;background:#138808;"></div>
-        </div>
-      </div>
-      <div style="flex:1;overflow-y:auto;padding:24px 20px;">
-        <div style="text-align:center;margin-bottom:20px;">
-          <div style="font-size:28px;margin-bottom:10px;">🔄</div>
-          <div style="font-size:16px;font-weight:800;color:#0a0a2e;">Recover your session</div>
-          <div style="font-size:12px;color:#50507a;margin-top:6px;line-height:1.5;">Enter the mobile number you used while paying to restore your session.</div>
+    <div id="fy-recover" class="fy-screen" style="display:none;flex-direction:column;height:100%;background:var(--fy-bg);">
+      ${renderHeader({
+        subtitle: "Recover session",
+        leftHtml: `
+          <button class="fy-hdr-back" id="fy-recover-back" aria-label="Back">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>`,
+      })}
+      <div style="flex:1;overflow-y:auto;padding:40px 26px 24px;">
+        <div style="text-align:center;margin-bottom:26px;">
+          <div style="font-size:19px;font-weight:800;color:var(--fy-ink);letter-spacing:-0.4px;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">Already paid?</div>
+          <div style="font-size:12.5px;color:var(--fy-muted);margin-top:8px;line-height:1.6;max-width:260px;margin-left:auto;margin-right:auto;">Enter the mobile number you used while paying and we'll restore your session.</div>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="max-width:290px;margin:0 auto;display:flex;flex-direction:column;gap:10px;">
           <input
             id="fy-recover-mobile"
             type="text"
             inputmode="numeric"
             maxlength="10"
             placeholder="10-digit mobile number"
-            style="width:100%;padding:13px;border:1.5px solid #e0e0f0;border-radius:10px;font-size:15px;font-family:monospace;font-weight:700;letter-spacing:2px;color:#0a0a2e;text-align:center;outline:none;"
+            style="width:100%;padding:14px;border:1.5px solid transparent;border-radius:11px;font-size:16px;font-weight:700;letter-spacing:2px;color:var(--fy-ink);text-align:center;outline:none;background:var(--fy-field);box-sizing:border-box;transition:border-color 0.15s,background 0.15s;"
+            onfocus="this.style.borderColor='#305eff';this.style.background='#fff';"
+            onblur="this.style.borderColor='transparent';this.style.background='#f3f5f9';"
           />
-          <button id="fy-recover-submit" style="width:100%;padding:12px;background:#000080;color:white;border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;">
-            Recover Session
+          <button id="fy-recover-submit" class="fy-btn fy-btn-primary fy-btn-block">
+            Recover my session
           </button>
+          <div id="fy-recover-error" style="display:none;font-size:12px;color:var(--fy-danger);text-align:center;line-height:1.5;margin-top:2px;"></div>
         </div>
 
-        <div id="fy-recover-error" style="display:none;margin-top:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:12px;color:#991b1b;text-align:center;"></div>
+        <div style="margin-top:22px;text-align:center;font-size:10.5px;color:var(--fy-faint);line-height:1.6;">
+          Sessions stay recoverable for 48 hours after payment.<br/>
+          Stuck? <a href="https://formyaar.in/contact" target="_blank" style="color:var(--fy-muted);font-weight:600;">Message us</a> — a real person will help.
+        </div>
       </div>
     </div>
   `;
@@ -76,7 +71,7 @@ export function attachRecoverScreenHandlers() {
         return;
       }
 
-      btn.textContent = "Looking up...";
+      btn.textContent = "Looking up…";
       btn.disabled = true;
       errorEl.style.display = "none";
 
@@ -86,7 +81,7 @@ export function attachRecoverScreenHandlers() {
           errorEl.style.display = "block";
           errorEl.textContent =
             "No active session found for this number. Sessions expire after 48 hours.";
-          btn.textContent = "Recover Session";
+          btn.textContent = "Recover my session";
           btn.disabled = false;
           return;
         }
@@ -106,7 +101,7 @@ export function attachRecoverScreenHandlers() {
       } catch {
         errorEl.style.display = "block";
         errorEl.textContent = "Network error. Please check your connection.";
-        btn.textContent = "Recover Session";
+        btn.textContent = "Recover my session";
         btn.disabled = false;
       }
     });

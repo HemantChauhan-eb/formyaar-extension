@@ -10,42 +10,32 @@ import { showReviewScreen } from "./reviewScreen";
 
 export function renderOperatorQueueScreen(): string {
   return `
-    <div id="fy-operator-queue" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
-      <div style="position:relative;background:#000080;overflow:hidden;flex-shrink:0;">
-        <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;">
-<div style="display:flex;align-items:center;gap:10px;">
-    <button id="fy-queue-back" style="background:none;border:none;cursor:pointer;color:white;display:flex;align-items:center;padding:4px 0;opacity:0.85;font-family:inherit;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
-    <div>
-      <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
-        <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;">·</span><span>Yaar</span>
+    <div id="fy-operator-queue" class="fy-screen" style="display:none;flex-direction:column;height:100%;background:var(--fy-bg-alt);">
+      <div class="fy-hdr">
+        <button class="fy-hdr-back" id="fy-queue-back" aria-label="Back">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <div class="fy-hdr-brand">
+          <span class="fy-brandmark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5l4 4L8 20l-4.6 1 1-4.6z"/><path d="M12.5 7.5l4 4"/></svg></span>
+          <div style="min-width:0;">
+            <div class="fy-hdr-name">Operator queue</div>
+            <div id="fy-op-email" class="fy-hdr-sub" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+          </div>
+        </div>
+        <button class="fy-hdr-back" id="fy-queue-refresh" title="Refresh queue" aria-label="Refresh queue">
+          <svg id="fy-refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+        </button>
+        <button class="fy-hdr-link" id="fy-operator-signout">Sign out</button>
       </div>
-      <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Operator Queue</div>
-    </div>
-  </div>
-  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <button id="fy-queue-refresh" style="background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.18);border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-        <svg id="fy-refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
-          <polyline points="23 4 23 10 17 10"/>
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
-      </button>
-      <button id="fy-operator-signout" style="background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.18);border-radius:7px;padding:5px 10px;color:white;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">
-        Sign out
-      </button>
-    </div>
-    <div id="fy-op-email" style="font-size:9.5px;color:rgba(255,255,255,0.5);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
-  </div>
-</div>
-        <div style="height:3px;display:flex;"><div style="flex:1;background:#FF9933;"></div><div style="flex:1;background:#ffffff;"></div><div style="flex:1;background:#138808;"></div></div>
-      </div>
+      <div class="fy-accentbar"></div>
 
-      <div style="flex:1;overflow-y:auto;padding:14px 12px;">
+      <div style="flex:1;overflow-y:auto;padding:12px;">
         <div id="fy-queue-list" style="display:flex;flex-direction:column;gap:8px;">
-          <div style="text-align:center;color:#94a3b8;font-size:13px;padding:40px 20px;">
-            Loading queue...
+          <div style="text-align:center;color:var(--fy-muted);font-size:13px;padding:40px 20px;">
+            Loading queue…
           </div>
         </div>
       </div>
@@ -151,10 +141,12 @@ export async function loadQueue(operatorId: string): Promise<void> {
   if (subStatus === "expired") {
     list.innerHTML = `
       <div style="text-align:center;padding:40px 20px;">
-        <div style="font-size:36px;margin-bottom:14px;">🔒</div>
-        <div style="font-size:15px;font-weight:800;color:#0a0a2e;margin-bottom:8px;">Subscription Expired</div>
-        <div style="font-size:12.5px;color:#64748b;line-height:1.6;margin-bottom:16px;">Your FormYaar subscription has expired. Renew to keep using speedy filling services for your customers.</div>
-        <a href="https://formyaar.in/operator-dashboard.html" target="_blank" style="display:inline-block;padding:10px 20px;background:#000080;color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">Renew Subscription</a>
+        <div style="width:50px;height:50px;border-radius:14px;background:var(--fy-warn-bg);border:1px solid var(--fy-warn-line);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8a6100" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div style="font-size:15px;font-weight:800;color:var(--fy-ink);margin-bottom:8px;">Subscription expired</div>
+        <div style="font-size:12.5px;color:var(--fy-muted);line-height:1.6;margin-bottom:16px;">Your FormYaar subscription has expired. Renew to keep filling forms for your customers.</div>
+        <a href="https://formyaar.in/operator-dashboard.html" target="_blank" class="fy-btn fy-btn-primary" style="text-decoration:none;padding:10px 20px;font-size:13px;">Renew subscription</a>
       </div>
     `;
     return;
@@ -163,10 +155,12 @@ export async function loadQueue(operatorId: string): Promise<void> {
   if (subStatus === "unknown") {
     list.innerHTML = `
       <div style="text-align:center;padding:40px 20px;">
-        <div style="font-size:36px;margin-bottom:14px;">📡</div>
-        <div style="font-size:15px;font-weight:800;color:#0a0a2e;margin-bottom:8px;">Couldn't verify subscription</div>
-        <div style="font-size:12.5px;color:#64748b;line-height:1.6;margin-bottom:16px;">We couldn't reach FormYaar to confirm your subscription. Check your connection and try again.</div>
-        <button id="fy-sub-retry" style="display:inline-block;padding:10px 20px;background:#000080;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Retry</button>
+        <div style="width:50px;height:50px;border-radius:14px;background:var(--fy-accent-soft);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#305eff" stroke-width="2" stroke-linecap="round"><path d="M5 12.5a7 7 0 0 1 14 0M8.5 15.5a3.5 3.5 0 0 1 7 0"/><circle cx="12" cy="19" r="1.2"/></svg>
+        </div>
+        <div style="font-size:15px;font-weight:800;color:var(--fy-ink);margin-bottom:8px;">Couldn't verify subscription</div>
+        <div style="font-size:12.5px;color:var(--fy-muted);line-height:1.6;margin-bottom:16px;">We couldn't reach FormYaar to confirm your subscription. Check your connection and try again.</div>
+        <button id="fy-sub-retry" class="fy-btn fy-btn-primary" style="padding:10px 20px;font-size:13px;">Retry</button>
       </div>
     `;
     document
@@ -200,7 +194,7 @@ export async function loadQueue(operatorId: string): Promise<void> {
     inProgress.length > 0
       ? `
     <div style="margin-bottom:10px;">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#b45309;margin-bottom:7px;padding:0 2px;">In Progress</div>
+      <div style="font-size:10px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;color:#8a6100;margin-bottom:7px;padding:0 2px;">In progress</div>
       ${inProgress
         .map((sub: any) => {
           const name = escapeHtml(
@@ -222,17 +216,17 @@ export async function loadQueue(operatorId: string): Promise<void> {
               })
             : "";
           return `
-        <div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:12px;padding:12px 13px;margin-bottom:6px;">
+        <div style="background:var(--fy-warn-bg);border:1px solid var(--fy-warn-line);border-radius:12px;padding:12px 13px;margin-bottom:6px;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             <span style="font-size:18px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
             <div>
-              <div style="font-size:13px;font-weight:700;color:#0a0a2e;">${name}</div>
-              <div style="font-size:11px;color:#92400e;margin-top:2px;">${formLabel}${accepted ? " · Started " + accepted : ""}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--fy-ink);">${name}</div>
+              <div style="font-size:11px;color:#8a6100;margin-top:2px;">${formLabel}${accepted ? " · Started " + accepted : ""}</div>
             </div>
           </div>
           <div style="display:flex;gap:6px;">
-            <button class="fy-ip-done" data-id="${escapeHtml(sub.id)}" style="flex:1;padding:7px 0;background:transparent;color:#94a3b8;border:1.5px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Done ✓</button>
-            <button class="fy-ip-resume" data-id="${escapeHtml(sub.id)}" style="flex:2;padding:7px 0;background:#000080;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Resume →</button>
+            <button class="fy-ip-done" data-id="${escapeHtml(sub.id)}" style="flex:1;padding:8px 0;background:var(--fy-bg);color:var(--fy-muted);border:1px solid var(--fy-line);border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Done ✓</button>
+            <button class="fy-ip-resume" data-id="${escapeHtml(sub.id)}" style="flex:2;padding:8px 0;background:var(--fy-accent);color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Resume →</button>
           </div>
         </div>`;
         })
@@ -244,9 +238,11 @@ export async function loadQueue(operatorId: string): Promise<void> {
     list.innerHTML =
       inProgressHTML +
       `
-      <div style="text-align:center;color:#94a3b8;font-size:13px;padding:${inProgress.length > 0 ? "20px" : "40px"} 20px;">
-        <div style="font-size:32px;margin-bottom:12px;">✅</div>
-        No pending forms. Queue is clear.
+      <div style="text-align:center;color:var(--fy-muted);font-size:12.5px;padding:${inProgress.length > 0 ? "20px" : "40px"} 20px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--fy-good-bg);display:inline-flex;align-items:center;justify-content:center;margin-bottom:11px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#157347" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg>
+        </div>
+        <div>No pending forms. Queue is clear.</div>
       </div>
     `;
   } else {
@@ -255,19 +251,19 @@ export async function loadQueue(operatorId: string): Promise<void> {
       data
         .map(
           (sub: any) => `
-      <button class="fy-queue-tile" data-id="${escapeHtml(sub.id)}" style="width:100%;background:#fff;border:1.5px solid #e0e0f0;border-radius:12px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;text-align:left;transition:border-color 0.15s;">
+      <button class="fy-queue-tile fy-card-hover" data-id="${escapeHtml(sub.id)}" style="width:100%;background:var(--fy-bg);border:1px solid var(--fy-line);border-radius:12px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;text-align:left;">
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:20px;">${FORM_ICONS[sub.form_type] ?? "📄"}</span>
           <div>
-            <div style="font-size:13.5px;font-weight:700;color:#0a0a2e;">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown")}</div>
-            <div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(
+            <div style="font-size:13.5px;font-weight:700;color:var(--fy-ink);">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || sub.name || "Unknown")}</div>
+            <div style="font-size:11px;color:var(--fy-muted);margin-top:2px;">${escapeHtml(
               String(sub.form_type ?? "")
                 .replace("_", " ")
                 .toUpperCase(),
             )} · ${new Date(sub.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
           </div>
         </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9aa3b5" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     `,
         )
@@ -302,7 +298,7 @@ export async function loadQueue(operatorId: string): Promise<void> {
       } catch (err: any) {
         if (err?.message?.includes("Extension context invalidated")) {
           btn.textContent = "Refresh page ↺";
-          btn.style.color = "#e67e22";
+          btn.style.color = "#8a6100";
           btn.disabled = false;
         } else {
           await removeInProgressSubmission(operatorId, id).catch(() => {});

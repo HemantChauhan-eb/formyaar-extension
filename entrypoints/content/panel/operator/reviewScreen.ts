@@ -9,31 +9,29 @@ import { addInProgressSubmission } from "./queueScreen";
 
 export function renderOperatorReviewScreen(): string {
   return `
-    <div id="fy-operator-review" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
-      <div style="position:relative;background:#000080;overflow:hidden;flex-shrink:0;">
-        <div style="padding:13px 16px;display:flex;align-items:center;gap:10px;position:relative;z-index:1;">
-          <button id="fy-review-back" style="background:none;border:none;cursor:pointer;color:white;display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;opacity:0.9;padding:4px 0;font-family:inherit;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Queue
-          </button>
-          <div style="flex:1;text-align:center;">
-            <div style="font-weight:800;font-size:16px;letter-spacing:-0.5px;color:#ffffff;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
-              <span style="font-weight:200;color:rgba(255,255,255,0.7);">Form</span><span style="color:#E8930A;">·</span><span>Yaar</span>
-            </div>
-            <div style="font-size:10.5px;color:#aabbd4;font-weight:500;">Review Form</div>
+    <div id="fy-operator-review" class="fy-screen" style="display:none;flex-direction:column;height:100%;background:var(--fy-bg-alt);">
+      <div class="fy-hdr">
+        <button class="fy-hdr-back" id="fy-review-back" aria-label="Back to queue">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <div class="fy-hdr-brand">
+          <span class="fy-brandmark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5l4 4L8 20l-4.6 1 1-4.6z"/><path d="M12.5 7.5l4 4"/></svg></span>
+          <div>
+            <div class="fy-hdr-name">Review form</div>
+            <div class="fy-hdr-sub">Check details before filling</div>
           </div>
-          <button id="fy-review-edit" style="background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.25);border-radius:7px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
         </div>
-        <div style="height:3px;display:flex;"><div style="flex:1;background:#FF9933;"></div><div style="flex:1;background:#ffffff;"></div><div style="flex:1;background:#138808;"></div></div>
+        <button class="fy-hdr-back" id="fy-review-edit" title="Edit details" aria-label="Edit details">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
       </div>
+      <div class="fy-accentbar"></div>
 
-      <div id="fy-review-body" style="flex:1;overflow-y:auto;padding:16px;">
+      <div id="fy-review-body" style="flex:1;overflow-y:auto;padding:14px;">
         <!-- Populated dynamically -->
       </div>
 
-      <div id="fy-review-footer" style="padding:12px 16px;border-top:1px solid #e5e7eb;background:#fafafa;display:flex;gap:8px;">
+      <div id="fy-review-footer" style="padding:12px 14px;border-top:1px solid var(--fy-line);background:var(--fy-bg);display:flex;gap:8px;flex-shrink:0;">
         <!-- populated by showReviewScreen -->
       </div>
     </div>
@@ -41,7 +39,7 @@ export function renderOperatorReviewScreen(): string {
 }
 
 const INPUT_STYLE =
-  "width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;color:#0a0a2e;background:#fff;box-sizing:border-box;";
+  "width:100%;padding:8px 11px;border:1px solid #e6e9f1;border-radius:9px;font-size:13px;font-family:inherit;color:#0c1322;background:#fff;box-sizing:border-box;";
 const SELECT_STYLE = INPUT_STYLE + "cursor:pointer;";
 
 function renderEditForm(sub: any): string {
@@ -57,14 +55,14 @@ function renderEditForm(sub: any): string {
       .join("")}</select>`;
 
   const editRow = (label: string, inputHtml: string) => `
-    <div style="padding:8px 0;border-bottom:1px solid #f1f5f9;">
-      <div style="font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:5px;">${label}</div>
+    <div style="padding:8px 0;border-bottom:1px solid #eef0f5;">
+      <div style="font-size:11px;color:#6c7689;font-weight:600;margin-bottom:5px;">${label}</div>
       ${inputHtml}
     </div>`;
 
   const editSection = (title: string, content: string) => `
-    <div style="font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#94a3b8;padding:12px 0 4px;">${title}</div>
-    <div style="background:#f8fafc;border-radius:10px;padding:4px 12px;margin-bottom:2px;">${content}</div>
+    <div class="fy-kv-section">${title}</div>
+    <div class="fy-kv-card" style="padding:4px 12px;">${content}</div>
   `;
 
   return `
@@ -192,8 +190,8 @@ export function showReviewScreen(sub: any): void {
   // Cancel/Save buttons, so re-entering view mode must reset it.
   const footer = document.getElementById("fy-review-footer")!;
   footer.innerHTML = `
-    <button id="fy-review-reject" style="flex:1;padding:11px;background:#fff;color:#ef4444;border:1.5px solid #ef4444;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Reject</button>
-    <button id="fy-review-accept" style="flex:2;padding:11px;background:#000080;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Accept & Fill</button>
+    <button id="fy-review-reject" class="fy-btn fy-btn-danger-ghost" style="flex:1;padding:11px;font-size:13px;">Reject</button>
+    <button id="fy-review-accept" class="fy-btn fy-btn-primary" style="flex:2;padding:11px;font-size:13px;">Accept &amp; fill →</button>
   `;
   footer.style.display = "flex";
   footer.style.gap = "8px";
@@ -204,22 +202,22 @@ export function showReviewScreen(sub: any): void {
   const row = (label: string, value: unknown) =>
     value
       ? `
-    <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f1f5f9;">
-      <span style="font-size:11.5px;color:#64748b;font-weight:500;">${label}</span>
-      <span style="font-size:12.5px;color:#0a0a2e;font-weight:600;text-align:right;max-width:60%;">${escapeHtml(value)}</span>
+    <div class="fy-kv-row">
+      <span class="fy-kv-label">${label}</span>
+      <span class="fy-kv-value">${escapeHtml(value)}</span>
     </div>
   `
       : "";
 
   const section = (title: string, content: string) => `
-    <div style="font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#94a3b8;padding:12px 0 4px;">${title}</div>
-    <div style="background:#f8fafc;border-radius:10px;padding:4px 12px;margin-bottom:2px;">${content}</div>
+    <div class="fy-kv-section">${title}</div>
+    <div class="fy-kv-card">${content}</div>
   `;
 
   body.innerHTML = `
-    <div style="margin-bottom:12px;">
-      <div style="font-size:16px;font-weight:800;color:#0a0a2e;">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || "Unknown")}</div>
-      <div style="font-size:11.5px;color:#64748b;margin-top:2px;">${escapeHtml(
+    <div style="margin-bottom:10px;background:var(--fy-bg);border:1px solid var(--fy-line);border-radius:12px;padding:13px 14px;">
+      <div style="font-size:15.5px;font-weight:800;color:var(--fy-ink);letter-spacing:-0.2px;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">${escapeHtml([sub.first_name, sub.middle_name, sub.last_name].filter(Boolean).join(" ") || "Unknown")}</div>
+      <div style="font-size:11px;color:var(--fy-muted);margin-top:2px;">${escapeHtml(
         String(sub.form_type ?? "")
           .replace(/_/g, " ")
           .toUpperCase(),
@@ -368,8 +366,8 @@ export function showReviewScreen(sub: any): void {
     body.innerHTML = renderEditForm(currentSub);
 
     footer.innerHTML = `
-      <button id="fy-edit-cancel" style="flex:1;padding:11px;background:#fff;color:#64748b;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>
-      <button id="fy-edit-save" style="flex:2;padding:11px;background:#000080;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Save Changes</button>
+      <button id="fy-edit-cancel" class="fy-btn fy-btn-ghost" style="flex:1;padding:11px;font-size:13px;">Cancel</button>
+      <button id="fy-edit-save" class="fy-btn fy-btn-primary" style="flex:2;padding:11px;font-size:13px;">Save changes</button>
     `;
     footer.style.display = "flex";
     footer.style.gap = "8px";
@@ -425,7 +423,7 @@ export function showReviewScreen(sub: any): void {
         currentSub = { ...currentSub, ...updates };
         showReviewScreen(currentSub);
       } catch {
-        saveBtn.textContent = "Save Changes";
+        saveBtn.textContent = "Save changes";
         saveBtn.disabled = false;
         alert("Failed to save. Please try again.");
       }

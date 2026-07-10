@@ -1,5 +1,62 @@
 # FormYaar Extension — Changelog
 
+## [0.12.0] — 2026-07-11
+
+### Added
+- **Photo & Signature auto-prep on the upload screen** — the document-upload guidance screen now has two dropzones (drop or click to browse) that crop/resize a raw photo or signature to NSDL's exact spec (Photo: 2.5×3.5cm portrait ≈ 197×276px; Signature: 4.5×2cm landscape ≈ 354×157px, both JPEG ≤50KB) entirely client-side via Canvas — nothing is uploaded anywhere. Center-crop-to-cover keeps the subject centered without distorting the aspect ratio; JPEG quality steps down automatically until the file fits under 50KB. Result shows the final dimensions/size and a Download button; the user then uploads that downloaded file manually via NSDL's own existing Upload button, same as always — no attempt to auto-inject files into the government site's own file input. New `imagePrep.ts` module (`processImageToSpec`, `downloadBlob`) holds the reusable logic; document compression (proof of identity/address/DOB, reusing `compress.html`'s existing PDF pipeline) is a follow-up.
+- Removed the non-functional placeholder "drop files" boxes from the details form (Proof of Identity/Address/DOB) — that capability now lives on the upload screen instead, where the file is actually needed, rather than earlier during details collection.
+
+### Fixed
+- **Panel fell back to the home screen after clicking the Photo/Signature "Upload" button** — clicking Upload on `photoUploadForm`/`signUploadForm` navigates to `uploadFile.html?ID=...&type=1|2`, a URL pattern `isDocUploadPage`'s pathname check (`index.ts`) didn't recognize (it only matched `fullFormSave`/`uploadDocument`), so the panel didn't know it was still on the upload flow and reset. Added `uploadFile` to the match list — same fix category as the `fullFormSave`/`uploadDocument` case already handled.
+
+## [0.11.0] — 2026-07-10
+
+### Added
+- **PAN application with supporting documents** — a second PAN flow (`adult_new_pan_card_supporting_docs`) for applicants who want a different photo/signature than their Aadhaar card, or whose current address doesn't match Aadhaar. The details form now asks "Is your current address the same as your Aadhaar address?" (always visible, defaults Yes); answering "No" reveals current-address fields (with a proper State dropdown, matching NSDL's own ALL-CAPS state naming) plus Proof of Identity / Proof of Address document-type pickers, each with a visual-only "drop files" placeholder (upload wiring is separate future work).
+- **Defence-personnel question is now always visible and answered by default** — was previously tucked inside a collapsed "+ Optional" section alongside passport/TIN, which meant many users skipped past a question the AO Code lookup actually depends on.
+- `resolveFormSlug(userData)` in `userData.ts` — single source of truth for which config to run, based on the address-match answer above.
+
+### Fixed
+- **Source of income only ever saved one selection** — the panel rendered it as radio buttons and `UserData.income_source` was a single string, so picking e.g. "Salary" + "Capital Gains" silently kept only whichever was clicked last, and the NSDL page ended up with just one checkbox ticked no matter what the user intended. `income_source` is now `IncomeSource[]`, the panel uses checkboxes (with "No income" mutually exclusive against the rest, mirroring the government form's own rule), and the NSDL-page checkbox fill now checks array membership instead of exact equality.
+- **The address-match answer wasn't actually changing which application NSDL saw** — the toggle only hid/showed panel fields; payment initiation and the post-payment autofill kickoff were both still hardcoded to `"pan_card"`, so choosing "No" still ran the Aadhaar-eKYC flow. `paymentScreen.ts` and `index.ts`'s `PAYMENT_VERIFIED` handler now both resolve the real form via `resolveFormSlug`.
+- **"Name as per Aadhaar" wasn't being filled on the supporting-documents flow** — NSDL's page disables that field in a one-time page-load check that only looks at whichever submission-mode radio is checked *by default* (Aadhaar eKYC), and never re-enables it after our script switches the radio to "supporting documents". `fillField` now supports an explicit per-field `force_enable` opt-in, used for this field, which clears `.disabled` before filling.
+
+## [0.10.4] — 2026-07-09
+
+### Fixed
+- **eKYC photo-consent dropdown reset on the document-upload page** — the NSDL upload page self-reloads after every Upload, which resets the select2 "photo visible on Aadhaar" consent (`#consentEkyc`) back to "-----Please Select-----"; clicking Submit then errored with "please select a consent", confusing users into thinking their upload failed. `index.ts` now re-selects "Y" on every load of the upload page (`reapplyEkycConsent`), setting the native `<select>` value and triggering a jQuery change so select2's visible label updates too. Polls briefly to win the race with select2's own init.
+
+## [0.10.3] — 2026-07-09
+
+### Changed
+- **CAPTCHA coach mark on the registration page** now reads "Solve the CAPTCHA, wait for the green check ✓, then click Submit" (was "Solve the CAPTCHA first, then click Submit") — so users wait for reCAPTCHA to verify before submitting instead of clicking Submit immediately. Updated in both `public/configs/pan_card.json` (bundled) and `formyaar-backend/configs/pan_card.json` (live).
+
+## [0.10.2] — 2026-07-09
+
+### Fixed
+- **"Continue →" resume card disappeared after reaching the document-upload page** — `showUploadScreen()` always called `markSessionCompleted()`, which was fine when it only ran at the true end of the flow. Now that it also drives the mid-flow `fullFormSave`/`uploadDocument` pages (0.10.0), every visit was flipping `fy_active_session.completed = true` and permanently hiding the home-screen resume card. `showUploadScreen` now takes `{ markCompleted }` (autofill's final step passes `true`; the doc-upload trigger doesn't) and, mid-flow, calls the new `markSessionActive()` to keep the session resumable — which also repairs sessions an earlier build wrongly marked completed.
+
+## [0.10.1] — 2026-07-09
+
+### Changed
+- **Upload screen restyled to the current panel design system** (`uploadScreen.ts`) — replaced the old navy/tricolor header + warm-yellow warning boxes with the near-monochrome language used across the rest of the panel: `renderHeader` + `renderProgress` chrome, `--fy-*` tokens, borderless `--fy-field` cards, and a single blue accent (`--fy-btn-primary`) reserved for the one primary action (Merge & compress). Emoji swapped for quiet line-icon `fy-quietrow`s; FAQ chips, chat input and chat bubbles re-skinned to the shared tokens. Content unchanged.
+
+## [0.10.0] — 2026-07-09
+
+### Added
+- **Document-upload guidance on the `fullFormSave.html` / `uploadDocument.html` pages** — after "Save draft" the user lands on `fullFormSave.html` (which the config treats as a `guidance_only` step, so the panel used to show a bare "Step complete!" verify screen — or the home screen once the session was cleared); each uploaded file then reloads the page with a fresh `?ID=` (sometimes as `uploadDocument.html`), which previously flipped the panel to "page not recognized". The panel now keys off the pathname (`isDocUploadPage` in `index.ts`, matching `fullFormSave`/`uploadDocument`), so it opens straight to the upload screen on every reload regardless of the changing ID, and the autofill auto-run is skipped there.
+
+### Changed
+- **Upload screen rewritten** (`uploadScreen.ts`) — now shown as standalone page guidance rather than the post-fill "one step remaining" success card. Warns that the page accepts only ONE PDF and to merge multiple documents into a single PDF first via the FormYaar compress tool (add all documents on one page → compress & download). Adds explicit two-step instructions: (1) click the orange ＋ button to select the PDF, (2) click Upload. Adds a reassurance note that the page reloads after each upload. AI-help context and FAQ chips updated to match. Companion change in `formyaar-website/compress.html`: the "Convert to grayscale" toggle now defaults **off**.
+
+## [0.9.0] — 2026-07-08
+
+### Changed
+- **Panel redesign** — migrated all in-page panel screens to the new design (`panel-mockup/`): home, user form, payment, filling/verify, recover, maintenance, celebration, panel shell, and operator login/queue/review. Quieter white header (`renderHeader`) with a hairline progress bar (`renderProgress`) replacing the old 3-step map; new `shared.ts` helpers (`renderHeader`, `renderProgress`, `renderSteps`, `BRAND_PEN_SVG`). Presentation only — no behavior change: telemetry events, backend endpoints (`/pincode`, `/payment/resume`, `/operator/*`, `/maintenance/status`), autofill triggers, operator session-token auth, and sensitive-field handling (`aadhaar_number`/`passport_number`/`tin_number`) are all preserved. Verified via `tsc --noEmit` + `wxt build`.
+
+### Fixed
+- **Panel was rendered flattened (zero-padding buttons, fields jammed to the edge)** — the base reset `#formyaar-panel * { margin: 0; padding: 0 }` (specificity 1,0,0) out-specified every one of the design's single-class rules (0,1,0) such as `.fy-btn { padding: 14px 18px }` and `.fy-userform-field input { padding: 12px 14px }`, zeroing their padding in production. The standalone preview hid this because its harness rescopes the reset to the `.fy-frame` *class* (0,1,0), letting the design classes win by source order. Fixed by dropping the reset to zero specificity via `:where(#formyaar-panel) *`, so the panel's own class rules always win — matching the preview exactly. Also added `line-height` on the panel root and kept a small form-control isolation block (`text-transform`/`appearance`/`font-family`) for native-chrome/host-font leaks. Verified with headless Chrome by rendering the real home + user-form screens under formyaar.in's actual global CSS, before/after.
+
 ## [0.8.3] — 2026-07-08
 
 ### Chore
