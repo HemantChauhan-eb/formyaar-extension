@@ -30,12 +30,24 @@ export default defineContentScript({
     // the panel keeps showing upload guidance instead of the generic "Step
     // complete!" verify screen, the home screen, or a "page not recognized"
     // fallback once the URL/ID changes.
+    //
+    // Once the user clicks "Submit" (#submitFormSTM) on that same
+    // fullFormSave.html, the site re-renders it into a post-upload review
+    // state — same pathname, but with #confirmSubmit ("Proceed") /
+    // #cancelConfirm ("Edit") buttons and an editable first-8-Aadhaar-digits
+    // field, and none of the upload widgets. #aadhaarNo_1 is NOT a reliable
+    // signal for this — it's present (readonly) on the upload page too, from
+    // the Personal Details fieldset in the same single-page app. #confirmSubmit
+    // only ever renders on the review state, so that state should run the
+    // normal step-matching flow (so the "enter first 8 digits, then click
+    // Proceed" guidance shows) instead of being swallowed by the upload screen.
     const pathname = window.location.pathname;
     const isDocUploadPage =
       hostname === "onlineservices.proteantech.in" &&
       (pathname.includes("fullFormSave") ||
         pathname.includes("uploadDocument") ||
-        pathname.includes("uploadFile"));
+        pathname.includes("uploadFile")) &&
+      !document.getElementById("confirmSubmit");
 
     // Message listener
     browser.runtime.onMessage.addListener((message) => {

@@ -148,7 +148,7 @@ export async function runAutofill(form: string = "pan_card") {
     await browser.storage.session.remove("autofillActive");
   }
   if ((step as any).guidance_only) {
-    showVerifyScreen();
+    showVerifyScreen((step as any).completion);
     return;
   }
   // Initial progress: all pending

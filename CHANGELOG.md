@@ -1,5 +1,14 @@
 # FormYaar Extension — Changelog
 
+## [0.12.1] — 2026-07-11
+
+### Added
+- **Post-upload review step** (supporting-documents flow) — after clicking Confirm/Proceed on `fullFormSave.html`, the site re-renders the same URL into a review state (editable first-8-Aadhaar-digits field, no upload widgets). New guidance-only step in `adult_new_pan_card_supporting_docs.json` tells the user to enter their Aadhaar's first 8 digits (we only collect the last 4, so this can't be autofilled), double-check the page, then click Proceed manually — everything after that (payment, e-Sign) is manual.
+
+### Fixed
+- **`guidance_only` steps showed a blank generic "Step complete!" card instead of their actual guidance** — `runAutofill` called `showVerifyScreen()` with no arguments on the early-return path for guidance-only steps, silently dropping whatever `completion` (title/subtitle/manual_steps) the config defined. Now passes `step.completion` through, matching the non-guidance-only code path. No effect on `pan_card.json`'s existing guidance-only steps, which never defined a `completion` object — this only changes behavior for steps that actually have one.
+- **`isDocUploadPage` mistook the post-upload review state for the still-uploading state** — both live at the same `fullFormSave.html` pathname, so the review page (which needs the guidance above) was being swallowed by the generic upload screen instead. Discriminates on `#confirmSubmit` (the review page's "Proceed"/"Edit" buttons — never present while still uploading). `#aadhaarNo_1` was tried first but rejected after live testing: it's present, just `readonly`, on the upload page too, since the whole flow is one single-page app.
+
 ## [0.12.0] — 2026-07-11
 
 ### Added
