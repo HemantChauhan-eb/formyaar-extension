@@ -930,7 +930,7 @@ function attachUserFormHandlers(
         <div style="background:#fff;border-radius:16px;padding:22px;max-width:320px;width:100%;box-shadow:0 20px 60px rgba(12,19,34,0.3);font-family:'DM Sans',sans-serif;">
           <div style="font-size:16px;font-weight:800;color:#0c1322;margin-bottom:6px;letter-spacing:-0.2px;">Details saved</div>
           <div style="font-size:12.5px;color:#8a92a3;margin-bottom:14px;line-height:1.6;">
-            Next is a one-time payment of <strong style="color:#0c1322;">₹29</strong>, then FormYaar fills your entire form.
+            Next is a one-time payment of <strong style="color:#0c1322;">₹39</strong>, then FormYaar fills your entire form.
           </div>
           ${aoLine}
           <div style="display:flex;gap:8px;">

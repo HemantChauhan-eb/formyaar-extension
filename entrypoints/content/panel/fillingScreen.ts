@@ -109,7 +109,7 @@ export function showVerifyScreen(completion?: {
 }
 
 export function updateFillProgress(
-  items: { label: string; status: "done" | "active" | "pending" }[],
+  items: { label: string; status: "done" | "active" | "pending" | "skipped" }[],
 ) {
   const list = document.getElementById("fy-fill-progress-list");
   if (!list) return;
@@ -121,6 +121,16 @@ export function updateFillProgress(
           <div class="fy-prog-item done">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
             <span>${item.label}</span>
+          </div>`;
+      }
+      // A field we couldn't fill (selector missing / disabled). Shown honestly
+      // as a muted "skipped" row rather than a false green check, so the user
+      // knows to fill it themselves. Not fatal — the flow continues.
+      if (item.status === "skipped") {
+        return `
+          <div class="fy-prog-item pending" style="opacity:0.6;">
+            <span style="width:13px;text-align:center;flex-shrink:0;color:var(--fy-muted);font-weight:800;">–</span>
+            <span style="text-decoration:line-through;">${item.label}</span>
           </div>`;
       }
       if (item.status === "active") {

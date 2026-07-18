@@ -122,7 +122,7 @@ export function renderPanCard(): string {
         Start — it takes 5 minutes
       </button>
       <div style="margin-top:9px;font-size:11px;color:var(--fy-muted);">
-        ₹29 · pay only when your details are ready
+        ₹39 · pay only when your details are ready
       </div>
     </div>
   `;

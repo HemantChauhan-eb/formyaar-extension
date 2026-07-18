@@ -9,32 +9,12 @@ import {
 } from "./panel";
 import { showUploadScreen } from "./uploadScreen";
 import { getUserData, type UserData } from "./userData";
-
-// ─── Types matching pan_card.json schema v2 ──────────────────────────
-interface FieldConfig {
-  field_id: string;
-  type: "text" | "select" | "checkbox" | "date" | "radio" | "button_click";
-  selector: string;
-  value_source: string;
-  static_value?: string | boolean;
-  match_by?: "value" | "text";
-  format?: string;
-  explanation: string;
-}
-
-interface StepConfig {
-  step: number;
-  page_pattern: string;
-  stop_message: string;
-  fields: FieldConfig[];
-}
-
-interface FormConfig {
-  form: string;
-  version: number;
-  site: string;
-  steps: StepConfig[];
-}
+import {
+  validateFormConfig,
+  type FormConfig,
+  type FieldConfig,
+  type StepConfig,
+} from "./formConfig";
 
 // Forms whose last config step ends on the NSDL/Protean "Save Draft" →
 // fullFormSave.html document-upload page. index.ts independently detects
@@ -147,14 +127,14 @@ export async function runAutofill(form: string = "pan_card") {
   if (isLastStep) {
     await browser.storage.session.remove("autofillActive");
   }
-  if ((step as any).guidance_only) {
-    showVerifyScreen((step as any).completion);
+  if (step.guidance_only) {
+    showVerifyScreen(step.completion);
     return;
   }
   // Initial progress: all pending
   const progress = step.fields.map((f) => ({
     label: FIELD_LABELS[f.field_id] ?? f.field_id,
-    status: "pending" as "done" | "active" | "pending",
+    status: "pending" as "done" | "active" | "pending" | "skipped",
   }));
   updateFillProgress(progress);
 
@@ -170,18 +150,20 @@ export async function runAutofill(form: string = "pan_card") {
     const el = document.querySelector(field.selector);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    const ok = await fillField(field, value);
+    const ok = await fillField(field, value, form);
     const baseDelay = field.type === "button_click" ? 2500 : 150;
-    const delay = (ok && (field as any).min_delay_ms) ? (field as any).min_delay_ms : baseDelay;
+    const delay = (ok && field.min_delay_ms) ? field.min_delay_ms : baseDelay;
     await sleep(delay);
-    progress[i].status = ok ? "done" : "done"; // mark done either way; missing fields aren't fatal
+    // Show fills honestly: a field we couldn't fill is "skipped" (muted), not a
+    // false green check. Still non-fatal — the loop continues either way.
+    progress[i].status = ok ? "done" : "skipped";
     updateFillProgress([...progress]);
   }
 
   trackEvent("guide_completed", form);
 
   // Fill AO code fields directly on step 4
-  if ((step as any).stepy_index === 3) {
+  if (step.stepy_index === 3) {
     const isDefence =
       userData.is_defence === true || (userData.is_defence as any) === "true";
     if (isDefence) {
@@ -208,6 +190,7 @@ export async function runAutofill(form: string = "pan_card") {
       await autoFillAOCode(
         userData.aadhaar_pin_code,
         primaryIncomeSource(userData.income_source),
+        form,
       );
     }
   }
@@ -216,7 +199,7 @@ export async function runAutofill(form: string = "pan_card") {
   if (FORMS_WITH_DOC_UPLOAD_PAGE.has(form) && isLastStep) {
     showUploadScreen({ markCompleted: true });
     celebrateTimeSaved(step.fields.length);
-  } else if ((step as any).auto_advance) {
+  } else if (step.auto_advance) {
     // Click Next and wait for stepy to actually change before running next step.
     // Handled here (not via index.ts click listener) to avoid infinite loops
     // when NSDL validation errors trigger the MutationObserver on the same step.
@@ -254,10 +237,10 @@ export async function runAutofill(form: string = "pan_card") {
       showVerifyScreen({ title: "Review required", subtitle: "Fix any errors on the page, then click Next →" });
     }
   } else {
-    showVerifyScreen((step as any).completion);
+    showVerifyScreen(step.completion);
     celebrateTimeSaved(step.fields.length);
     // Show a page-level coach mark if the step config requests one
-    const coach = (step as any).page_coach as { selector: string; message: string } | undefined;
+    const coach = step.page_coach as { selector: string; message: string } | undefined;
     if (coach) showCoachMark(coach.selector, coach.message);
   }
 }
@@ -370,16 +353,31 @@ const BUNDLED_CONFIGS: Record<string, FormConfig> = {
 };
 
 // ─── Fetch config — backend first for live updates, bundled as fallback ─
+// Every config is validated before it's allowed to run: a malformed backend
+// push (bad selector shape, missing fields, truncated payload) is rejected and
+// we fall back to the bundled copy rather than half-filling a paid-for
+// government form. An invalid backend config also fires a critical telemetry
+// alert so the team hears about a bad push immediately.
 async function fetchConfig(form: string): Promise<FormConfig | null> {
   // Backend first — allows pushing selector fixes without an extension update
   try {
     const res = await fetch(`${BACKEND_URL}/configs/${form}/latest`);
-    if (res.ok) return await res.json();
+    if (res.ok) {
+      const out: { reason?: string } = {};
+      const valid = validateFormConfig(await res.json(), out);
+      if (valid) return valid;
+      // Backend returned something, but it's not safe to run.
+      trackEvent("autofill_error", form, {
+        error: `invalid_backend_config: ${out.reason ?? "unknown"}`,
+        step: "config_fetch",
+      });
+    }
   } catch {
-    // fall through to bundled
+    // network/parse failure — fall through to bundled
   }
-  // Bundled fallback — static import, immune to extension context invalidation
-  return BUNDLED_CONFIGS[form] ?? null;
+  // Bundled fallback — static import, immune to extension context invalidation.
+  // Validated too, so a bad bundled copy can't slip through either.
+  return validateFormConfig(BUNDLED_CONFIGS[form]);
 }
 
 // ─── Match the current page to a step in the config ──────────────────
@@ -390,12 +388,15 @@ function matchStep(config: FormConfig): StepConfig | null {
   // (NSDL shows this on registerEndUser.html after submission)
   const tokenRadio = document.querySelector("input.tokenButton");
   if (tokenRadio) {
-    return config.steps.find((s: any) => s.is_token_page === true) ?? null;
+    return config.steps.find((s) => s.is_token_page === true) ?? null;
   }
 
   // Page 1 — registerEndUser, simple URL match
   if (!url.includes("endUserLogin")) {
-    return config.steps.find((s) => url.includes(s.page_pattern)) ?? null;
+    return (
+      config.steps.find((s) => !!s.page_pattern && url.includes(s.page_pattern)) ??
+      null
+    );
   }
 
   // Page 3 — endUserLogin, detect which stepy step is visible
@@ -409,7 +410,7 @@ function matchStep(config: FormConfig): StepConfig | null {
 
   if (visibleIndex === -1) return null;
 
-  return config.steps.find((s: any) => s.stepy_index === visibleIndex) ?? null;
+  return config.steps.find((s) => s.stepy_index === visibleIndex) ?? null;
 }
 
 // ─── Resolve "user.first_name" or "static" to actual value ───────────
@@ -459,15 +460,16 @@ function resolveValue(
 async function fillField(
   field: FieldConfig,
   value: string | boolean,
+  form: string,
 ): Promise<boolean> {
   const el = document.querySelector(field.selector) as HTMLElement | null;
   if (import.meta.env.DEV) console.log("FormYaar: fillField called for", field.selector);
   if (!el) {
     console.warn(`FormYaar: field not found ${field.selector}`);
-    trackEvent("field_fill_failed", "pan_card", {
+    trackEvent("field_fill_failed", form, {
       field_id: field.field_id,
       selector: field.selector,
-      step: (field as any)._step ?? "unknown",
+      step: field._step ?? "unknown",
     });
     return false;
   }
@@ -479,7 +481,7 @@ async function fillField(
     // per field (set only where we've confirmed via the site's own source
     // that the field should legitimately be editable in our flow) — a plain
     // .disabled skip stays the default for everything else.
-    if ((field as any).force_enable) {
+    if (field.force_enable) {
       (el as HTMLInputElement).disabled = false;
     } else {
       if (import.meta.env.DEV) console.log(`FormYaar: skipping disabled field ${field.selector}`);
@@ -500,10 +502,10 @@ async function fillField(
     case "checkbox":
       return fillCheckbox(el as HTMLInputElement, Boolean(value));
     case "radio":
-      if ((field as any).defence_selector) {
+      if (field.defence_selector) {
         if (value === true || value === "true") {
           const defEl = document.querySelector(
-            (field as any).defence_selector,
+            field.defence_selector,
           ) as HTMLInputElement | null;
           if (defEl) return fillRadio(defEl, true);
           return false;
@@ -648,7 +650,7 @@ function primaryIncomeSource(sources: readonly string[]): string {
   return sources[0] ?? "";
 }
 
-async function autoFillAOCode(pinCode: string, incomeSource = ""): Promise<boolean> {
+async function autoFillAOCode(pinCode: string, incomeSource = "", form = "pan_card"): Promise<boolean> {
   try {
     const params = incomeSource ? `?income=${encodeURIComponent(incomeSource)}` : "";
     const res = await fetch(`${BACKEND_URL}/pincode/${pinCode}${params}`);
@@ -662,7 +664,7 @@ async function autoFillAOCode(pinCode: string, incomeSource = ""): Promise<boole
     return true;
   } catch (err) {
     console.error("FormYaar: AO code auto-fill failed", err);
-    trackEvent("ao_code_failed", "pan_card", {
+    trackEvent("ao_code_failed", form, {
       pincode: pinCode,
       reason: err instanceof Error ? err.message : "unknown",
     });

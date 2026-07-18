@@ -1,10 +1,15 @@
 import { trackEvent } from "../telemetry";
 import { renderHeader, renderProgress } from "./shared";
 import { getUserData, resolveFormSlug } from "../userData";
+import { BACKEND_URL } from "../constants";
 
-// Single source for the pay button label — used on first render and every
-// time the handler restores the button after a loading state.
-const PAY_BTN_HTML = `Pay ₹29 securely`;
+// Price / coupon state for this screen. The panel is rendered once, so these
+// persist across shows — an applied code stays applied.
+const BASE_PRICE = 39;
+const COUPON_PRICE = 29;
+let appliedCoupon: string | null = null;
+let currentTotal = BASE_PRICE;
+const payBtnLabel = () => `Pay ₹${currentTotal} securely`;
 
 // ── Inline brand marks (extension-safe: no external requests) ──────────
 const LOGO_UPI = `<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="#EE7C22" d="M9.5 2.5 19 12l-9.5 9.5-2.1-2.1L14.8 12 7.4 4.6z"/><path fill="#1B8F3A" d="M13.6 2.5 23.1 12l-9.5 9.5-2.1-2.1L18.9 12l-7.4-7.4z"/></svg>`;
@@ -50,7 +55,7 @@ export function renderPaymentScreen(): string {
         <!-- Price hero -->
         <div style="text-align:center;">
           <div style="font-size:10px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--fy-muted);">PAN card · full form fill</div>
-          <div style="font-size:44px;font-weight:800;color:var(--fy-ink);letter-spacing:-1.5px;margin-top:8px;line-height:1;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">₹29</div>
+          <div id="fy-price-hero" style="font-size:44px;font-weight:800;color:var(--fy-ink);letter-spacing:-1.5px;margin-top:8px;line-height:1;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">₹39</div>
           <div style="font-size:11.5px;color:var(--fy-muted);margin-top:6px;">One-time payment · includes GST</div>
         </div>
 
@@ -58,16 +63,37 @@ export function renderPaymentScreen(): string {
         <div style="background:var(--fy-field);border-radius:13px;padding:14px 16px;margin-top:22px;">
           <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--fy-body);">
             <span>Complete PAN form filling</span>
-            <span style="font-weight:700;color:var(--fy-ink);flex-shrink:0;">₹29.00</span>
+            <span style="font-weight:700;color:var(--fy-ink);flex-shrink:0;">₹39.00</span>
+          </div>
+          <div id="fy-discount-row" style="display:none;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--fy-body);margin-top:8px;">
+            <span>Distributor code <b id="fy-discount-code" style="color:var(--fy-ink);"></b></span>
+            <span style="font-weight:700;color:#0e9f6e;flex-shrink:0;">−₹10.00</span>
           </div>
           <div style="border-top:1px dashed #d7dbe4;margin:11px 0;"></div>
           <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:800;color:var(--fy-ink);">
             <span>Total</span>
-            <span>₹29.00</span>
+            <span id="fy-receipt-total">₹39.00</span>
           </div>
           <div style="display:flex;align-items:center;gap:7px;margin-top:11px;font-size:11px;color:var(--fy-muted);">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3.5V8h4.5"/></svg>
             100% refund if the government rejects your form
+          </div>
+        </div>
+
+        <!-- Coupon — pay ₹29 instead of ₹39 with a distributor's code -->
+        <div style="margin-top:16px;">
+          <div id="fy-coupon-prompt">
+            <div style="font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--fy-muted);margin-bottom:9px;">Have a distributor's code?</div>
+            <div style="display:flex;gap:8px;">
+              <input id="fy-coupon-input" placeholder="ENTER CODE" autocomplete="off" spellcheck="false" style="flex:1;min-width:0;padding:11px 13px;border:1.5px solid #e2e6ef;border-radius:9px;background:var(--fy-bg);color:var(--fy-ink);font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;font-family:inherit;outline:none;" />
+              <button id="fy-coupon-apply" style="border:none;background:var(--fy-field);color:var(--fy-ink);font-weight:800;font-size:12.5px;padding:0 17px;border-radius:9px;cursor:pointer;font-family:inherit;">Apply</button>
+            </div>
+            <div id="fy-coupon-msg" style="font-size:11px;margin-top:7px;line-height:1.45;"></div>
+            <div style="font-size:11px;color:var(--fy-muted);margin-top:5px;">Pay <b style="color:var(--fy-accent,#305eff);">₹29</b> instead of ₹39 — save ₹10.</div>
+          </div>
+          <div id="fy-coupon-applied" style="display:none;align-items:center;gap:9px;background:#e7f7f0;border-radius:10px;padding:11px 13px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0e9f6e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 6 9 17l-5-5"/></svg>
+            <span style="font-size:12px;font-weight:700;color:#0b7a54;"><b id="fy-applied-code"></b> applied · you saved ₹10</span>
           </div>
         </div>
 
@@ -82,7 +108,7 @@ export function renderPaymentScreen(): string {
         </div>
 
         <button id="fy-pay-btn" class="fy-pay-btn fy-btn fy-btn-primary fy-btn-block" style="margin-top:24px;">
-          ${PAY_BTN_HTML}
+          ${payBtnLabel()}
         </button>
 
         <!-- Pay using: real brand marks people recognise -->
@@ -116,12 +142,86 @@ export function renderPaymentScreen(): string {
   `;
 }
 
+// Reflect an applied coupon across the price hero, receipt, and pay button.
+function applyCouponUI(code: string): void {
+  appliedCoupon = code;
+  currentTotal = COUPON_PRICE;
+
+  const hero = document.getElementById("fy-price-hero");
+  if (hero)
+    hero.innerHTML =
+      `<span style="font-size:26px;color:var(--fy-faint);text-decoration:line-through;font-weight:600;margin-right:8px;vertical-align:5px;">₹${BASE_PRICE}</span>₹${COUPON_PRICE}`;
+
+  const drow = document.getElementById("fy-discount-row");
+  if (drow) drow.style.display = "flex";
+  const dcode = document.getElementById("fy-discount-code");
+  if (dcode) dcode.textContent = code;
+  const total = document.getElementById("fy-receipt-total");
+  if (total) total.textContent = `₹${COUPON_PRICE}.00`;
+
+  const prompt = document.getElementById("fy-coupon-prompt");
+  if (prompt) prompt.style.display = "none";
+  const applied = document.getElementById("fy-coupon-applied");
+  if (applied) applied.style.display = "flex";
+  const appliedCode = document.getElementById("fy-applied-code");
+  if (appliedCode) appliedCode.textContent = code;
+
+  const payBtn = document.getElementById("fy-pay-btn");
+  if (payBtn) payBtn.innerHTML = payBtnLabel();
+}
+
 export function attachPaymentScreenHandlers() {
   document.getElementById("fy-back-btn")?.addEventListener("click", () => {
     document.getElementById("fy-payment")!.style.display = "none";
     document.getElementById("fy-home")!.style.display = "flex";
   });
 
+  // ── Coupon apply ──────────────────────────────────────────────────
+  const couponInput = document.getElementById(
+    "fy-coupon-input",
+  ) as HTMLInputElement | null;
+  const applyBtn = document.getElementById(
+    "fy-coupon-apply",
+  ) as HTMLButtonElement | null;
+  const couponMsg = document.getElementById("fy-coupon-msg");
+
+  async function applyCoupon() {
+    if (!couponInput || !applyBtn || !couponMsg) return;
+    const code = couponInput.value.trim().toUpperCase();
+    if (!code) return;
+    applyBtn.disabled = true;
+    applyBtn.textContent = "…";
+    couponMsg.textContent = "";
+
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/payment/coupon/${encodeURIComponent(code)}`,
+      );
+      const data = await res.json();
+      if (data?.valid) {
+        applyCouponUI(data.coupon ?? code);
+        trackEvent("coupon_applied", "pan_card", { coupon: data.coupon ?? code });
+      } else {
+        couponMsg.textContent =
+          "That code isn't valid. Check it, or continue at ₹39.";
+        couponMsg.style.color = "#c0392b";
+        applyBtn.disabled = false;
+        applyBtn.textContent = "Apply";
+      }
+    } catch {
+      couponMsg.textContent = "Couldn't check the code. Please try again.";
+      couponMsg.style.color = "#c0392b";
+      applyBtn.disabled = false;
+      applyBtn.textContent = "Apply";
+    }
+  }
+
+  applyBtn?.addEventListener("click", applyCoupon);
+  couponInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") applyCoupon();
+  });
+
+  // ── Pay ───────────────────────────────────────────────────────────
   document.getElementById("fy-pay-btn")?.addEventListener("click", async () => {
     const btn = document.getElementById("fy-pay-btn") as HTMLButtonElement;
     btn.innerHTML = `<div style="width:15px;height:15px;border:2.5px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:fy-spin 0.8s linear infinite;"></div> Opening secure checkout…`;
@@ -133,10 +233,11 @@ export function attachPaymentScreenHandlers() {
     const orderRes = await browser.runtime.sendMessage({
       type: "CREATE_PAYMENT",
       form: formSlug,
+      coupon: appliedCoupon ?? "",
     });
 
     if (!orderRes?.success) {
-      btn.innerHTML = PAY_BTN_HTML;
+      btn.innerHTML = payBtnLabel();
       btn.style.opacity = "1";
       btn.style.cursor = "pointer";
       alert("Could not initiate payment. Please try again.");
@@ -149,7 +250,7 @@ export function attachPaymentScreenHandlers() {
       amount: orderRes.amount,
     });
 
-    btn.innerHTML = PAY_BTN_HTML;
+    btn.innerHTML = payBtnLabel();
     btn.style.opacity = "1";
     btn.style.cursor = "pointer";
   });

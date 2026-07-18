@@ -2,7 +2,7 @@
   "name": "formyaar",
   "description": "FormYaar — auto-fills Indian government forms for you",
   "private": true,
-  "version": "0.12.1",
+  "version": "0.13.2",
   "type": "module",
   "scripts": {
     "dev": "wxt",

@@ -1,5 +1,35 @@
 # FormYaar Extension — Changelog
 
+## [0.13.2] — 2026-07-18
+
+### Changed
+- Renamed "creator" → "distributor" in the payment screen's coupon copy ("Have a distributor's code?"), matching the project-wide rename of the referral program.
+
+## [0.13.1] — 2026-07-17
+
+### Changed
+- Standard price shown as **₹39** on the remaining panel screens (home screen, user-form pre-payment note) to match the new base price. The payment screen's coupon field still offers ₹29 with a valid creator code.
+
+## [0.13.0] — 2026-07-17
+
+### Added
+- **Creator coupon codes on the payment screen.** The panel now shows the ₹39 base price with a "Have a creator's code?" field. Applying a valid code drops the price to ₹29 (a receipt-style −₹10 discount line), and the code is passed through to order creation so the sale is attributed to that creator. Price and pay button update live; the discount is server-enforced (the panel's check is UX-only — `create-order` re-validates and sets the real amount). Fires a `coupon_applied` telemetry event.
+
+## [0.12.3] — 2026-07-14
+
+### Added
+- **Form configs are now validated before they run.** Configs are fetched live from the backend and executed against a real government form after the user has paid, but nothing checked them first — a malformed push (bad/missing selector, truncated payload, wrong shape) would run and silently mis-fill or half-fill the form. New `formConfig.ts` structurally validates every config (form → steps → fields → selector/value_source) and **fails closed**: an invalid backend config is rejected and we fall back to the bundled copy, and a critical `autofill_error` telemetry event fires so a bad push is caught immediately. Validation is intentionally lenient about the rest — unknown field `type`s and extra keys are preserved, so a forward-compatible config pushed to newer builds doesn't hard-fail older ones.
+
+### Changed
+- Replaced the stale hand-written config interfaces (which described a schema the real configs didn't use, forcing ~11 `(field as any)` / `(step as any)` casts) with the accurate types from `formConfig.ts`. The autofill engine is now fully type-checked against the real config shape.
+
+## [0.12.2] — 2026-07-13
+
+### Fixed
+- **Fields that failed to fill were shown as a green check (falsely "done").** The progress line hardcoded `ok ? "done" : "done"`, so a missing/disabled selector still rendered as success — the user never knew to fill it manually. Failed fills now show as a muted, struck-through "skipped" row (new `skipped` progress state). Still non-fatal; the flow continues.
+- **`field_fill_failed` / `ao_code_failed` telemetry was hardcoded to `pan_card`** even though autofill runs for any form, so non-PAN failures were mis-attributed. Now reports the actual form.
+- **`BACKEND_URL` fallback was missing its `https://` scheme** — if `VITE_BACKEND_URL` were unset at build, every request would target a broken URL. Added the scheme (matches `wxt.config.ts`).
+
 ## [0.12.1] — 2026-07-11
 
 ### Added

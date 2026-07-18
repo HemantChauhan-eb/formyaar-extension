@@ -88,7 +88,10 @@ export default defineBackground(() => {
         fetch(`${BACKEND_URL}/payment/create-order`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ form: message.form || "pan_card" }),
+          body: JSON.stringify({
+            form: message.form || "pan_card",
+            coupon: message.coupon || "",
+          }),
         })
           .then((res) => res.json())
           .then((data) => sendResponse(data))
