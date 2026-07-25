@@ -480,7 +480,18 @@
           "static_value": true,
           "explanation": "Confirm your uploaded documents and proceed to payment."
         }
-      ]
+      ],
+      "completion": {
+        "title": "95% complete!",
+        "subtitle": "Just a few more clicks to go",
+        "manual_steps": [
+          "Enter your Aadhaar's first 8 digits above",
+          "Review your application on this screen",
+          "If everything is correct, click <strong>Proceed</strong>",
+          "Choose your payment method and pay"
+        ],
+        "info": "You're all done — your application will be submitted and your PAN card will arrive soon."
+      }
     },
     {
       "step": 7,
