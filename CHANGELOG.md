@@ -1,5 +1,191 @@
 # FormYaar Extension — Changelog
 
+## [0.17.0] — 2026-07-26
+
+### Added
+- **`correction_pan_card.json` is now bundled with the extension**, alongside `pan_card.json`. Until it's deployed to the backend, the correction flow had no config to run at all — the fetch 404'd and there was no bundled fallback, so it died on "Could not load form config". It now runs offline-first like the new-PAN flow.
+
+### Changed
+- **The details wizard now matches what the correction application actually asks for.** Four questions are hidden on that flow because the correction form has no fieldset that consumes them:
+  - *PIN code as per Aadhaar* — exists only to look up an AO code, and the correction form has no AO Code fieldset.
+  - *Source of income* — no such section on the correction form.
+  - *Are you a defence personnel?* — same reason (it's an AO-code branch).
+  - *Is your current address the same as your Aadhaar address?* plus the whole current-address block — the correction form takes the address from Aadhaar under eKYC.
+  - *Single parent?* — NSDL fills this from the existing PAN record and the config never touches it, so asking implied a control the applicant doesn't have.
+- `validateUserData()` takes the form slug and no longer demands a PIN code or a source of income on the correction flow — previously those two blocked submission on data nothing would ever read.
+- The pre-payment AO-availability modal is skipped on the correction flow. With no PIN field to check, it would have read as "AO unavailable" and shown an empty warning.
+
+## [0.16.1] — 2026-07-26
+
+### Changed
+- The correction flow now shows the document-upload screen after Save Draft, the same as the two new-PAN configs, instead of the generic "step complete" panel. `correction_pan_card` joins `FORMS_WITH_DOC_UPLOAD_PAGE`.
+
+## [0.16.0] — 2026-07-26
+
+### Added
+- **Two correction-only questions on the wizard's last pane**, rendered only when the chosen application is `correction_pan_card`:
+  - *Proof of your existing PAN* — copy of PAN card / allotment letter / no document. A new-PAN applicant has no PAN to prove, so it stays hidden there.
+  - *Do you want a physical PAN card?* — Yes ₹101 / No ₹66 (e-PAN only). This activates the `wants_physical_pan` plumbing added in 0.15.1, which until now had no way to be set.
+- `UserData.proof_of_pan`, defaulting to "Copy of Pan Card".
+- Progress labels for the correction form's step-4 fields.
+
+### Fixed
+- **AO-code autofill no longer fires on the correction form's Document step.** The trigger keyed purely on `stepy_index === 3`, which is the AO Code fieldset on the new-PAN form but Document details on the correction form — that form has no AO fieldset at all. It now also requires the `#area_code` input to exist, so the PIN-code lookup only runs on a page that actually has AO fields.
+
+## [0.15.2] — 2026-07-26
+
+### Added
+- Progress labels for the correction form's step-3 fields. `passport_num` and `tin_num` were missing a label all along — they're used by `pan_card.json` too, so that step showed raw field ids there as well.
+
+## [0.15.1] — 2026-07-25
+
+### Added
+- Progress labels for the correction form's step-2 fields, including the per-section "mark for change" ticks NSDL requires on the correction application.
+- `UserData.wants_physical_pan` (`"yes"` | `"no"`) — physical PAN + ePAN (₹101) vs ePAN only (₹66). `correction_pan_card` step 2 reads it. There's no wizard question for it yet, so it stays at the `"yes"` default and behaviour is unchanged.
+
+## [0.15.0] — 2026-07-25
+
+### Added
+- **Application chooser screen.** "Start — it takes 5 minutes" no longer jumps straight into the new-PAN wizard; it opens a list of PAN applications to pick from — New PAN card, Correct existing PAN, and PAN for a minor (shown as "Soon"). The home screen keeps its single message and trust lines; the branch happens after the user commits, not before. Adding a variant later is one `PAN_OPTIONS` entry in `panel/chooserScreen.ts`.
+- **PAN correction flow.** Picking "Correct existing PAN" runs the same details wizard and payment, then fills NSDL's "Changes or Correction in existing PAN Data" application (`correction_pan_card`) instead of a new one.
+- Unbuilt options render as greyed rows rather than being hidden, and taps on them fire a `locked_form_clicked` event — so demand for a variant is measurable before its config is written.
+- Friendly progress label for `citizen_of_india`, the one field `correction_pan_card` introduces that the other PAN forms don't have. Without it the filling screen would have shown the raw field id.
+
+### Changed
+- `UserData` gained `application_intent` (`"new"` | `"correction"`), and `resolveFormSlug()` now checks it before the existing Aadhaar-address branch. The intent comes from which home-screen entry point was tapped rather than a wizard question, so it's threaded through `showUserForm(form)` into `collectFormData()` — keeping every autofill kick-off point (payment, session resume, page-load resume) reading the same single source of truth.
+- The pre-payment eligibility modal's second confirmation inverts for the correction flow: "I confirm I already have a PAN card and want to change or correct its details" replaces "I confirm I do not already have a PAN card", which was exactly backwards for someone correcting one.
+- Backing out of the details wizard now returns to the chooser instead of skipping to the home screen.
+- New telemetry: `chooser_shown`, `form_selected` (with the chosen slug), `locked_form_clicked`. `panel_opened` no longer carries a form, since at that point the user hasn't picked one.
+
+## [0.14.2] — 2026-07-25
+
+### Fixed
+- **Maintenance countdown now counts days.** Days were being rolled into the hours slot, so a maintenance window set five days out displayed as `133:48:57` — closer to a glitch than a wait. It now reads `5d 13:48:57`, with the clock tightening slightly while a day count is on screen so the line still fits the panel.
+
+### Added
+- **The maintenance screen says when it's actually coming back.** Under the countdown it now shows "Expected back · Today, 6:30 PM" — `Today` / `Tomorrow` for the two nearest days, weekday + date beyond that (e.g. "Fri, 31 Jul, 12:01 AM"). A running timer alone made a multi-day pause hard to plan around.
+
+## [0.14.1] — 2026-07-19
+
+### Fixed
+- Clicking checkboxes/buttons inside the eligibility or AO-availability confirmation modals no longer collapses the panel. Those modals render on `<body>` outside the panel element, so the panel's click-outside-to-close handler treated clicks on them as "outside" — it now stays open while any `.fy-modal-guard` modal is on screen.
+
+## [0.14.0] — 2026-07-19
+
+### Added
+- **Eligibility confirmation modal before payment.** After step 5 of 5 in the user details wizard, the panel now shows a red-flagged caution modal requiring the applicant to check two boxes — "I am over 18 years old" (PAN is not currently offered for minors) and "I do not already have a PAN card" — before they can proceed. Shown every time, in addition to the existing AO-code-availability confirmation.
+
+## [0.13.3] — 2026-07-19
+
+### Changed
+- The panel step shown right after document upload/confirm (PAN `fullFormSave` page) now says "95% complete!" and walks the user through entering Aadhaar's first 8 digits, reviewing the application, clicking Proceed, and paying — instead of the generic "Step complete" message.
+
+## [0.13.2] — 2026-07-18
+
+### Changed
+- Renamed "creator" → "distributor" in the payment screen's coupon copy ("Have a distributor's code?"), matching the project-wide rename of the referral program.
+
+## [0.13.1] — 2026-07-17
+
+### Changed
+- Standard price shown as **₹39** on the remaining panel screens (home screen, user-form pre-payment note) to match the new base price. The payment screen's coupon field still offers ₹29 with a valid creator code.
+
+## [0.13.0] — 2026-07-17
+
+### Added
+- **Creator coupon codes on the payment screen.** The panel now shows the ₹39 base price with a "Have a creator's code?" field. Applying a valid code drops the price to ₹29 (a receipt-style −₹10 discount line), and the code is passed through to order creation so the sale is attributed to that creator. Price and pay button update live; the discount is server-enforced (the panel's check is UX-only — `create-order` re-validates and sets the real amount). Fires a `coupon_applied` telemetry event.
+
+## [0.12.3] — 2026-07-14
+
+### Added
+- **Form configs are now validated before they run.** Configs are fetched live from the backend and executed against a real government form after the user has paid, but nothing checked them first — a malformed push (bad/missing selector, truncated payload, wrong shape) would run and silently mis-fill or half-fill the form. New `formConfig.ts` structurally validates every config (form → steps → fields → selector/value_source) and **fails closed**: an invalid backend config is rejected and we fall back to the bundled copy, and a critical `autofill_error` telemetry event fires so a bad push is caught immediately. Validation is intentionally lenient about the rest — unknown field `type`s and extra keys are preserved, so a forward-compatible config pushed to newer builds doesn't hard-fail older ones.
+
+### Changed
+- Replaced the stale hand-written config interfaces (which described a schema the real configs didn't use, forcing ~11 `(field as any)` / `(step as any)` casts) with the accurate types from `formConfig.ts`. The autofill engine is now fully type-checked against the real config shape.
+
+## [0.12.2] — 2026-07-13
+
+### Fixed
+- **Fields that failed to fill were shown as a green check (falsely "done").** The progress line hardcoded `ok ? "done" : "done"`, so a missing/disabled selector still rendered as success — the user never knew to fill it manually. Failed fills now show as a muted, struck-through "skipped" row (new `skipped` progress state). Still non-fatal; the flow continues.
+- **`field_fill_failed` / `ao_code_failed` telemetry was hardcoded to `pan_card`** even though autofill runs for any form, so non-PAN failures were mis-attributed. Now reports the actual form.
+- **`BACKEND_URL` fallback was missing its `https://` scheme** — if `VITE_BACKEND_URL` were unset at build, every request would target a broken URL. Added the scheme (matches `wxt.config.ts`).
+
+## [0.12.1] — 2026-07-11
+
+### Added
+- **Post-upload review step** (supporting-documents flow) — after clicking Confirm/Proceed on `fullFormSave.html`, the site re-renders the same URL into a review state (editable first-8-Aadhaar-digits field, no upload widgets). New guidance-only step in `adult_new_pan_card_supporting_docs.json` tells the user to enter their Aadhaar's first 8 digits (we only collect the last 4, so this can't be autofilled), double-check the page, then click Proceed manually — everything after that (payment, e-Sign) is manual.
+
+### Fixed
+- **`guidance_only` steps showed a blank generic "Step complete!" card instead of their actual guidance** — `runAutofill` called `showVerifyScreen()` with no arguments on the early-return path for guidance-only steps, silently dropping whatever `completion` (title/subtitle/manual_steps) the config defined. Now passes `step.completion` through, matching the non-guidance-only code path. No effect on `pan_card.json`'s existing guidance-only steps, which never defined a `completion` object — this only changes behavior for steps that actually have one.
+- **`isDocUploadPage` mistook the post-upload review state for the still-uploading state** — both live at the same `fullFormSave.html` pathname, so the review page (which needs the guidance above) was being swallowed by the generic upload screen instead. Discriminates on `#confirmSubmit` (the review page's "Proceed"/"Edit" buttons — never present while still uploading). `#aadhaarNo_1` was tried first but rejected after live testing: it's present, just `readonly`, on the upload page too, since the whole flow is one single-page app.
+
+## [0.12.0] — 2026-07-11
+
+### Added
+- **Photo & Signature auto-prep on the upload screen** — the document-upload guidance screen now has two dropzones (drop or click to browse) that crop/resize a raw photo or signature to NSDL's exact spec (Photo: 2.5×3.5cm portrait ≈ 197×276px; Signature: 4.5×2cm landscape ≈ 354×157px, both JPEG ≤50KB) entirely client-side via Canvas — nothing is uploaded anywhere. Center-crop-to-cover keeps the subject centered without distorting the aspect ratio; JPEG quality steps down automatically until the file fits under 50KB. Result shows the final dimensions/size and a Download button; the user then uploads that downloaded file manually via NSDL's own existing Upload button, same as always — no attempt to auto-inject files into the government site's own file input. New `imagePrep.ts` module (`processImageToSpec`, `downloadBlob`) holds the reusable logic; document compression (proof of identity/address/DOB, reusing `compress.html`'s existing PDF pipeline) is a follow-up.
+- Removed the non-functional placeholder "drop files" boxes from the details form (Proof of Identity/Address/DOB) — that capability now lives on the upload screen instead, where the file is actually needed, rather than earlier during details collection.
+
+### Fixed
+- **Panel fell back to the home screen after clicking the Photo/Signature "Upload" button** — clicking Upload on `photoUploadForm`/`signUploadForm` navigates to `uploadFile.html?ID=...&type=1|2`, a URL pattern `isDocUploadPage`'s pathname check (`index.ts`) didn't recognize (it only matched `fullFormSave`/`uploadDocument`), so the panel didn't know it was still on the upload flow and reset. Added `uploadFile` to the match list — same fix category as the `fullFormSave`/`uploadDocument` case already handled.
+
+## [0.11.0] — 2026-07-10
+
+### Added
+- **PAN application with supporting documents** — a second PAN flow (`adult_new_pan_card_supporting_docs`) for applicants who want a different photo/signature than their Aadhaar card, or whose current address doesn't match Aadhaar. The details form now asks "Is your current address the same as your Aadhaar address?" (always visible, defaults Yes); answering "No" reveals current-address fields (with a proper State dropdown, matching NSDL's own ALL-CAPS state naming) plus Proof of Identity / Proof of Address document-type pickers, each with a visual-only "drop files" placeholder (upload wiring is separate future work).
+- **Defence-personnel question is now always visible and answered by default** — was previously tucked inside a collapsed "+ Optional" section alongside passport/TIN, which meant many users skipped past a question the AO Code lookup actually depends on.
+- `resolveFormSlug(userData)` in `userData.ts` — single source of truth for which config to run, based on the address-match answer above.
+
+### Fixed
+- **Source of income only ever saved one selection** — the panel rendered it as radio buttons and `UserData.income_source` was a single string, so picking e.g. "Salary" + "Capital Gains" silently kept only whichever was clicked last, and the NSDL page ended up with just one checkbox ticked no matter what the user intended. `income_source` is now `IncomeSource[]`, the panel uses checkboxes (with "No income" mutually exclusive against the rest, mirroring the government form's own rule), and the NSDL-page checkbox fill now checks array membership instead of exact equality.
+- **The address-match answer wasn't actually changing which application NSDL saw** — the toggle only hid/showed panel fields; payment initiation and the post-payment autofill kickoff were both still hardcoded to `"pan_card"`, so choosing "No" still ran the Aadhaar-eKYC flow. `paymentScreen.ts` and `index.ts`'s `PAYMENT_VERIFIED` handler now both resolve the real form via `resolveFormSlug`.
+- **"Name as per Aadhaar" wasn't being filled on the supporting-documents flow** — NSDL's page disables that field in a one-time page-load check that only looks at whichever submission-mode radio is checked *by default* (Aadhaar eKYC), and never re-enables it after our script switches the radio to "supporting documents". `fillField` now supports an explicit per-field `force_enable` opt-in, used for this field, which clears `.disabled` before filling.
+
+## [0.10.4] — 2026-07-09
+
+### Fixed
+- **eKYC photo-consent dropdown reset on the document-upload page** — the NSDL upload page self-reloads after every Upload, which resets the select2 "photo visible on Aadhaar" consent (`#consentEkyc`) back to "-----Please Select-----"; clicking Submit then errored with "please select a consent", confusing users into thinking their upload failed. `index.ts` now re-selects "Y" on every load of the upload page (`reapplyEkycConsent`), setting the native `<select>` value and triggering a jQuery change so select2's visible label updates too. Polls briefly to win the race with select2's own init.
+
+## [0.10.3] — 2026-07-09
+
+### Changed
+- **CAPTCHA coach mark on the registration page** now reads "Solve the CAPTCHA, wait for the green check ✓, then click Submit" (was "Solve the CAPTCHA first, then click Submit") — so users wait for reCAPTCHA to verify before submitting instead of clicking Submit immediately. Updated in both `public/configs/pan_card.json` (bundled) and `formyaar-backend/configs/pan_card.json` (live).
+
+## [0.10.2] — 2026-07-09
+
+### Fixed
+- **"Continue →" resume card disappeared after reaching the document-upload page** — `showUploadScreen()` always called `markSessionCompleted()`, which was fine when it only ran at the true end of the flow. Now that it also drives the mid-flow `fullFormSave`/`uploadDocument` pages (0.10.0), every visit was flipping `fy_active_session.completed = true` and permanently hiding the home-screen resume card. `showUploadScreen` now takes `{ markCompleted }` (autofill's final step passes `true`; the doc-upload trigger doesn't) and, mid-flow, calls the new `markSessionActive()` to keep the session resumable — which also repairs sessions an earlier build wrongly marked completed.
+
+## [0.10.1] — 2026-07-09
+
+### Changed
+- **Upload screen restyled to the current panel design system** (`uploadScreen.ts`) — replaced the old navy/tricolor header + warm-yellow warning boxes with the near-monochrome language used across the rest of the panel: `renderHeader` + `renderProgress` chrome, `--fy-*` tokens, borderless `--fy-field` cards, and a single blue accent (`--fy-btn-primary`) reserved for the one primary action (Merge & compress). Emoji swapped for quiet line-icon `fy-quietrow`s; FAQ chips, chat input and chat bubbles re-skinned to the shared tokens. Content unchanged.
+
+## [0.10.0] — 2026-07-09
+
+### Added
+- **Document-upload guidance on the `fullFormSave.html` / `uploadDocument.html` pages** — after "Save draft" the user lands on `fullFormSave.html` (which the config treats as a `guidance_only` step, so the panel used to show a bare "Step complete!" verify screen — or the home screen once the session was cleared); each uploaded file then reloads the page with a fresh `?ID=` (sometimes as `uploadDocument.html`), which previously flipped the panel to "page not recognized". The panel now keys off the pathname (`isDocUploadPage` in `index.ts`, matching `fullFormSave`/`uploadDocument`), so it opens straight to the upload screen on every reload regardless of the changing ID, and the autofill auto-run is skipped there.
+
+### Changed
+- **Upload screen rewritten** (`uploadScreen.ts`) — now shown as standalone page guidance rather than the post-fill "one step remaining" success card. Warns that the page accepts only ONE PDF and to merge multiple documents into a single PDF first via the FormYaar compress tool (add all documents on one page → compress & download). Adds explicit two-step instructions: (1) click the orange ＋ button to select the PDF, (2) click Upload. Adds a reassurance note that the page reloads after each upload. AI-help context and FAQ chips updated to match. Companion change in `formyaar-website/compress.html`: the "Convert to grayscale" toggle now defaults **off**.
+
+## [0.9.0] — 2026-07-08
+
+### Changed
+- **Panel redesign** — migrated all in-page panel screens to the new design (`panel-mockup/`): home, user form, payment, filling/verify, recover, maintenance, celebration, panel shell, and operator login/queue/review. Quieter white header (`renderHeader`) with a hairline progress bar (`renderProgress`) replacing the old 3-step map; new `shared.ts` helpers (`renderHeader`, `renderProgress`, `renderSteps`, `BRAND_PEN_SVG`). Presentation only — no behavior change: telemetry events, backend endpoints (`/pincode`, `/payment/resume`, `/operator/*`, `/maintenance/status`), autofill triggers, operator session-token auth, and sensitive-field handling (`aadhaar_number`/`passport_number`/`tin_number`) are all preserved. Verified via `tsc --noEmit` + `wxt build`.
+
+### Fixed
+- **Panel was rendered flattened (zero-padding buttons, fields jammed to the edge)** — the base reset `#formyaar-panel * { margin: 0; padding: 0 }` (specificity 1,0,0) out-specified every one of the design's single-class rules (0,1,0) such as `.fy-btn { padding: 14px 18px }` and `.fy-userform-field input { padding: 12px 14px }`, zeroing their padding in production. The standalone preview hid this because its harness rescopes the reset to the `.fy-frame` *class* (0,1,0), letting the design classes win by source order. Fixed by dropping the reset to zero specificity via `:where(#formyaar-panel) *`, so the panel's own class rules always win — matching the preview exactly. Also added `line-height` on the panel root and kept a small form-control isolation block (`text-transform`/`appearance`/`font-family`) for native-chrome/host-font leaks. Verified with headless Chrome by rendering the real home + user-form screens under formyaar.in's actual global CSS, before/after.
+
+## [0.8.3] — 2026-07-08
+
+### Chore
+- Split `entrypoints/content/panel.ts` (2,911 lines) into `entrypoints/content/panel/` — one module per screen (home, payment, user form, filling/verify, recover, operator login/queue/review) plus shared panel shell, maintenance, and celebration modules. Pure refactor, no behavior change; `showContextualBanner`, `showFillingScreen`, `showVerifyScreen`, `updateFillProgress`, `celebrateTimeSaved` still import from `./panel` unchanged.
+
+## [0.8.1] — 2026-06-13
+
+### Changed
+- `fullFormSave` step (`#confirmSubmit`) is no longer auto-clicked — it's now `guidance_only`, requiring the user to manually click Confirm after uploading proof-of-DOB/Aadhaar/photo/signature documents. Prevents the autofill from advancing past the document-upload page before uploads are done.
+
 ## [0.7.0] — 2026-05-30  (UNRELEASED — on branch `fixes/operator-audit`, not yet merged)
 
 > Operator-flow security/data audit fixes + a delight feature. Pairs with the

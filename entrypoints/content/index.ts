@@ -1,7 +1,8 @@
 import { SITE_CONFIGS, BANNER_DELAY_MS, BACKEND_URL } from "./constants";
 import { showContextualBanner } from "./panel";
+import { showUploadScreen } from "./uploadScreen";
 import { runAutofill } from "./autofill";
-import { getUserData } from "./userData";
+import { getUserData, resolveFormSlug } from "./userData";
 
 const NSDL_START_URL = "https://onlineservices.proteantech.in/paam/endUserRegisterContact.html";
 export default defineContentScript({
@@ -19,6 +20,35 @@ export default defineContentScript({
 
     const hostname = window.location.hostname;
 
+    // NSDL document-upload flow. After "Save draft" the user lands on
+    // fullFormSave.html (the review + document-upload page); each uploaded file
+    // then reloads the page with a fresh ?ID= query param (sometimes as
+    // uploadDocument.html). Clicking the individual Photo/Signature "Upload"
+    // buttons (photoUploadForm/signUploadForm) instead lands on
+    // uploadFile.html?ID=...&type=1|2, a distinct URL from the same reload
+    // pattern. We key off the pathname — stable across those reloads — so
+    // the panel keeps showing upload guidance instead of the generic "Step
+    // complete!" verify screen, the home screen, or a "page not recognized"
+    // fallback once the URL/ID changes.
+    //
+    // Once the user clicks "Submit" (#submitFormSTM) on that same
+    // fullFormSave.html, the site re-renders it into a post-upload review
+    // state — same pathname, but with #confirmSubmit ("Proceed") /
+    // #cancelConfirm ("Edit") buttons and an editable first-8-Aadhaar-digits
+    // field, and none of the upload widgets. #aadhaarNo_1 is NOT a reliable
+    // signal for this — it's present (readonly) on the upload page too, from
+    // the Personal Details fieldset in the same single-page app. #confirmSubmit
+    // only ever renders on the review state, so that state should run the
+    // normal step-matching flow (so the "enter first 8 digits, then click
+    // Proceed" guidance shows) instead of being swallowed by the upload screen.
+    const pathname = window.location.pathname;
+    const isDocUploadPage =
+      hostname === "onlineservices.proteantech.in" &&
+      (pathname.includes("fullFormSave") ||
+        pathname.includes("uploadDocument") ||
+        pathname.includes("uploadFile")) &&
+      !document.getElementById("confirmSubmit");
+
     // Message listener
     browser.runtime.onMessage.addListener((message) => {
       if (message.type === "OPEN_PANEL") {
@@ -27,39 +57,42 @@ export default defineContentScript({
       if (message.type === "PAYMENT_VERIFIED") {
         const orderId = message.order_id ?? "";
 
-        // Persist session server-side (payment proof only — no form data)
         getUserData().then((userData) => {
-          if (!userData.mobile) return;
-          fetch(`${BACKEND_URL}/payment/save-session`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              order_id: orderId,
-              mobile: userData.mobile,
-              form_type: "pan_card",
-            }),
-          }).catch(() => {});
-        });
+          const formSlug = resolveFormSlug(userData);
 
-        Promise.all([
-          browser.storage.session.set({ autofillActive: { form: "pan_card", done: [] } }),
-          browser.storage.local.set({
-            fy_active_session: {
-              form: "pan_card",
-              order_id: orderId,
-              paid_at: Date.now(),
-              completed: false,
-            },
-          }),
-        ]).then(() => {
-          if (hostname === "onlineservices.proteantech.in") {
-            // Already on NSDL — run autofill directly on this page
-            runAutofill("pan_card");
-          } else {
-            // Navigate to NSDL — autofill runs on page load via autofillActive
-            window.location.href = NSDL_START_URL;
+          // Persist session server-side (payment proof only — no form data)
+          if (userData.mobile) {
+            fetch(`${BACKEND_URL}/payment/save-session`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                order_id: orderId,
+                mobile: userData.mobile,
+                form_type: formSlug,
+              }),
+            }).catch(() => {});
           }
-        }).catch((err) => console.warn("FormYaar: could not save autofill state", err));
+
+          Promise.all([
+            browser.storage.session.set({ autofillActive: { form: formSlug, done: [] } }),
+            browser.storage.local.set({
+              fy_active_session: {
+                form: formSlug,
+                order_id: orderId,
+                paid_at: Date.now(),
+                completed: false,
+              },
+            }),
+          ]).then(() => {
+            if (hostname === "onlineservices.proteantech.in") {
+              // Already on NSDL — run autofill directly on this page
+              runAutofill(formSlug);
+            } else {
+              // Navigate to NSDL — autofill runs on page load via autofillActive
+              window.location.href = NSDL_START_URL;
+            }
+          }).catch((err) => console.warn("FormYaar: could not save autofill state", err));
+        });
       }
     });
     // Re-run autofill when user moves to next step on endUserLogin
@@ -98,8 +131,19 @@ export default defineContentScript({
         }
       });
     }
-    // Show contextual banner on supported sites + formyaar website
-    if (SITE_CONFIGS[hostname] || hostname === "formyaar.in") {
+    // Document-upload page: open the panel straight to the upload guidance
+    // screen on every load (survives the self-reloads with changing ?ID=).
+    if (isDocUploadPage) {
+      // showContextualBanner creates the panel div synchronously before its
+      // first await, so showUploadScreen can find the screen nodes right after.
+      showContextualBanner();
+      showUploadScreen();
+      // The upload page resets the eKYC photo-consent dropdown on every
+      // self-reload, so Submit errors with "please select a consent". Re-apply
+      // it on each load so it survives however many documents the user uploads.
+      reapplyEkycConsent();
+    } else if (SITE_CONFIGS[hostname] || hostname === "formyaar.in") {
+      // Show contextual banner on supported sites + formyaar website
       setTimeout(() => showContextualBanner(), BANNER_DELAY_MS);
     }
 
@@ -112,8 +156,10 @@ export default defineContentScript({
       });
     }
 
-    // Auto-run autofill on page load only for pages not yet seen in this flow
-    if (SITE_CONFIGS[hostname]) {
+    // Auto-run autofill on page load only for pages not yet seen in this flow.
+    // Skip the document-upload page — it's guidance-only (handled above) and
+    // has no autofillable step, so matchStep would flash "page not recognized".
+    if (SITE_CONFIGS[hostname] && !isDocUploadPage) {
       try {
         const result = await browser.storage.session.get("autofillActive");
         const active = result.autofillActive as { form: string; done: string[] } | undefined;
@@ -133,6 +179,10 @@ export default defineContentScript({
             // Subsequent pages (mid-flow) run directly — don't interrupt mid-fill.
             const isFirstPage = done.length === 0 && !isTokenPage;
             if (isFirstPage) {
+              // Panel must exist before showStartOverlay — showFillingScreen crashes otherwise.
+              // showContextualBanner creates the panel div synchronously before its first await,
+              // so calling it here (fire-and-forget) guarantees the panel is in the DOM.
+              showContextualBanner();
               showStartOverlay(active.form);
             } else {
               setTimeout(() => runAutofill(active.form), 1500);
@@ -223,4 +273,58 @@ function showStartOverlay(form: string): void {
       runAutofill(form);
     }, 200);
   });
+}
+
+// ─── Re-apply eKYC photo consent on the document-upload page ──────────
+// The NSDL upload page renders a select2-enhanced "photo visible on Aadhaar"
+// consent dropdown (#consentEkyc) that resets to "-----Please Select-----"
+// on every self-reload after an Upload. Clicking Submit then errors with
+// "please select a consent". We re-select "Y" on each page load, setting the
+// native <select> value AND triggering a jQuery change so select2's visible
+// label updates. select2 initialises on the page's own jQuery-ready, which can
+// land before or after our content script, so we poll briefly to win the race.
+function reapplyEkycConsent(): void {
+  let tries = 0;
+  const tick = () => {
+    tries += 1;
+    const done = applyConsentValue();
+    // Keep re-asserting for a few seconds: covers select2's init race and any
+    // late reset the page performs after the initial render.
+    if (!done && tries < 15) setTimeout(tick, 300);
+  };
+  tick();
+}
+
+// Returns true once "Y" is selected AND select2 is initialised (so the visible
+// label reflects it) — the caller stops polling then. Returns false while the
+// options/select2 aren't ready yet, so the caller retries.
+function applyConsentValue(): boolean {
+  const select = document.getElementById("consentEkyc") as HTMLSelectElement | null;
+  if (!select) return false;
+
+  let idx = -1;
+  for (let i = 0; i < select.options.length; i++) {
+    if (select.options[i].value === "Y") {
+      idx = i;
+      break;
+    }
+  }
+  if (idx === -1) return false; // options not populated yet
+
+  if (select.selectedIndex !== idx) {
+    select.selectedIndex = idx;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  // Sync select2's rendered label if it's present.
+  try {
+    const jq = (window as any).$;
+    if (jq && jq(select).data && jq(select).data("select2")) {
+      jq(select).trigger("change");
+      return true;
+    }
+  } catch {
+    // fall through — native value is still set
+  }
+  return false;
 }

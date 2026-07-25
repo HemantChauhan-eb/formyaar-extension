@@ -7,6 +7,14 @@ const SENSITIVE_FIELDS: (keyof UserData)[] = [
   "tin_number",
 ];
 
+export type IncomeSource =
+  | "salary"
+  | "business"
+  | "house_property"
+  | "other_sources"
+  | "capital_gains"
+  | "no_income";
+
 export interface UserData {
   first_name: string;
   middle_name: string;
@@ -34,14 +42,36 @@ export interface UserData {
   passport_number: string;
   tin_number: string;
   proof_of_dob: string;
-  income_source:
-    | "salary"
-    | "business"
-    | "house_property"
-    | "other_sources"
-    | "capital_gains"
-    | "no_income"
-    | "";
+  income_source: IncomeSource[];
+  // Whether the applicant's current address matches their Aadhaar address.
+  // Drives which PAN application mode is used: true → Aadhaar eKYC
+  // (pan_card), false → PAN application with supporting documents
+  // (adult_new_pan_card_supporting_docs), which needs the fields below.
+  address_same_as_aadhaar: boolean;
+  // Current residence address — only used by the "PAN application with
+  // supporting documents" flow, for applicants whose current address
+  // differs from their Aadhaar address. Optional everywhere else.
+  current_address_flat: string;
+  current_address_street: string;
+  current_address_post_office: string;
+  current_address_city: string;
+  current_address_district: string;
+  current_address_state: string;
+  current_address_pin_code: string;
+  // Proof documents for the "PAN application with supporting documents"
+  // flow — proof_of_address is for the current address above, not Aadhaar.
+  proof_of_identity: string;
+  proof_of_address: string;
+  // Which PAN application the user came in for: a fresh PAN, or changes /
+  // correction to one they already hold. Chosen on the home screen and carried
+  // through the wizard, not asked as a form field.
+  application_intent: "new" | "correction";
+  // Physical PAN card + ePAN (₹101) vs ePAN only (₹66). Only the correction
+  // config reads this today; pan_card.json still hardcodes the physical card.
+  wants_physical_pan: "yes" | "no";
+  // What the applicant is enclosing to prove the PAN they're correcting.
+  // Correction flow only — a new-PAN applicant has no PAN to prove.
+  proof_of_pan: string;
 }
 
 export const EMPTY_USER_DATA: UserData = {
@@ -71,8 +101,38 @@ export const EMPTY_USER_DATA: UserData = {
   passport_number: "",
   tin_number: "",
   proof_of_dob: "",
-  income_source: "",
+  income_source: [],
+  address_same_as_aadhaar: true,
+  current_address_flat: "",
+  current_address_street: "",
+  current_address_post_office: "",
+  current_address_city: "",
+  current_address_district: "",
+  current_address_state: "",
+  current_address_pin_code: "",
+  proof_of_identity: "",
+  proof_of_address: "",
+  application_intent: "new",
+  wants_physical_pan: "yes",
+  proof_of_pan: "Copy of Pan Card",
 };
+
+// Which NSDL/Protean config to run — the single source of truth for this
+// decision, used at every point that kicks off or resumes autofill (payment,
+// session resume, page-load resume) so they can't drift out of sync with each
+// other. Two inputs, in order of precedence:
+//   1. which application the user picked on the home screen (new vs correction)
+//   2. for a new PAN only: whether their current address matches Aadhaar, which
+//      decides eKYC vs the supporting-documents route.
+export function resolveFormSlug(
+  data: Pick<UserData, "address_same_as_aadhaar" | "application_intent">,
+): string {
+  if (data.application_intent === "correction") return "correction_pan_card";
+  return data.address_same_as_aadhaar === false
+    ? "adult_new_pan_card_supporting_docs"
+    : "pan_card";
+}
+
 export async function getUserData(): Promise<UserData> {
   try {
     // Operator override — persisted in session storage, survives navigation
@@ -116,8 +176,15 @@ export interface ValidationError {
   message: string;
 }
 
-export function validateUserData(data: UserData): ValidationError[] {
+export function validateUserData(
+  data: UserData,
+  form = "pan_card",
+): ValidationError[] {
   const errors: ValidationError[] = [];
+  // The correction application asks for neither of these: it has no AO Code
+  // fieldset (the applicant already has a jurisdiction) and no source-of-income
+  // section. Requiring them would block a correction on data nobody uses.
+  const isCorrection = form === "correction_pan_card";
 
   if (!data.first_name.trim())
     errors.push({ field: "first_name", message: "First name is required" });
@@ -167,7 +234,7 @@ export function validateUserData(data: UserData): ValidationError[] {
       message: "Choose whose name to print on the PAN card",
     });
 
-  if (!data.aadhaar_pin_code.match(/^\d{6}$/))
+  if (!isCorrection && !data.aadhaar_pin_code.match(/^\d{6}$/))
     errors.push({
       field: "aadhaar_pin_code",
       message: "Enter a valid 6-digit PIN code",
@@ -182,7 +249,7 @@ export function validateUserData(data: UserData): ValidationError[] {
       message: "Select your proof of date of birth",
     });
 
-  if (!data.income_source)
+  if (!isCorrection && !data.income_source.length)
     errors.push({
       field: "income_source",
       message: "Select your source of income",
@@ -217,6 +284,15 @@ export async function markSessionCompleted(): Promise<void> {
   const s = await getActiveSession();
   if (!s) return;
   await setActiveSession({ ...s, completed: true });
+}
+
+// Inverse of markSessionCompleted — keeps the session in the "resume" state so
+// the home-screen "Continue →" card stays visible. Used on the mid-flow
+// document-upload page, which must not look completed. No-op if already active.
+export async function markSessionActive(): Promise<void> {
+  const s = await getActiveSession();
+  if (!s || !s.completed) return;
+  await setActiveSession({ ...s, completed: false });
 }
 
 export async function clearActiveSession(): Promise<void> {

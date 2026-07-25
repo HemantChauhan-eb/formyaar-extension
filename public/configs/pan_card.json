@@ -84,7 +84,7 @@
       },
       "page_coach": {
         "selector": "#submitForm",
-        "message": "Solve the CAPTCHA first, then click Submit"
+        "message": "Solve the CAPTCHA, wait for the green check ✓, then click Submit"
       }
     },
     {
@@ -469,7 +469,8 @@
       "step": 6,
       "page_pattern": "fullFormSave",
       "page": "fullFormSave",
-      "stop_message": "Review complete. Proceeding automatically.",
+      "guidance_only": true,
+      "stop_message": "Make sure you've uploaded all required documents above, then click Confirm to proceed.",
       "fields": [
         {
           "field_id": "confirm_submit",
@@ -477,9 +478,20 @@
           "selector": "#confirmSubmit",
           "value_source": "static",
           "static_value": true,
-          "explanation": "Proceed to payment."
+          "explanation": "Confirm your uploaded documents and proceed to payment."
         }
-      ]
+      ],
+      "completion": {
+        "title": "95% complete!",
+        "subtitle": "Just a few more clicks to go",
+        "manual_steps": [
+          "Enter your Aadhaar's first 8 digits above",
+          "Review your application on this screen",
+          "If everything is correct, click <strong>Proceed</strong>",
+          "Choose your payment method and pay"
+        ],
+        "info": "You're all done — your application will be submitted and your PAN card will arrive soon."
+      }
     },
     {
       "step": 7,

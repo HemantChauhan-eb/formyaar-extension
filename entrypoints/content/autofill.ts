@@ -1,5 +1,7 @@
 import { BACKEND_URL } from "./constants";
 import { trackEvent } from "./telemetry";
+import panCardConfig from "../../public/configs/pan_card.json";
+import correctionPanCardConfig from "../../public/configs/correction_pan_card.json";
 import {
   showFillingScreen,
   showVerifyScreen,
@@ -8,32 +10,24 @@ import {
 } from "./panel";
 import { showUploadScreen } from "./uploadScreen";
 import { getUserData, type UserData } from "./userData";
+import {
+  validateFormConfig,
+  type FormConfig,
+  type FieldConfig,
+  type StepConfig,
+} from "./formConfig";
 
-// ─── Types matching pan_card.json schema v2 ──────────────────────────
-interface FieldConfig {
-  field_id: string;
-  type: "text" | "select" | "checkbox" | "date" | "radio" | "button_click";
-  selector: string;
-  value_source: string;
-  static_value?: string | boolean;
-  match_by?: "value" | "text";
-  format?: string;
-  explanation: string;
-}
-
-interface StepConfig {
-  step: number;
-  page_pattern: string;
-  stop_message: string;
-  fields: FieldConfig[];
-}
-
-interface FormConfig {
-  form: string;
-  version: number;
-  site: string;
-  steps: StepConfig[];
-}
+// Forms whose last config step ends on the NSDL/Protean "Save Draft" →
+// fullFormSave.html document-upload page. index.ts independently detects
+// that page by URL pattern (not by form), so this only controls whether the
+// panel jumps straight to the upload-guidance screen the moment this last
+// step's fields are filled, vs. showing the generic verify screen for the
+// brief instant before the page navigates there.
+const FORMS_WITH_DOC_UPLOAD_PAGE = new Set([
+  "pan_card",
+  "adult_new_pan_card_supporting_docs",
+  "correction_pan_card",
+]);
 
 // ─── Field-friendly labels (used in progress UI) ─────────────────────
 const FIELD_LABELS: Record<string, string> = {
@@ -71,6 +65,43 @@ const FIELD_LABELS: Record<string, string> = {
   capacity_verifier: "Declaration capacity",
   place: "Place",
   ao_fetch_btn: "Fetch AO code",
+  // adult_new_pan_card_supporting_docs
+  submission_mode_supporting_docs: "Submission mode (supporting documents)",
+  esign_vendor: "e-Sign vendor",
+  address_for_communication: "Address for communication",
+  current_address_flat: "Flat/Door/Building",
+  current_address_street: "Road/Street/Block/Sector",
+  current_address_post_office: "Post office",
+  current_address_city: "Area/Locality/Town/City",
+  current_address_district: "District",
+  current_address_country: "Country",
+  current_address_state: "State",
+  current_address_pin_code: "PIN code (current address)",
+  mobile_num: "Mobile number",
+  rep_ase_no: "Representative Assessee",
+  poid_code: "Proof of identity",
+  poa_code: "Proof of address",
+  verifier_name: "Declarant name (\"I, ___\")",
+  declaration_name: "Declarant name",
+  name_as_per_aadhaar: "Name as per Aadhaar",
+  // correction_pan_card
+  citizen_of_india: "Citizen of India",
+  physical_pan_yes: "Physical PAN card",
+  physical_pan_no: "ePAN only",
+  // The correction form's per-section "change this" ticks
+  update_flag_aadhaar: "Mark Aadhaar for change",
+  update_flag_name: "Mark name for change",
+  update_flag_dob: "Mark date of birth for change",
+  update_flag_gender: "Mark gender for change",
+  update_flag_parents: "Mark parents' details for change",
+  update_flag_contact: "Mark contact details for change",
+  landline_isd_code: "Country code (landline)",
+  passport_num: "Passport number",
+  tin_num: "TIN",
+  proof_dob_code: "Proof of date of birth",
+  proof_pan_code: "Proof of PAN",
+  no_of_docs: "Documents enclosed",
+  save_draft: "Save draft",
 };
 
 function getCurrentStepyIndex(): number {
@@ -116,14 +147,14 @@ export async function runAutofill(form: string = "pan_card") {
   if (isLastStep) {
     await browser.storage.session.remove("autofillActive");
   }
-  if ((step as any).guidance_only) {
-    showVerifyScreen();
+  if (step.guidance_only) {
+    showVerifyScreen(step.completion);
     return;
   }
   // Initial progress: all pending
   const progress = step.fields.map((f) => ({
     label: FIELD_LABELS[f.field_id] ?? f.field_id,
-    status: "pending" as "done" | "active" | "pending",
+    status: "pending" as "done" | "active" | "pending" | "skipped",
   }));
   updateFillProgress(progress);
 
@@ -139,18 +170,24 @@ export async function runAutofill(form: string = "pan_card") {
     const el = document.querySelector(field.selector);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    const ok = await fillField(field, value);
+    const ok = await fillField(field, value, form);
     const baseDelay = field.type === "button_click" ? 2500 : 150;
-    const delay = (ok && (field as any).min_delay_ms) ? (field as any).min_delay_ms : baseDelay;
+    const delay = (ok && field.min_delay_ms) ? field.min_delay_ms : baseDelay;
     await sleep(delay);
-    progress[i].status = ok ? "done" : "done"; // mark done either way; missing fields aren't fatal
+    // Show fills honestly: a field we couldn't fill is "skipped" (muted), not a
+    // false green check. Still non-fatal — the loop continues either way.
+    progress[i].status = ok ? "done" : "skipped";
     updateFillProgress([...progress]);
   }
 
   trackEvent("guide_completed", form);
 
-  // Fill AO code fields directly on step 4
-  if ((step as any).stepy_index === 3) {
+  // Fill AO code fields directly on step 4.
+  // Gated on the AO input actually being present, not on the step index alone:
+  // the correction form has no AO Code fieldset at all (Guidelines, Personal,
+  // Contact, Document — four in total), so its Document step also sits at
+  // stepy_index 3 and would otherwise trigger a pointless PIN-code lookup.
+  if (step.stepy_index === 3 && document.getElementById("area_code")) {
     const isDefence =
       userData.is_defence === true || (userData.is_defence as any) === "true";
     if (isDefence) {
@@ -174,15 +211,19 @@ export async function runAutofill(form: string = "pan_card") {
         }
       }
     } else {
-      await autoFillAOCode(userData.aadhaar_pin_code, userData.income_source);
+      await autoFillAOCode(
+        userData.aadhaar_pin_code,
+        primaryIncomeSource(userData.income_source),
+        form,
+      );
     }
   }
   await sleep(400);
 
-  if (form === "pan_card" && isLastStep) {
-    showUploadScreen();
+  if (FORMS_WITH_DOC_UPLOAD_PAGE.has(form) && isLastStep) {
+    showUploadScreen({ markCompleted: true });
     celebrateTimeSaved(step.fields.length);
-  } else if ((step as any).auto_advance) {
+  } else if (step.auto_advance) {
     // Click Next and wait for stepy to actually change before running next step.
     // Handled here (not via index.ts click listener) to avoid infinite loops
     // when NSDL validation errors trigger the MutationObserver on the same step.
@@ -220,10 +261,10 @@ export async function runAutofill(form: string = "pan_card") {
       showVerifyScreen({ title: "Review required", subtitle: "Fix any errors on the page, then click Next →" });
     }
   } else {
-    showVerifyScreen((step as any).completion);
+    showVerifyScreen(step.completion);
     celebrateTimeSaved(step.fields.length);
     // Show a page-level coach mark if the step config requests one
-    const coach = (step as any).page_coach as { selector: string; message: string } | undefined;
+    const coach = step.page_coach as { selector: string; message: string } | undefined;
     if (coach) showCoachMark(coach.selector, coach.message);
   }
 }
@@ -318,7 +359,7 @@ export async function prepareOperatorSubmission(sub: any): Promise<void> {
     passport_number: "",
     tin_number: "",
     proof_of_dob: sub.proof_of_dob ?? "",
-    income_source: (incomeSources[0] as UserData["income_source"]) ?? "",
+    income_source: incomeSources as UserData["income_source"],
   };
 
   delete (window as any).__fy_operator_userdata;
@@ -331,24 +372,37 @@ export async function runAutofillFromSubmission(sub: any): Promise<void> {
   await prepareOperatorSubmission(sub);
   await runAutofill(sub.form_type);
 }
+const BUNDLED_CONFIGS: Record<string, FormConfig> = {
+  pan_card: panCardConfig as unknown as FormConfig,
+  correction_pan_card: correctionPanCardConfig as unknown as FormConfig,
+};
+
 // ─── Fetch config — backend first for live updates, bundled as fallback ─
+// Every config is validated before it's allowed to run: a malformed backend
+// push (bad selector shape, missing fields, truncated payload) is rejected and
+// we fall back to the bundled copy rather than half-filling a paid-for
+// government form. An invalid backend config also fires a critical telemetry
+// alert so the team hears about a bad push immediately.
 async function fetchConfig(form: string): Promise<FormConfig | null> {
   // Backend first — allows pushing selector fixes without an extension update
   try {
     const res = await fetch(`${BACKEND_URL}/configs/${form}/latest`);
-    if (res.ok) return await res.json();
+    if (res.ok) {
+      const out: { reason?: string } = {};
+      const valid = validateFormConfig(await res.json(), out);
+      if (valid) return valid;
+      // Backend returned something, but it's not safe to run.
+      trackEvent("autofill_error", form, {
+        error: `invalid_backend_config: ${out.reason ?? "unknown"}`,
+        step: "config_fetch",
+      });
+    }
   } catch {
-    // fall through to bundled
+    // network/parse failure — fall through to bundled
   }
-  // Bundled fallback — works offline, satisfies Chrome's local-copy requirement
-  try {
-    const bundledUrl = (browser.runtime.getURL as (p: string) => string)(`configs/${form}.json`);
-    const res = await fetch(bundledUrl);
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.warn("FormYaar: config fetch failed", err);
-  }
-  return null;
+  // Bundled fallback — static import, immune to extension context invalidation.
+  // Validated too, so a bad bundled copy can't slip through either.
+  return validateFormConfig(BUNDLED_CONFIGS[form]);
 }
 
 // ─── Match the current page to a step in the config ──────────────────
@@ -359,12 +413,15 @@ function matchStep(config: FormConfig): StepConfig | null {
   // (NSDL shows this on registerEndUser.html after submission)
   const tokenRadio = document.querySelector("input.tokenButton");
   if (tokenRadio) {
-    return config.steps.find((s: any) => s.is_token_page === true) ?? null;
+    return config.steps.find((s) => s.is_token_page === true) ?? null;
   }
 
   // Page 1 — registerEndUser, simple URL match
   if (!url.includes("endUserLogin")) {
-    return config.steps.find((s) => url.includes(s.page_pattern)) ?? null;
+    return (
+      config.steps.find((s) => !!s.page_pattern && url.includes(s.page_pattern)) ??
+      null
+    );
   }
 
   // Page 3 — endUserLogin, detect which stepy step is visible
@@ -378,7 +435,7 @@ function matchStep(config: FormConfig): StepConfig | null {
 
   if (visibleIndex === -1) return null;
 
-  return config.steps.find((s: any) => s.stepy_index === visibleIndex) ?? null;
+  return config.steps.find((s) => s.stepy_index === visibleIndex) ?? null;
 }
 
 // ─── Resolve "user.first_name" or "static" to actual value ───────────
@@ -390,6 +447,13 @@ function resolveValue(
     console.warn(`FormYaar: missing value_source on ${field.field_id}`);
     return "";
   }
+  // Computed values — derived from more than one UserData field, so they
+  // can't be expressed as a plain "user.<key>" lookup.
+  if (field.value_source === "computed.full_name") {
+    return [userData.first_name, userData.middle_name, userData.last_name]
+      .filter(Boolean)
+      .join(" ");
+  }
   // Special case: checkbox that matches against a user value
   if (
     field.value_source.startsWith("user.") &&
@@ -397,6 +461,11 @@ function resolveValue(
   ) {
     const key = field.value_source.slice(5) as keyof UserData;
     const userVal = userData[key];
+    // Multi-select fields (e.g. income_source) store an array — check
+    // membership rather than exact equality, so more than one checkbox
+    // on the target site can end up checked.
+    if (Array.isArray(userVal))
+      return (userVal as string[]).includes(field.static_value as string);
     return userVal === field.static_value;
   }
   if (field.value_source === "static") {
@@ -405,7 +474,9 @@ function resolveValue(
   if (field.value_source.startsWith("user.")) {
     const key = field.value_source.slice(5);
     const v = userData[key as keyof UserData];
-    return v !== undefined ? v : "";
+    // Array-valued fields (income_source) only make sense via the
+    // static_value/checkbox branch above — never as a plain text/select fill.
+    return typeof v === "string" || typeof v === "boolean" ? v : "";
   }
   return "";
 }
@@ -414,22 +485,33 @@ function resolveValue(
 async function fillField(
   field: FieldConfig,
   value: string | boolean,
+  form: string,
 ): Promise<boolean> {
   const el = document.querySelector(field.selector) as HTMLElement | null;
   if (import.meta.env.DEV) console.log("FormYaar: fillField called for", field.selector);
   if (!el) {
     console.warn(`FormYaar: field not found ${field.selector}`);
-    trackEvent("field_fill_failed", "pan_card", {
+    trackEvent("field_fill_failed", form, {
       field_id: field.field_id,
       selector: field.selector,
-      step: (field as any)._step ?? "unknown",
+      step: field._step ?? "unknown",
     });
     return false;
   }
 
   if ((el as HTMLInputElement).disabled) {
-    if (import.meta.env.DEV) console.log(`FormYaar: skipping disabled field ${field.selector}`);
-    return false;
+    // Some NSDL fields are disabled by a one-time $(document).ready() check
+    // that runs before our script switches the submission-mode radio, and
+    // nothing re-enables them afterward. force_enable is an explicit opt-in
+    // per field (set only where we've confirmed via the site's own source
+    // that the field should legitimately be editable in our flow) — a plain
+    // .disabled skip stays the default for everything else.
+    if (field.force_enable) {
+      (el as HTMLInputElement).disabled = false;
+    } else {
+      if (import.meta.env.DEV) console.log(`FormYaar: skipping disabled field ${field.selector}`);
+      return false;
+    }
   }
 
   switch (field.type) {
@@ -445,10 +527,10 @@ async function fillField(
     case "checkbox":
       return fillCheckbox(el as HTMLInputElement, Boolean(value));
     case "radio":
-      if ((field as any).defence_selector) {
+      if (field.defence_selector) {
         if (value === true || value === "true") {
           const defEl = document.querySelector(
-            (field as any).defence_selector,
+            field.defence_selector,
           ) as HTMLInputElement | null;
           if (defEl) return fillRadio(defEl, true);
           return false;
@@ -574,7 +656,26 @@ function fillAOCodeFields(ao: AOCode): void {
   }
 }
 
-async function autoFillAOCode(pinCode: string, incomeSource = ""): Promise<boolean> {
+// AO jurisdiction rules (cities-ao-code/*.json) key on a single income
+// source. When the applicant has multiple, business/professional income
+// determines the ward/circle over salary-only, per IT dept convention —
+// pick the most "senior" source present rather than an arbitrary one.
+const INCOME_SOURCE_PRIORITY: readonly string[] = [
+  "business",
+  "salary",
+  "house_property",
+  "capital_gains",
+  "other_sources",
+  "no_income",
+];
+function primaryIncomeSource(sources: readonly string[]): string {
+  for (const candidate of INCOME_SOURCE_PRIORITY) {
+    if (sources.includes(candidate)) return candidate;
+  }
+  return sources[0] ?? "";
+}
+
+async function autoFillAOCode(pinCode: string, incomeSource = "", form = "pan_card"): Promise<boolean> {
   try {
     const params = incomeSource ? `?income=${encodeURIComponent(incomeSource)}` : "";
     const res = await fetch(`${BACKEND_URL}/pincode/${pinCode}${params}`);
@@ -588,7 +689,7 @@ async function autoFillAOCode(pinCode: string, incomeSource = ""): Promise<boole
     return true;
   } catch (err) {
     console.error("FormYaar: AO code auto-fill failed", err);
-    trackEvent("ao_code_failed", "pan_card", {
+    trackEvent("ao_code_failed", form, {
       pincode: pinCode,
       reason: err instanceof Error ? err.message : "unknown",
     });

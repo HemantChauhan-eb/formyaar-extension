@@ -11,7 +11,7 @@ export type ExtensionMessage =
       fieldExplanation: string;
       userMessage: string;
     }
-  | { type: "CREATE_PAYMENT"; form: string }
+  | { type: "CREATE_PAYMENT"; form: string; coupon?: string }
   | { type: "OPEN_RAZORPAY"; order_id: string; amount: number }
   | { type: "OPEN_URL"; url: string }
   | {
