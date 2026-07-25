@@ -1,5 +1,5 @@
 // Single source of truth — version comes from package.json via Vite
-export const VERSION = (import.meta.env.VITE_APP_VERSION as string) ?? "0.13.2";
+export const VERSION = (import.meta.env.VITE_APP_VERSION as string) ?? "0.17.0";
 export const CWS_LISTING_URL =
   "https://chromewebstore.google.com/detail/formyaar/anibapibnfjepjpomkpoifpolbagajag";
 

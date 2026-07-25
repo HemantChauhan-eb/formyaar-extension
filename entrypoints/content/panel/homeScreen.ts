@@ -6,7 +6,7 @@ import {
   type ActiveSession,
 } from "../userData";
 import { runAutofill } from "../autofill";
-import { showUserForm } from "./userForm";
+import { showChooser } from "./chooserScreen";
 import { showOperatorPanel } from "./operator/queueScreen";
 import { renderHeader } from "./shared";
 
@@ -197,6 +197,7 @@ export function renderVisaIcon(): string {
 const FORM_LABELS: Record<string, string> = {
   pan_card: "PAN Card — New Application",
   adult_new_pan_card_supporting_docs: "PAN Card — Supporting Documents",
+  correction_pan_card: "PAN Card — Changes / Correction",
 };
 
 export async function refreshPendingSessions(): Promise<void> {
@@ -270,9 +271,11 @@ export async function refreshPendingSessions(): Promise<void> {
 export function attachHomeScreenHandlers() {
   refreshPendingSessions();
 
+  // The Start button no longer commits the user to a specific form — it opens
+  // the chooser, which is the only thing that calls showUserForm().
   document.getElementById("fy-pan-card")?.addEventListener("click", () => {
-    trackEvent("panel_opened", "pan_card");
-    showUserForm("pan_card");
+    trackEvent("panel_opened");
+    showChooser();
   });
 
   document.getElementById("fy-operator-mode")?.addEventListener("click", () => {

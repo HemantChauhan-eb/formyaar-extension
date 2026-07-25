@@ -186,7 +186,7 @@ export function renderUploadScreen(): string {
 }
 
 export function showUploadScreen(opts?: { markCompleted?: boolean }): void {
-  const screens = ["fy-home", "fy-payment", "fy-filling", "fy-verify"];
+  const screens = ["fy-home", "fy-chooser", "fy-payment", "fy-filling", "fy-verify"];
   screens.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";

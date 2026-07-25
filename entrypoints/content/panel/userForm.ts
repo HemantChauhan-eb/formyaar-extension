@@ -247,7 +247,20 @@ function paneContact(data: UserData): string {
   `;
 }
 
-function paneAadhaar(data: UserData): string {
+function paneAadhaar(form: string, data: UserData): string {
+  // PIN code exists purely to look up an AO code. The correction form has no
+  // AO Code fieldset, so asking for it there would be dead data collection.
+  const pinCode =
+    form === "correction_pan_card"
+      ? ""
+      : `
+      <label class="fy-userform-field">
+        <span>PIN code as per Aadhaar <em>*</em></span>
+        <input type="text" data-field="aadhaar_pin_code" value="${escapeHtml(data.aadhaar_pin_code)}" placeholder="243001" autocomplete="off" inputmode="numeric" maxlength="6">
+        <div id="fy-ao-status" style="margin-top:7px;font-size:12px;min-height:18px;"></div>
+      </label>
+      `;
+
   return `
     <div class="fy-pane" data-pane="2">
       <div class="fy-pane-caption">Step 3 of 5</div>
@@ -259,16 +272,33 @@ function paneAadhaar(data: UserData): string {
         <input type="text" data-field="aadhaar_last_4" value="${escapeHtml(data.aadhaar_last_4 ?? "")}" placeholder="9012" autocomplete="off" inputmode="numeric" maxlength="4">
       </label>
 
-      <label class="fy-userform-field">
-        <span>PIN code as per Aadhaar <em>*</em></span>
-        <input type="text" data-field="aadhaar_pin_code" value="${escapeHtml(data.aadhaar_pin_code)}" placeholder="243001" autocomplete="off" inputmode="numeric" maxlength="6">
-        <div id="fy-ao-status" style="margin-top:7px;font-size:12px;min-height:18px;"></div>
-      </label>
+      ${pinCode}
     </div>
   `;
 }
 
-function paneFamily(data: UserData): string {
+function paneFamily(form: string, data: UserData): string {
+  // NSDL populates the single-parent radio from the existing PAN record and the
+  // correction config deliberately never touches it, so asking is misleading.
+  const singleParent =
+    form === "correction_pan_card"
+      ? ""
+      : `
+      <label class="fy-userform-field">
+        <span>Single parent?</span>
+        <div class="fy-userform-radios">
+          <label class="fy-userform-radio">
+            <input type="radio" name="is_single_parent" data-field="is_single_parent" value="false" ${!data.is_single_parent ? "checked" : ""}>
+            <span>No</span>
+          </label>
+          <label class="fy-userform-radio">
+            <input type="radio" name="is_single_parent" data-field="is_single_parent" value="true" ${data.is_single_parent ? "checked" : ""}>
+            <span>Yes</span>
+          </label>
+        </div>
+      </label>
+      `;
+
   return `
     <div class="fy-pane" data-pane="3">
       <div class="fy-pane-caption">Step 4 of 5</div>
@@ -307,19 +337,7 @@ function paneFamily(data: UserData): string {
         <input type="text" data-field="mother_last_name" value="${escapeHtml(data.mother_last_name)}" placeholder="Optional" autocomplete="off">
       </label>
 
-      <label class="fy-userform-field">
-        <span>Single parent?</span>
-        <div class="fy-userform-radios">
-          <label class="fy-userform-radio">
-            <input type="radio" name="is_single_parent" data-field="is_single_parent" value="false" ${!data.is_single_parent ? "checked" : ""}>
-            <span>No</span>
-          </label>
-          <label class="fy-userform-radio">
-            <input type="radio" name="is_single_parent" data-field="is_single_parent" value="true" ${data.is_single_parent ? "checked" : ""}>
-            <span>Yes</span>
-          </label>
-        </div>
-      </label>
+      ${singleParent}
 
       <label class="fy-userform-field">
         <span>Whose name on the card? <em>*</em></span>
@@ -352,13 +370,55 @@ const INDIAN_STATES = [
   "UTTARAKHAND", "WEST BENGAL",
 ];
 
-function paneFinal(data: UserData): string {
+function paneFinal(form: string, data: UserData): string {
+  const isCorrection = form === "correction_pan_card";
+  // Source of income, defence status and the current-address branch all feed
+  // parts of the new-PAN application that the correction form simply doesn't
+  // have. Kept in the DOM (rather than dropped) so collectFormData still reads
+  // their defaults and the address-toggle handler has something to bind to.
+  const hideOnCorrection = isCorrection ? `style="display:none;"` : "";
+
+  // Two questions only the correction application asks. A new-PAN applicant
+  // has no PAN to prove, and pan_card.json hardcodes the physical card, so
+  // showing either of these on that flow would be noise.
+  const correctionOnly = !isCorrection
+    ? ""
+    : `
+      <label class="fy-userform-field">
+        <span>Proof of your existing PAN <em>*</em></span>
+        <select data-field="proof_of_pan">
+          <option value="Copy of Pan Card" ${data.proof_of_pan === "Copy of Pan Card" ? "selected" : ""}>Copy of PAN card</option>
+          <option value="Copy of Pan Allotment Letter" ${data.proof_of_pan === "Copy of Pan Allotment Letter" ? "selected" : ""}>Copy of PAN allotment letter</option>
+          <option value="No Document" ${data.proof_of_pan === "No Document" ? "selected" : ""}>No document</option>
+        </select>
+        <small class="fy-userform-hint">What you'll upload to prove the PAN you're correcting</small>
+      </label>
+
+      <label class="fy-userform-field">
+        <span>Do you want a physical PAN card? <em>*</em></span>
+        <div class="fy-userform-radios">
+          <label class="fy-userform-radio">
+            <input type="radio" name="wants_physical_pan" data-field="wants_physical_pan" value="yes" ${data.wants_physical_pan !== "no" ? "checked" : ""}>
+            <span>Yes — ₹101</span>
+          </label>
+          <label class="fy-userform-radio">
+            <input type="radio" name="wants_physical_pan" data-field="wants_physical_pan" value="no" ${data.wants_physical_pan === "no" ? "checked" : ""}>
+            <span>No — ₹66</span>
+          </label>
+        </div>
+        <small class="fy-userform-hint">"No" means e-PAN only, sent to your email. This is the government's fee, not ours.</small>
+      </label>
+      `;
+
   return `
     <div class="fy-pane" data-pane="4">
       <div class="fy-pane-caption">Step 5 of 5</div>
       <div class="fy-pane-title">Last step</div>
       <div class="fy-pane-sub">A few details the income tax department requires.</div>
 
+      ${correctionOnly}
+
+      <div ${hideOnCorrection}>
       <label class="fy-userform-field">
         <span>Source of income <em>*</em></span>
         <small class="fy-userform-hint">Select all that apply</small>
@@ -389,6 +449,7 @@ function paneFinal(data: UserData): string {
           </label>
         </div>
       </label>
+      </div>
 
       <label class="fy-userform-field">
         <span>Place (district) <em>*</em></span>
@@ -411,6 +472,7 @@ function paneFinal(data: UserData): string {
         <small class="fy-userform-hint">The document you'll upload as proof</small>
       </label>
 
+      <div ${hideOnCorrection}>
       <label class="fy-userform-field">
         <span>Are you a defence personnel? <em>*</em></span>
         <div class="fy-userform-radios">
@@ -560,6 +622,7 @@ function paneFinal(data: UserData): string {
         </label>
 
       </div>
+      </div>
 
       <details class="fy-uf-optional"${data.passport_number || data.tin_number ? " open" : ""}>
         <summary>+ Optional — passport, TIN</summary>
@@ -595,9 +658,9 @@ export function renderUserFormScreen(form: string, data: UserData): string {
       <div class="fy-userform-body" id="fy-uf-body">
         ${paneName(data)}
         ${paneContact(data)}
-        ${paneAadhaar(data)}
-        ${paneFamily(data)}
-        ${paneFinal(data)}
+        ${paneAadhaar(form, data)}
+        ${paneFamily(form, data)}
+        ${paneFinal(form, data)}
       </div>
 
       <div class="fy-userform-footer">
@@ -620,6 +683,7 @@ export function showUserForm(form: string): void {
   // Hide all other screens
   const screens = [
     "fy-home",
+    "fy-chooser",
     "fy-payment",
     "fy-filling",
     "fy-verify",
@@ -654,10 +718,12 @@ export function showUserForm(form: string): void {
         wrapper.remove();
         document.getElementById("fy-payment")!.style.display = "flex";
       },
-      // onBack: go back to home
+      // onBack: return to the chooser the user came in through, so backing out
+      // of the wizard lands on the application list rather than skipping past
+      // it to the home screen.
       () => {
         wrapper.remove();
-        document.getElementById("fy-home")!.style.display = "flex";
+        document.getElementById("fy-chooser")!.style.display = "flex";
       },
     );
 
@@ -876,8 +942,8 @@ function attachUserFormHandlers(
 
   if (submit) {
     submit.addEventListener("click", async () => {
-      const data = collectFormData();
-      const errors = validateUserData(data);
+      const data = collectFormData(form);
+      const errors = validateUserData(data, form);
 
       // Clear previous error highlights
       document
@@ -905,11 +971,20 @@ function attachUserFormHandlers(
 
       if (errorBox) errorBox.hidden = true;
 
+      // Eligibility confirmation — required every time, before payment
+      const eligible = await showEligibilityModal(form);
+      if (!eligible) return;
+
       // Confirmation modal before payment
       const aoStatusEl = document.getElementById("fy-ao-status");
       const aoStatusHTML = aoStatusEl?.innerHTML?.trim() ?? "";
-      // AO is available if the text contains the green checkmark — no modal needed
-      const aoAvailable = aoStatusEl?.textContent?.includes("✓") ?? false;
+      // AO is available if the text contains the green checkmark — no modal
+      // needed. The correction form has no AO Code fieldset and so no PIN input
+      // to check, which would otherwise read as "AO unavailable" and pop an
+      // empty warning modal — skip straight through.
+      const aoAvailable =
+        form === "correction_pan_card" ||
+        (aoStatusEl?.textContent?.includes("✓") ?? false);
 
       if (aoAvailable) {
         await saveUserData(data);
@@ -922,6 +997,7 @@ function attachUserFormHandlers(
         : "";
 
       const modal = document.createElement("div");
+      modal.className = "fy-modal-guard";
       modal.style.cssText = `
         position:fixed;inset:0;background:rgba(12,19,34,0.5);z-index:9999999;
         display:flex;align-items:center;justify-content:center;padding:24px;
@@ -967,7 +1043,78 @@ function attachUserFormHandlers(
   }
 }
 
-function collectFormData(): UserData {
+// Required every time before payment — PAN service currently only supports
+// adults, so we make the applicant explicitly confirm both before they can
+// proceed. The second confirmation inverts for the correction flow: holding a
+// PAN disqualifies a new application, but is the whole premise of a correction.
+function showEligibilityModal(form: string): Promise<boolean> {
+  const isCorrection = form === "correction_pan_card";
+  const panConfirmText = isCorrection
+    ? `I confirm I already have a PAN card and want to change or correct its details.`
+    : `I confirm I do not already have a PAN card.`;
+  const modal = document.createElement("div");
+  modal.className = "fy-modal-guard";
+  modal.style.cssText = `
+    position:fixed;inset:0;background:rgba(12,19,34,0.5);z-index:9999999;
+    display:flex;align-items:center;justify-content:center;padding:24px;
+  `;
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:22px;max-width:320px;width:100%;box-shadow:0 20px 60px rgba(12,19,34,0.3);font-family:'DM Sans',sans-serif;">
+      <div style="font-size:16px;font-weight:800;color:#0c1322;margin-bottom:14px;letter-spacing:-0.2px;">Before you continue</div>
+      <div style="background:#fdecea;border:1px solid #f3b9b3;border-radius:11px;padding:12px 13px;margin-bottom:16px;">
+        <label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer;margin-bottom:10px;">
+          <input type="checkbox" id="fy-elig-adult" style="margin-top:2px;flex-shrink:0;">
+          <span style="font-size:12.5px;color:#b3261e;font-weight:600;line-height:1.5;">I confirm I am over 18 years old. <span style="font-weight:400;">We don't currently offer PAN cards for minors.</span></span>
+        </label>
+        <label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer;">
+          <input type="checkbox" id="fy-elig-no-pan" style="margin-top:2px;flex-shrink:0;">
+          <span style="font-size:12.5px;color:#b3261e;font-weight:600;line-height:1.5;">${panConfirmText}</span>
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button id="fy-elig-cancel" style="flex:1;padding:12px;background:#f3f5f9;color:#424b5e;border:none;border-radius:11px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Go back</button>
+        <button id="fy-elig-confirm" disabled style="flex:2;padding:12px;background:#c7ccd6;color:#fff;border:none;border-radius:11px;font-size:13px;font-weight:700;cursor:not-allowed;font-family:inherit;">Continue</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const adultBox = modal.querySelector<HTMLInputElement>("#fy-elig-adult")!;
+  const noPanBox = modal.querySelector<HTMLInputElement>("#fy-elig-no-pan")!;
+  const confirmBtn = modal.querySelector<HTMLButtonElement>(
+    "#fy-elig-confirm",
+  )!;
+
+  const updateConfirmState = () => {
+    const bothChecked = adultBox.checked && noPanBox.checked;
+    confirmBtn.disabled = !bothChecked;
+    confirmBtn.style.background = bothChecked ? "#305eff" : "#c7ccd6";
+    confirmBtn.style.cursor = bothChecked ? "pointer" : "not-allowed";
+  };
+  adultBox.addEventListener("change", updateConfirmState);
+  noPanBox.addEventListener("change", updateConfirmState);
+
+  return new Promise<boolean>((resolve) => {
+    confirmBtn.onclick = () => {
+      if (confirmBtn.disabled) return;
+      modal.remove();
+      resolve(true);
+    };
+    modal.querySelector<HTMLButtonElement>("#fy-elig-cancel")!.onclick =
+      () => {
+        modal.remove();
+        resolve(false);
+      };
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.remove();
+        resolve(false);
+      }
+    });
+  });
+}
+
+function collectFormData(form: string): UserData {
   const get = (field: string): string => {
     const el = document.querySelector(
       `[data-field="${field}"]`,
@@ -1033,5 +1180,13 @@ function collectFormData(): UserData {
     current_address_pin_code: get("current_address_pin_code"),
     proof_of_identity: get("proof_of_identity"),
     proof_of_address: get("proof_of_address"),
+    // Not a form field — comes from which home-screen entry point the user
+    // took, so it survives into resolveFormSlug() after save.
+    application_intent: form === "correction_pan_card" ? "correction" : "new",
+    // Both only rendered on the correction flow; everywhere else the radio /
+    // select isn't in the DOM, so these fall back to the same defaults
+    // EMPTY_USER_DATA carries.
+    wants_physical_pan: getRadio("wants_physical_pan") === "no" ? "no" : "yes",
+    proof_of_pan: get("proof_of_pan") || "Copy of Pan Card",
   };
 }

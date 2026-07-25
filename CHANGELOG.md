@@ -1,5 +1,85 @@
 # FormYaar Extension — Changelog
 
+## [0.17.0] — 2026-07-26
+
+### Added
+- **`correction_pan_card.json` is now bundled with the extension**, alongside `pan_card.json`. Until it's deployed to the backend, the correction flow had no config to run at all — the fetch 404'd and there was no bundled fallback, so it died on "Could not load form config". It now runs offline-first like the new-PAN flow.
+
+### Changed
+- **The details wizard now matches what the correction application actually asks for.** Four questions are hidden on that flow because the correction form has no fieldset that consumes them:
+  - *PIN code as per Aadhaar* — exists only to look up an AO code, and the correction form has no AO Code fieldset.
+  - *Source of income* — no such section on the correction form.
+  - *Are you a defence personnel?* — same reason (it's an AO-code branch).
+  - *Is your current address the same as your Aadhaar address?* plus the whole current-address block — the correction form takes the address from Aadhaar under eKYC.
+  - *Single parent?* — NSDL fills this from the existing PAN record and the config never touches it, so asking implied a control the applicant doesn't have.
+- `validateUserData()` takes the form slug and no longer demands a PIN code or a source of income on the correction flow — previously those two blocked submission on data nothing would ever read.
+- The pre-payment AO-availability modal is skipped on the correction flow. With no PIN field to check, it would have read as "AO unavailable" and shown an empty warning.
+
+## [0.16.1] — 2026-07-26
+
+### Changed
+- The correction flow now shows the document-upload screen after Save Draft, the same as the two new-PAN configs, instead of the generic "step complete" panel. `correction_pan_card` joins `FORMS_WITH_DOC_UPLOAD_PAGE`.
+
+## [0.16.0] — 2026-07-26
+
+### Added
+- **Two correction-only questions on the wizard's last pane**, rendered only when the chosen application is `correction_pan_card`:
+  - *Proof of your existing PAN* — copy of PAN card / allotment letter / no document. A new-PAN applicant has no PAN to prove, so it stays hidden there.
+  - *Do you want a physical PAN card?* — Yes ₹101 / No ₹66 (e-PAN only). This activates the `wants_physical_pan` plumbing added in 0.15.1, which until now had no way to be set.
+- `UserData.proof_of_pan`, defaulting to "Copy of Pan Card".
+- Progress labels for the correction form's step-4 fields.
+
+### Fixed
+- **AO-code autofill no longer fires on the correction form's Document step.** The trigger keyed purely on `stepy_index === 3`, which is the AO Code fieldset on the new-PAN form but Document details on the correction form — that form has no AO fieldset at all. It now also requires the `#area_code` input to exist, so the PIN-code lookup only runs on a page that actually has AO fields.
+
+## [0.15.2] — 2026-07-26
+
+### Added
+- Progress labels for the correction form's step-3 fields. `passport_num` and `tin_num` were missing a label all along — they're used by `pan_card.json` too, so that step showed raw field ids there as well.
+
+## [0.15.1] — 2026-07-25
+
+### Added
+- Progress labels for the correction form's step-2 fields, including the per-section "mark for change" ticks NSDL requires on the correction application.
+- `UserData.wants_physical_pan` (`"yes"` | `"no"`) — physical PAN + ePAN (₹101) vs ePAN only (₹66). `correction_pan_card` step 2 reads it. There's no wizard question for it yet, so it stays at the `"yes"` default and behaviour is unchanged.
+
+## [0.15.0] — 2026-07-25
+
+### Added
+- **Application chooser screen.** "Start — it takes 5 minutes" no longer jumps straight into the new-PAN wizard; it opens a list of PAN applications to pick from — New PAN card, Correct existing PAN, and PAN for a minor (shown as "Soon"). The home screen keeps its single message and trust lines; the branch happens after the user commits, not before. Adding a variant later is one `PAN_OPTIONS` entry in `panel/chooserScreen.ts`.
+- **PAN correction flow.** Picking "Correct existing PAN" runs the same details wizard and payment, then fills NSDL's "Changes or Correction in existing PAN Data" application (`correction_pan_card`) instead of a new one.
+- Unbuilt options render as greyed rows rather than being hidden, and taps on them fire a `locked_form_clicked` event — so demand for a variant is measurable before its config is written.
+- Friendly progress label for `citizen_of_india`, the one field `correction_pan_card` introduces that the other PAN forms don't have. Without it the filling screen would have shown the raw field id.
+
+### Changed
+- `UserData` gained `application_intent` (`"new"` | `"correction"`), and `resolveFormSlug()` now checks it before the existing Aadhaar-address branch. The intent comes from which home-screen entry point was tapped rather than a wizard question, so it's threaded through `showUserForm(form)` into `collectFormData()` — keeping every autofill kick-off point (payment, session resume, page-load resume) reading the same single source of truth.
+- The pre-payment eligibility modal's second confirmation inverts for the correction flow: "I confirm I already have a PAN card and want to change or correct its details" replaces "I confirm I do not already have a PAN card", which was exactly backwards for someone correcting one.
+- Backing out of the details wizard now returns to the chooser instead of skipping to the home screen.
+- New telemetry: `chooser_shown`, `form_selected` (with the chosen slug), `locked_form_clicked`. `panel_opened` no longer carries a form, since at that point the user hasn't picked one.
+
+## [0.14.2] — 2026-07-25
+
+### Fixed
+- **Maintenance countdown now counts days.** Days were being rolled into the hours slot, so a maintenance window set five days out displayed as `133:48:57` — closer to a glitch than a wait. It now reads `5d 13:48:57`, with the clock tightening slightly while a day count is on screen so the line still fits the panel.
+
+### Added
+- **The maintenance screen says when it's actually coming back.** Under the countdown it now shows "Expected back · Today, 6:30 PM" — `Today` / `Tomorrow` for the two nearest days, weekday + date beyond that (e.g. "Fri, 31 Jul, 12:01 AM"). A running timer alone made a multi-day pause hard to plan around.
+
+## [0.14.1] — 2026-07-19
+
+### Fixed
+- Clicking checkboxes/buttons inside the eligibility or AO-availability confirmation modals no longer collapses the panel. Those modals render on `<body>` outside the panel element, so the panel's click-outside-to-close handler treated clicks on them as "outside" — it now stays open while any `.fy-modal-guard` modal is on screen.
+
+## [0.14.0] — 2026-07-19
+
+### Added
+- **Eligibility confirmation modal before payment.** After step 5 of 5 in the user details wizard, the panel now shows a red-flagged caution modal requiring the applicant to check two boxes — "I am over 18 years old" (PAN is not currently offered for minors) and "I do not already have a PAN card" — before they can proceed. Shown every time, in addition to the existing AO-code-availability confirmation.
+
+## [0.13.3] — 2026-07-19
+
+### Changed
+- The panel step shown right after document upload/confirm (PAN `fullFormSave` page) now says "95% complete!" and walks the user through entering Aadhaar's first 8 digits, reviewing the application, clicking Proceed, and paying — instead of the generic "Step complete" message.
+
 ## [0.13.2] — 2026-07-18
 
 ### Changed

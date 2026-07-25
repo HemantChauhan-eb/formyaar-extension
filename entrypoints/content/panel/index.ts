@@ -15,6 +15,7 @@ import {
   renderUpdateScreen,
 } from "./maintenance";
 import { attachHomeScreenHandlers } from "./homeScreen";
+import { attachChooserHandlers } from "./chooserScreen";
 import { attachPaymentScreenHandlers } from "./paymentScreen";
 import { attachRecoverScreenHandlers } from "./recoverScreen";
 import { attachOperatorLoginHandlers } from "./operator/loginScreen";
@@ -92,6 +93,7 @@ export async function showContextualBanner() {
 
 function attachPanelEventHandlers() {
   attachHomeScreenHandlers();
+  attachChooserHandlers();
   attachPaymentScreenHandlers();
   attachRecoverScreenHandlers();
   attachUploadScreenHandlers();

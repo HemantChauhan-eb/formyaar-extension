@@ -6,6 +6,7 @@ import {
 } from "../constants";
 import { renderUploadScreen } from "../uploadScreen";
 import { renderHomeScreen } from "./homeScreen";
+import { renderChooserScreen, CHOOSER_STYLES } from "./chooserScreen";
 import { renderPaymentScreen } from "./paymentScreen";
 import { renderFillingScreen, renderVerifyScreen } from "./fillingScreen";
 import { renderRecoverScreen } from "./recoverScreen";
@@ -124,9 +125,11 @@ export function renderPanelHTML(): string {
       .fy-kv-label { font-size: 11.5px; color: var(--fy-muted); font-weight: 500; }
       .fy-kv-value { font-size: 12.5px; color: var(--fy-ink); font-weight: 600; text-align: right; max-width: 60%; word-break: break-word; }
 
+      ${CHOOSER_STYLES}
       ${USERFORM_STYLES}
     </style>
     ${renderHomeScreen()}
+    ${renderChooserScreen()}
     ${renderPaymentScreen()}
     ${renderFillingScreen()}
     ${renderVerifyScreen()}
@@ -218,6 +221,10 @@ export function attachClickOutsideHandler() {
     if (!p || !t) return;
     const filling = document.getElementById("fy-filling");
     if (filling && filling.style.display !== "none") return;
+    // A confirmation modal (eligibility check, AO-availability notice, etc.)
+    // is open — it's appended to <body>, outside the panel, so clicking its
+    // checkboxes/buttons would otherwise register as an "outside click".
+    if (document.querySelector(".fy-modal-guard")) return;
     if (
       p.style.right === "0px" &&
       document.contains(e.target as Node) &&

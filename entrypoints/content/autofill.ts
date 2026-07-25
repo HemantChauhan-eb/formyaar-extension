@@ -1,6 +1,7 @@
 import { BACKEND_URL } from "./constants";
 import { trackEvent } from "./telemetry";
 import panCardConfig from "../../public/configs/pan_card.json";
+import correctionPanCardConfig from "../../public/configs/correction_pan_card.json";
 import {
   showFillingScreen,
   showVerifyScreen,
@@ -25,6 +26,7 @@ import {
 const FORMS_WITH_DOC_UPLOAD_PAGE = new Set([
   "pan_card",
   "adult_new_pan_card_supporting_docs",
+  "correction_pan_card",
 ]);
 
 // ─── Field-friendly labels (used in progress UI) ─────────────────────
@@ -82,6 +84,24 @@ const FIELD_LABELS: Record<string, string> = {
   verifier_name: "Declarant name (\"I, ___\")",
   declaration_name: "Declarant name",
   name_as_per_aadhaar: "Name as per Aadhaar",
+  // correction_pan_card
+  citizen_of_india: "Citizen of India",
+  physical_pan_yes: "Physical PAN card",
+  physical_pan_no: "ePAN only",
+  // The correction form's per-section "change this" ticks
+  update_flag_aadhaar: "Mark Aadhaar for change",
+  update_flag_name: "Mark name for change",
+  update_flag_dob: "Mark date of birth for change",
+  update_flag_gender: "Mark gender for change",
+  update_flag_parents: "Mark parents' details for change",
+  update_flag_contact: "Mark contact details for change",
+  landline_isd_code: "Country code (landline)",
+  passport_num: "Passport number",
+  tin_num: "TIN",
+  proof_dob_code: "Proof of date of birth",
+  proof_pan_code: "Proof of PAN",
+  no_of_docs: "Documents enclosed",
+  save_draft: "Save draft",
 };
 
 function getCurrentStepyIndex(): number {
@@ -162,8 +182,12 @@ export async function runAutofill(form: string = "pan_card") {
 
   trackEvent("guide_completed", form);
 
-  // Fill AO code fields directly on step 4
-  if (step.stepy_index === 3) {
+  // Fill AO code fields directly on step 4.
+  // Gated on the AO input actually being present, not on the step index alone:
+  // the correction form has no AO Code fieldset at all (Guidelines, Personal,
+  // Contact, Document — four in total), so its Document step also sits at
+  // stepy_index 3 and would otherwise trigger a pointless PIN-code lookup.
+  if (step.stepy_index === 3 && document.getElementById("area_code")) {
     const isDefence =
       userData.is_defence === true || (userData.is_defence as any) === "true";
     if (isDefence) {
@@ -350,6 +374,7 @@ export async function runAutofillFromSubmission(sub: any): Promise<void> {
 }
 const BUNDLED_CONFIGS: Record<string, FormConfig> = {
   pan_card: panCardConfig as unknown as FormConfig,
+  correction_pan_card: correctionPanCardConfig as unknown as FormConfig,
 };
 
 // ─── Fetch config — backend first for live updates, bundled as fallback ─

@@ -85,6 +85,7 @@ export async function showOperatorPanel(): Promise<void> {
 
   const screens = [
     "fy-home",
+    "fy-chooser",
     "fy-payment",
     "fy-filling",
     "fy-verify",

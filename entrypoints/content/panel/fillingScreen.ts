@@ -43,6 +43,7 @@ export function renderVerifyScreen(): string {
 export function showFillingScreen() {
   document.getElementById("fy-payment")!.style.display = "none";
   document.getElementById("fy-home")!.style.display = "none";
+  document.getElementById("fy-chooser")!.style.display = "none";
   document.getElementById("fy-verify")!.style.display = "none";
   document.getElementById("fy-filling")!.style.display = "flex";
 

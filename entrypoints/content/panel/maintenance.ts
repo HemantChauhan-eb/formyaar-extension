@@ -39,33 +39,81 @@ export function renderMaintenanceScreen(backAt: string | null): string {
       <div class="fy-maint-timer-box">
         <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#305eff;margin-bottom:9px;">Back in</div>
         <div id="fy-maint-countdown" style="font-size:34px;font-weight:800;color:#0c1322;letter-spacing:3px;font-variant-numeric:tabular-nums;">--:--:--</div>
+        <div id="fy-maint-backat" style="display:none;font-size:11.5px;font-weight:600;color:#4d5b7a;margin-top:11px;padding-top:10px;border-top:1px solid rgba(48,94,255,0.16);"></div>
       </div>
     </div>
     <div class="fy-maint-stripe"></div>
   `;
 }
 
+// The date the panel comes back, phrased the way someone would say it out loud.
+// A bare "31 Jul" reads as far away even when it's tonight, so the two nearest
+// days are named and anything beyond that gets the weekday + date.
+function formatBackAt(target: Date): string {
+  const time = target
+    .toLocaleTimeString("en-IN", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
+    .toUpperCase();
+  const dayStart = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const daysAway = Math.round(
+    (dayStart(target) - dayStart(new Date())) / 86400000,
+  );
+  if (daysAway <= 0) return `Today, ${time}`;
+  if (daysAway === 1) return `Tomorrow, ${time}`;
+  const date = target.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+  return `${date}, ${time}`;
+}
+
 export function startMaintenanceCountdown(backAt: string | null) {
+  const pad = (n: number) => String(n).padStart(2, "0");
   const update = () => {
     const el = document.getElementById("fy-maint-countdown");
+    const backEl = document.getElementById("fy-maint-backat");
+    const hideBackAt = () => {
+      if (backEl) backEl.style.display = "none";
+    };
     if (!el) return;
     if (!backAt) {
       el.textContent = "--:--:--";
+      hideBackAt();
       return;
     }
-    const diff = new Date(backAt).getTime() - Date.now();
+    const target = new Date(backAt);
+    const diff = target.getTime() - Date.now();
     if (diff <= 0) {
       el.textContent = "Soon";
+      hideBackAt();
       if (maintenanceCountdownInterval) {
         clearInterval(maintenanceCountdownInterval);
         maintenanceCountdownInterval = null;
       }
       return;
     }
-    const h = Math.floor(diff / 3600000);
+    // Multi-day maintenance was rolling the days into the hours slot — 5 days
+    // out read as "133:48:57", which looks like a glitch rather than a wait.
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
     const s = Math.floor((diff % 60000) / 1000);
-    el.textContent = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    const clock = `${pad(h)}:${pad(m)}:${pad(s)}`;
+    // The day prefix makes the line too wide for the panel at full size, so the
+    // clock tightens only while days are on screen.
+    el.style.fontSize = d > 0 ? "27px" : "34px";
+    el.style.letterSpacing = d > 0 ? "1.5px" : "3px";
+    el.textContent = d > 0 ? `${d} days ${clock}` : clock;
+
+    if (backEl) {
+      backEl.style.display = "block";
+      backEl.textContent = `Expected back · ${formatBackAt(target)}`;
+    }
   };
   update();
   maintenanceCountdownInterval = setInterval(update, 1000);
