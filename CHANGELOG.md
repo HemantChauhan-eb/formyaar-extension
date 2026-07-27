@@ -1,5 +1,10 @@
 # FormYaar Extension — Changelog
 
+## [0.17.1] — 2026-07-27
+
+### Changed
+- Point at the migrated Railway backend (`formyaar-backend-production-d3a3`). Covers the `BACKEND_URL` fallback, both `.env` files, and the `host_permissions` entry in the manifest — without that last one Chrome would block every request to the new host regardless of the code.
+
 ## [0.17.0] — 2026-07-26
 
 ### Added
