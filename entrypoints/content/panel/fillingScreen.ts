@@ -208,18 +208,23 @@ export function updateFillProgress(
             </div>
           </div>`;
       }
-      // A field we genuinely couldn't fill (selector missing / disabled). This
-      // is the only status that asks the user to do something, so it's the only
-      // one that gets the warning colour — otherwise it reads the same as a
-      // deliberate skip and the real problems get lost among them.
+      // A field we couldn't fill. Deliberately rendered exactly like a
+      // deliberate skip for now: users read the warning as "FormYaar is
+      // broken" and went hunting for a problem that wasn't theirs. No invented
+      // reason is shown here — unlike a real skip we don't have one, and
+      // claiming the field wasn't needed could be untrue.
+      //
+      // The engine still tracks this separately and still fires the
+      // field_fill_failed telemetry, so a genuinely broken selector is visible
+      // to us even though it is now silent to the user. Restoring the visible
+      // warning is a matter of putting this branch back.
       if (item.status === "skipped") {
         return `
-          <div class="fy-prog-item" style="align-items:flex-start;color:var(--fy-ink);">
-            <span style="width:13px;text-align:center;flex-shrink:0;color:var(--fy-warn);font-weight:800;line-height:1.5;">!</span>
+          <div class="fy-prog-item" style="align-items:flex-start;color:var(--fy-muted);">
+            <span style="width:13px;text-align:center;flex-shrink:0;font-weight:800;line-height:1.5;">–</span>
             <div>
               <span style="font-weight:600;">${item.label}</span>
-              <span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;background:var(--fy-warn-bg);color:var(--fy-warn);font-size:9px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;vertical-align:1px;">Check</span>
-              ${noteLine(item.note, "var(--fy-warn)")}
+              <span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;background:var(--fy-field);color:var(--fy-muted);font-size:9px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;vertical-align:1px;">Skipped</span>
             </div>
           </div>`;
       }

@@ -1,6 +1,6 @@
 {
   "form": "pan_card",
-  "version": 16,
+  "version": 17,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -38,6 +38,8 @@
           "type": "text",
           "selector": "#m_name_end",
           "value_source": "user.middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "You don't have a middle name, so there's nothing to fill.",
           "explanation": "Your middle name as per Aadhaar."
         },
         {
@@ -180,6 +182,8 @@
           "type": "text",
           "selector": "#m_name",
           "value_source": "user.middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "You don't have a middle name, so there's nothing to fill.",
           "explanation": "Middle name as per Aadhaar."
         },
         {
@@ -202,6 +206,8 @@
           "type": "radio",
           "selector": "#single_parent_yes",
           "value_source": "user.is_single_parent",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't tell us this is a single-parent application, so this option is left unselected.",
           "min_delay_ms": 2000,
           "explanation": "Click Yes only if single parent — 2s delay lets NSDL JS show the which-parent selector."
         },
@@ -210,6 +216,8 @@
           "type": "radio",
           "selector": "#single_parent_father",
           "value_source": "user.is_single_parent_father",
+          "skip_when_empty": true,
+          "skip_reason": "Not the single-parent option that applies to you.",
           "min_delay_ms": 1500,
           "explanation": "Select Father as single parent when applicable — 1.5s delay lets NSDL enable father fields."
         },
@@ -218,6 +226,8 @@
           "type": "radio",
           "selector": "#single_parent_mother",
           "value_source": "user.is_single_parent_mother",
+          "skip_when_empty": true,
+          "skip_reason": "Not the single-parent option that applies to you.",
           "min_delay_ms": 1500,
           "explanation": "Select Mother as single parent when applicable — 1.5s delay lets NSDL enable mother fields."
         },
@@ -226,6 +236,8 @@
           "type": "text",
           "selector": "#faf_name",
           "value_source": "user.father_first_name",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't provide your father's details, and they aren't required for your PAN.",
           "explanation": "Father's first name."
         },
         {
@@ -233,6 +245,8 @@
           "type": "text",
           "selector": "#fam_name",
           "value_source": "user.father_middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "No middle name given for your father.",
           "explanation": "Father's middle name."
         },
         {
@@ -240,6 +254,8 @@
           "type": "text",
           "selector": "#fal_name",
           "value_source": "user.father_last_name",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't provide your father's details, and they aren't required for your PAN.",
           "explanation": "Father's last name."
         },
         {
@@ -247,6 +263,8 @@
           "type": "text",
           "selector": "#mof_name",
           "value_source": "user.mother_first_name",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't provide your mother's details, and they aren't required for your PAN.",
           "explanation": "Mother's first name."
         },
         {
@@ -254,6 +272,8 @@
           "type": "text",
           "selector": "#mom_name",
           "value_source": "user.mother_middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "No middle name given for your mother.",
           "explanation": "Mother's middle name."
         },
         {
@@ -261,6 +281,8 @@
           "type": "text",
           "selector": "#mol_name",
           "value_source": "user.mother_last_name",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't provide your mother's details, and they aren't required for your PAN.",
           "explanation": "Mother's last name."
         },
         {
@@ -268,6 +290,8 @@
           "type": "radio",
           "selector": "#parent_father",
           "value_source": "user.parent_on_card_is_father",
+          "skip_when_empty": true,
+          "skip_reason": "You chose your mother's name to appear on the card.",
           "explanation": "Father's name on PAN card."
         },
         {
@@ -275,6 +299,8 @@
           "type": "radio",
           "selector": "#parent_mother",
           "value_source": "user.parent_on_card_is_mother",
+          "skip_when_empty": true,
+          "skip_reason": "You chose your father's name to appear on the card.",
           "explanation": "Mother's name on PAN card."
         }
       ],

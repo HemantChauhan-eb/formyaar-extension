@@ -213,7 +213,10 @@ async function runAutofillInner(form: string = "pan_card") {
     // Show fills honestly: a field we couldn't fill is "skipped" (muted), not a
     // false green check. Still non-fatal — the loop continues either way.
     progress[i].status = ok ? "done" : "skipped";
-    if (!ok) progress[i].note = "We couldn't fill this — please check it";
+    // No note on a failure: the panel renders these as a plain "Skipped" row,
+    // and we have no truthful reason to put under it. The status itself is
+    // still "skipped" rather than "intentional" so telemetry and any future
+    // UI can tell a real failure from a field we left alone by design.
     updateFillProgress([...progress]);
   }
 
