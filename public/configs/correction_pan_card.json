@@ -1,6 +1,6 @@
 {
   "form": "correction_pan_card",
-  "version": 8,
+  "version": 9,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -39,6 +39,8 @@
           "type": "text",
           "selector": "#m_name_end",
           "value_source": "user.middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "You don't have a middle name, so there's nothing to fill.",
           "explanation": "Your middle name as per your existing PAN."
         },
         {
@@ -222,6 +224,8 @@
           "type": "text",
           "selector": "#m_name",
           "value_source": "user.middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "You don't have a middle name, so there's nothing to fill.",
           "explanation": "Middle name as per Aadhaar."
         },
         {
@@ -268,6 +272,8 @@
           "type": "text",
           "selector": "#faf_name",
           "value_source": "user.father_first_name",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't provide your father's details, and they aren't required for your PAN.",
           "explanation": "Father's first name."
         },
         {
@@ -275,6 +281,8 @@
           "type": "text",
           "selector": "#fam_name",
           "value_source": "user.father_middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "No middle name given for your father.",
           "explanation": "Father's middle name."
         },
         {
@@ -282,6 +290,8 @@
           "type": "text",
           "selector": "#fal_name",
           "value_source": "user.father_last_name",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't provide your father's details, and they aren't required for your PAN.",
           "explanation": "Father's last name."
         },
         {
@@ -289,6 +299,8 @@
           "type": "text",
           "selector": "#mof_name",
           "value_source": "user.mother_first_name",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't provide your mother's details, and they aren't required for your PAN.",
           "explanation": "Mother's first name."
         },
         {
@@ -296,6 +308,8 @@
           "type": "text",
           "selector": "#mom_name",
           "value_source": "user.mother_middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "No middle name given for your mother.",
           "explanation": "Mother's middle name."
         },
         {
@@ -303,6 +317,8 @@
           "type": "text",
           "selector": "#mol_name",
           "value_source": "user.mother_last_name",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't provide your mother's details, and they aren't required for your PAN.",
           "explanation": "Mother's last name."
         },
         {
@@ -310,6 +326,8 @@
           "type": "radio",
           "selector": "#parent_father",
           "value_source": "user.parent_on_card_is_father",
+          "skip_when_empty": true,
+          "skip_reason": "You chose your mother's name to appear on the card.",
           "explanation": "Print father's name on the PAN card."
         },
         {
@@ -317,6 +335,8 @@
           "type": "radio",
           "selector": "#parent_mother",
           "value_source": "user.parent_on_card_is_mother",
+          "skip_when_empty": true,
+          "skip_reason": "You chose your father's name to appear on the card.",
           "explanation": "Print mother's name on the PAN card."
         }
       ],

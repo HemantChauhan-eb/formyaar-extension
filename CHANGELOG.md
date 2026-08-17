@@ -1,5 +1,10 @@
 # FormYaar Extension — Changelog
 
+## [0.20.3] — 2026-08-17
+
+### Changed
+- Two states in the fill list instead of three: filled, or skipped. A field FormYaar couldn't fill now renders as a plain grey "Skipped" row like any deliberate skip, with no warning colour and no "please check it" — applicants were reading that as FormYaar being broken and going looking for a problem that wasn't theirs. No reason is invented for these rows: unlike a real skip there isn't one, and claiming the field wasn't needed could be untrue. The engine still records the two cases separately and still fires `field_fill_failed`, so a broken selector stays visible to us in telemetry while being silent to the user.
+
 ## [0.20.2] — 2026-08-17
 
 ### Fixed
