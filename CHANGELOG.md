@@ -1,5 +1,45 @@
 # FormYaar Extension — Changelog
 
+## [0.20.2] — 2026-08-17
+
+### Fixed
+- **Unchosen options no longer look like failures.** Where the form offers a choice — ePAN vs physical card, the six income sources — only one option gets filled, and every other option was reported as "We couldn't fill this, please check it". On the new-PAN form that meant five of six income rows accusing FormYaar of breaking. Those rows now read as deliberate skips with the reason ("You chose to receive a physical card, so this option is left unselected"). Config-driven, via the same `skip_when_empty` keys.
+
+### Changed
+- Progress rows are colour-coded: green for filled, grey with a "Skipped" tag and a reason for anything left alone on purpose, amber with a "Check" tag for the only case that actually needs the user's attention. Filled rows were previously near-black ink with only the tick in green.
+
+## [0.20.1] — 2026-08-17
+
+### Fixed
+- Step review no longer opens on top of the document-upload screen. `showFillingScreen`/`showVerifyScreen` hid a hardcoded list of screens that didn't include the upload one, so two panel screens rendered stacked. Both now hide every screen and show only their own.
+- The panel can be closed again while reviewing a step. Click-outside-to-close refuses to fire while the filling screen is up so a running fill can't be dismissed by accident; review reuses that screen and inherited the block. The check is now on the screen's mode rather than its visibility.
+
+## [0.20.0] — 2026-08-17
+
+### Added
+- **The panel follows the step you're looking at.** It used to show one thing — whatever the fill reached last — so an applicant on the document step who clicked back to "Personal Details" to check what went in still saw upload instructions. Clicking a step in NSDL's own stepper now shows that step's fill results: the same rows, with the same ticks, dashes and warnings, that were watched going in. The rows are replayed exactly as the fill recorded them rather than re-derived, so the panel can't claim something different from what happened on the page. The step the page opened on keeps its normal screen, so returning to it restores the upload guidance instead of trapping the applicant in review. A running fill is never interrupted — it drives the stepper itself, and those moves are indistinguishable from a click.
+
+## [0.19.1] — 2026-08-17
+
+### Fixed
+- **Document upload defaults to manual again.** NSDL added a DigiLocker upload option to the document page and made it the default, dropping applicants into a flow FormYaar has no part in — on the page that already generates the most confusion. The manual upload option is now selected automatically on every load of that page. Selecting the radio alone doesn't reveal the manual section (the site keeps it hidden until its own handler fires), so this dispatches a real click and re-asserts until the section is actually on screen, the same way the eKYC consent fix handles the site's initialisation race.
+
+## [0.19.0] — 2026-08-17
+
+### Fixed
+- **You're returned to your form automatically after paying.** Previously the payment tab ended on "you can close this tab" while the form tab quietly redirected itself to the government site — two tabs, no clear signal which one to look at, and the most common source of confusion we had. Now the /pay page tells the extension the moment Razorpay confirms; the background verifies with the backend, closes the payment tab, and focuses the form tab. The page reads "Taking you back to your form…" while that happens. The nudge also removes the wait: the poller runs on a `chrome.alarms` interval that Chrome clamps in packed builds, so a paid user could sit on a finished payment for ~30s before anything moved. If nothing has closed the tab after 10s (older build, or the form tab is gone) the manual "close this tab" button reappears, so nobody is stranded.
+- **The AO code must be confirmed before you can continue.** The PIN-code check treated "couldn't reach the backend" as good enough to proceed, so anyone offline sailed past it and only discovered the problem at payment. Now nothing but a confirmed AO code opens the gate — an unrecognised PIN, an area we have no code for, and a check that never completed all stop the form, each with its own message. Network failures get a Retry link and re-check themselves when the connection returns, rather than leaving a stale error that only clears if you retype the PIN. Two things this deliberately avoids: the shared Next button is only disabled while the PIN step itself is showing (so navigating back doesn't strand you), and forms with no PIN field — the correction flow — aren't gated at all.
+- **Fields we skip on purpose now say so.** Optional government fields the applicant has no value for (passport number, foreign TIN) were reported as filled — `fillText` returns success even for an empty box — while genuine failures shared the same muted row. Deliberate skips now show a reason ("Only needed if you're a non-resident"), and real failures show a warning marker and "We couldn't fill this — please check it". Driven by `skip_when_empty` / `skip_reason` in the form config, so which fields these are stays a backend decision.
+- FormYaar's own banner no longer appears over the payment page.
+
+## [0.18.0] — 2026-08-16
+
+### Added
+- **Free coupon codes.** A code the backend marks as free takes the total to ₹0, and the pay button becomes "Start filling — free". Razorpay is never opened: the backend hands back a `free_…` order id, the background script recognises the prefix and fires `PAYMENT_VERIFIED` straight back to the tab, so the fill starts immediately and the payment poller never runs. Which codes are free is a backend env var, so codes can be issued or revoked without shipping an extension update.
+
+### Changed
+- The receipt's discount amount and the "you saved" chip are now computed from the applied code instead of being hardcoded to ₹10, so a ₹0 code reads "−₹39.00" and "this one's free".
+
 ## [0.17.1] — 2026-07-27
 
 ### Changed

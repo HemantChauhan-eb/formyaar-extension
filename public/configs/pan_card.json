@@ -1,6 +1,6 @@
 {
   "form": "pan_card",
-  "version": 14,
+  "version": 16,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -292,6 +292,8 @@
           "type": "checkbox",
           "selector": "#sal_id",
           "value_source": "user.income_source",
+          "skip_when_empty": true,
+          "skip_reason": "Not one of the income sources you selected.",
           "static_value": "salary",
           "explanation": "Source of income — Salary."
         },
@@ -300,6 +302,8 @@
           "type": "checkbox",
           "selector": "#buss",
           "value_source": "user.income_source",
+          "skip_when_empty": true,
+          "skip_reason": "Not one of the income sources you selected.",
           "static_value": "business",
           "explanation": "Source of income — Business/Profession."
         },
@@ -308,6 +312,8 @@
           "type": "checkbox",
           "selector": "#inc_house",
           "value_source": "user.income_source",
+          "skip_when_empty": true,
+          "skip_reason": "Not one of the income sources you selected.",
           "static_value": "house_property",
           "explanation": "Source of income — House property."
         },
@@ -316,6 +322,8 @@
           "type": "checkbox",
           "selector": "#inc_other_sources",
           "value_source": "user.income_source",
+          "skip_when_empty": true,
+          "skip_reason": "Not one of the income sources you selected.",
           "static_value": "other_sources",
           "explanation": "Source of income — Other sources."
         },
@@ -324,6 +332,8 @@
           "type": "checkbox",
           "selector": "#capital_gains",
           "value_source": "user.income_source",
+          "skip_when_empty": true,
+          "skip_reason": "Not one of the income sources you selected.",
           "static_value": "capital_gains",
           "explanation": "Source of income — Capital gains."
         },
@@ -332,6 +342,8 @@
           "type": "checkbox",
           "selector": "#no_income",
           "value_source": "user.income_source",
+          "skip_when_empty": true,
+          "skip_reason": "Not one of the income sources you selected.",
           "static_value": "no_income",
           "explanation": "Source of income — No income."
         },
@@ -358,6 +370,8 @@
           "type": "text",
           "selector": "#passport_num",
           "value_source": "user.passport_number",
+          "skip_when_empty": true,
+          "skip_reason": "Only needed if you're a non-resident. Not required for your PAN.",
           "explanation": "Passport number (optional)."
         },
         {
@@ -365,6 +379,8 @@
           "type": "text",
           "selector": "#tin_num",
           "value_source": "user.tin_number",
+          "skip_when_empty": true,
+          "skip_reason": "Only needed if you pay tax in another country. Not required for your PAN.",
           "explanation": "TIN number (optional)."
         }
       ],

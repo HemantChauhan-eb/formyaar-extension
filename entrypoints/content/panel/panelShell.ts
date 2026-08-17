@@ -107,7 +107,7 @@ export function renderPanelHTML(): string {
 
       /* ── Fill progress list ── */
       .fy-prog-item { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 3px 0; }
-      .fy-prog-item.done { color: var(--fy-ink); font-weight: 600; }
+      .fy-prog-item.done { color: var(--fy-good); font-weight: 600; }
       .fy-prog-item.done svg { color: var(--fy-good); }
       .fy-prog-item.active { color: var(--fy-accent); font-weight: 700; }
       .fy-prog-item.pending { color: var(--fy-faint); }
@@ -219,8 +219,17 @@ export function attachClickOutsideHandler() {
     const p = document.getElementById("formyaar-panel");
     const t = document.getElementById("fy-tab");
     if (!p || !t) return;
+    // Don't let a stray click dismiss the panel while a fill is running. This
+    // checks the mode, not just visibility: the same screen is reused to review
+    // a finished step, and there the user must be able to close the panel
+    // normally to see the form underneath.
     const filling = document.getElementById("fy-filling");
-    if (filling && filling.style.display !== "none") return;
+    if (
+      filling &&
+      filling.style.display !== "none" &&
+      filling.dataset.mode !== "review"
+    )
+      return;
     // A confirmation modal (eligibility check, AO-availability notice, etc.)
     // is open — it's appended to <body>, outside the panel, so clicking its
     // checkboxes/buttons would otherwise register as an "outside click".
