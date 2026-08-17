@@ -6,6 +6,7 @@ import {
   showFillingScreen,
   showVerifyScreen,
   updateFillProgress,
+  resetFillingScreenChrome,
   celebrateTimeSaved,
 } from "./panel";
 import { showUploadScreen } from "./uploadScreen";
@@ -95,7 +96,6 @@ const FIELD_LABELS: Record<string, string> = {
   update_flag_gender: "Mark gender for change",
   update_flag_parents: "Mark parents' details for change",
   update_flag_contact: "Mark contact details for change",
-  landline_isd_code: "Country code (landline)",
   passport_num: "Passport number",
   tin_num: "TIN",
   proof_dob_code: "Proof of date of birth",
@@ -104,7 +104,7 @@ const FIELD_LABELS: Record<string, string> = {
   save_draft: "Save draft",
 };
 
-function getCurrentStepyIndex(): number {
+export function getCurrentStepyIndex(): number {
   // Primary: stepy header active class — most reliable indicator
   const headers = document.querySelectorAll(".stepy-header li");
   for (let i = 0; i < headers.length; i++) {
@@ -119,8 +119,27 @@ function getCurrentStepyIndex(): number {
 }
 
 // ─── Main entry point ────────────────────────────────────────────────
+// True while a fill is actually typing into the page. The step-review watcher
+// checks this: the fill advances the site's own stepper as it goes, and those
+// programmatic step changes look identical to a user clicking one — without
+// the guard, review mode would overwrite the live progress list mid-fill.
+let filling = false;
+export const isFilling = (): boolean => filling;
+
 export async function runAutofill(form: string = "pan_card") {
+  filling = true;
+  try {
+    await runAutofillInner(form);
+  } finally {
+    filling = false;
+  }
+}
+
+async function runAutofillInner(form: string = "pan_card") {
   showFillingScreen();
+  // Review mode reuses these nodes, so a fill starting after one must put the
+  // spinner and headings back before it writes any progress.
+  resetFillingScreenChrome();
 
   const config = await fetchConfig(form);
   const userData = await getUserData();
@@ -154,17 +173,34 @@ export async function runAutofill(form: string = "pan_card") {
   // Initial progress: all pending
   const progress = step.fields.map((f) => ({
     label: FIELD_LABELS[f.field_id] ?? f.field_id,
-    status: "pending" as "done" | "active" | "pending" | "skipped",
+    status: "pending" as
+      | "done"
+      | "active"
+      | "pending"
+      | "skipped"
+      | "intentional",
+    note: undefined as string | undefined,
   }));
   updateFillProgress(progress);
 
   // Fill each field with delay
   for (let i = 0; i < step.fields.length; i++) {
-    progress[i].status = "active";
-    updateFillProgress([...progress]);
-
     const field = { ...step.fields[i], _step: step.step };
     const value = resolveValue(field, userData);
+
+    // Optional field the applicant has no value for. Don't touch it, and say
+    // why — left to the normal path it would report a green tick for an empty
+    // box (fillText always succeeds), which reads as "FormYaar filled this"
+    // for a field it deliberately left alone.
+    if (field.skip_when_empty && (value === "" || value === false)) {
+      progress[i].status = "intentional";
+      progress[i].note = field.skip_reason ?? "Not needed for your PAN";
+      updateFillProgress([...progress]);
+      continue;
+    }
+
+    progress[i].status = "active";
+    updateFillProgress([...progress]);
 
     // Scroll the target field into view so the user can follow along
     const el = document.querySelector(field.selector);
@@ -177,7 +213,28 @@ export async function runAutofill(form: string = "pan_card") {
     // Show fills honestly: a field we couldn't fill is "skipped" (muted), not a
     // false green check. Still non-fatal — the loop continues either way.
     progress[i].status = ok ? "done" : "skipped";
+    if (!ok) progress[i].note = "We couldn't fill this — please check it";
     updateFillProgress([...progress]);
+  }
+
+  // Keep what we did on this step so the panel can show it again when the user
+  // clicks back to the step in the site's own stepper. Keyed by stepy_index
+  // because that is literally the index of the page's own fieldset (see
+  // matchStep), so the stored rows line up with whatever step is on screen —
+  // including on later pages that re-render the same wizard.
+  if (typeof step.stepy_index === "number") {
+    try {
+      const prev = await browser.storage.session.get("fillHistory");
+      const history = (prev.fillHistory ?? {}) as Record<string, unknown>;
+      await browser.storage.session.set({
+        fillHistory: {
+          ...history,
+          [String(step.stepy_index)]: progress,
+        },
+      });
+    } catch {
+      // Nice-to-have only — never let history bookkeeping break a paid fill.
+    }
   }
 
   trackEvent("guide_completed", form);

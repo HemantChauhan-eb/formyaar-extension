@@ -738,7 +738,9 @@ function attachUserFormHandlers(
   onBack: () => void,
 ): void {
   const back = document.getElementById("fy-userform-back");
-  const submit = document.getElementById("fy-userform-submit");
+  const submit = document.getElementById(
+    "fy-userform-submit",
+  ) as HTMLButtonElement | null;
   const next = document.getElementById(
     "fy-userform-next",
   ) as HTMLButtonElement | null;
@@ -752,6 +754,34 @@ function attachUserFormHandlers(
   const bodyEl = document.getElementById("fy-uf-body");
   let paneIdx = 0;
 
+  // ── AO-code gate ────────────────────────────────────────────────────
+  // Nobody advances past the PIN-code step until the backend has confirmed an
+  // AO code for that area. An unchecked PIN (offline, backend down) is treated
+  // exactly like a missing one: we can't know it's fillable, so we don't let
+  // the form proceed on a guess and strand the user at payment.
+  //
+  // Two traps this has to avoid:
+  //  • `next` is one shared footer button, not one per pane — gating it
+  //    unconditionally would also strand someone who navigated back, so it is
+  //    only ever disabled while the PIN pane itself is showing.
+  //  • The correction form has no PIN input at all. With no field to check
+  //    there is nothing to gate, so the gate opens rather than locking that
+  //    form's submit button forever.
+  const pinInputEl = document.querySelector<HTMLInputElement>(
+    '[data-field="aadhaar_pin_code"]',
+  );
+  const aoStatusEl0 = document.getElementById("fy-ao-status");
+  const aoGated = !!(pinInputEl && aoStatusEl0);
+  const pinPaneIdx = pinInputEl
+    ? Number(pinInputEl.closest<HTMLElement>(".fy-pane")?.dataset.pane ?? -1)
+    : -1;
+  let aoOk = !aoGated;
+
+  const updateNavState = () => {
+    if (next) next.disabled = aoGated && paneIdx === pinPaneIdx && !aoOk;
+    if (submit) submit.disabled = !aoOk;
+  };
+
   const showPane = (i: number) => {
     paneIdx = Math.max(0, Math.min(panes.length - 1, i));
     panes.forEach((p, idx) => p.classList.toggle("on", idx === paneIdx));
@@ -760,7 +790,10 @@ function attachUserFormHandlers(
     if (next) next.style.display = isLast ? "none" : "flex";
     if (submit) submit.style.display = isLast ? "flex" : "none";
     if (bodyEl) bodyEl.scrollTop = 0;
+    updateNavState();
   };
+
+  updateNavState();
 
   next?.addEventListener("click", () => showPane(paneIdx + 1));
   back?.addEventListener("click", () => {
@@ -778,52 +811,75 @@ function attachUserFormHandlers(
   };
 
   // Live AO code availability check — fires when user finishes typing PIN
-  const pinInput = document.querySelector<HTMLInputElement>(
-    '[data-field="aadhaar_pin_code"]',
-  );
-  const aoStatus = document.getElementById("fy-ao-status");
-  const submitBtn = document.getElementById(
-    "fy-userform-submit",
-  ) as HTMLButtonElement | null;
+  const pinInput = pinInputEl;
+  const aoStatus = aoStatusEl0;
   let aoCheckTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const setSubmitEnabled = (enabled: boolean) => {
-    if (submitBtn) submitBtn.disabled = !enabled;
-    if (next) next.disabled = !enabled;
-  };
-
   if (pinInput && aoStatus) {
+    // Every outcome other than a confirmed code closes the gate. The retry
+    // link matters more than it looks: the result is cached in the DOM and only
+    // recomputed on input, so without it someone whose check failed while
+    // offline would have to retype the PIN to get moving again.
+    const retryLink = `<a href="#" id="fy-ao-retry" style="color:#305eff;font-weight:600;text-decoration:underline;">Retry</a>`;
+
+    const setAO = (ok: boolean, html: string) => {
+      aoOk = ok;
+      aoStatus.innerHTML = html;
+      updateNavState();
+      const retry = document.getElementById("fy-ao-retry");
+      if (retry)
+        retry.addEventListener("click", (e) => {
+          e.preventDefault();
+          checkAO(pinInput.value.replace(/\D/g, ""));
+        });
+    };
+
     const checkAO = async (pin: string) => {
       if (pin.length !== 6) {
-        aoStatus.innerHTML = "";
-        setSubmitEnabled(true);
+        setAO(false, "");
         return;
       }
+      aoOk = false; // no advancing mid-flight
+      updateNavState();
       aoStatus.innerHTML = `<span style="color:#8a92a3;">Checking AO code availability…</span>`;
-      setSubmitEnabled(false); // disable while checking
       try {
         const res = await fetch(`${BACKEND_URL}/pincode/${pin}`);
         if (!res.ok) {
-          aoStatus.innerHTML = `<span style="color:#d43c33;font-weight:600;">✗ PIN code not recognised — please double-check it</span>`;
-          setSubmitEnabled(false); // keep disabled — invalid pincode
+          setAO(
+            false,
+            `<span style="color:#d43c33;font-weight:600;">✗ PIN code not recognised — please double-check it</span>`,
+          );
           return;
         }
         const { ao_code } = await res.json();
         if (ao_code) {
-          aoStatus.innerHTML = `<span style="color:#157347;font-weight:600;">✓ AO code available for your area</span>`;
+          setAO(
+            true,
+            `<span style="color:#157347;font-weight:600;">✓ AO code available for your area</span>`,
+          );
         } else {
-          aoStatus.innerHTML = `<span style="color:#424b5e;font-weight:600;">AO code not available yet — you'll select it manually on the NSDL form</span>`;
+          setAO(
+            false,
+            `<span style="color:#d43c33;font-weight:600;">✗ We don't have the AO code for this area yet</span><br><span style="color:#8a92a3;">FormYaar can't complete this form correctly without it. Please write to us and we'll add your area.</span>`,
+          );
         }
-        setSubmitEnabled(true);
       } catch {
-        aoStatus.innerHTML = `<span style="color:#8a92a3;">Could not check — please continue</span>`;
-        setSubmitEnabled(true); // network error — let them proceed
+        setAO(
+          false,
+          `<span style="color:#d43c33;font-weight:600;">✗ Couldn't check your AO code</span><br><span style="color:#8a92a3;">Check your internet connection, then ${retryLink}.</span>`,
+        );
       }
     };
     pinInput.addEventListener("input", () => {
       const pin = pinInput.value.replace(/\D/g, "");
       if (aoCheckTimer) clearTimeout(aoCheckTimer);
       aoCheckTimer = setTimeout(() => checkAO(pin), 600);
+    });
+    // Connection came back — re-run automatically rather than leaving a stale
+    // failure on screen that the user has to notice and clear themselves.
+    window.addEventListener("online", () => {
+      if (!aoOk && pinInput.value.replace(/\D/g, "").length === 6)
+        checkAO(pinInput.value.replace(/\D/g, ""));
     });
     // Check immediately if PIN is already filled (e.g. resuming saved data)
     if (pinInput.value.length === 6) checkAO(pinInput.value);

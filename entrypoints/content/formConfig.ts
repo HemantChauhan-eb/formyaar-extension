@@ -32,6 +32,15 @@ export interface FieldConfig {
   min_delay_ms?: number;
   force_enable?: boolean;
   defence_selector?: string;
+  // Optional government fields that simply don't apply to most applicants
+  // (passport number, foreign TIN). When the applicant gave no value we leave
+  // the box empty *on purpose* — it isn't needed for the PAN to be issued.
+  // Without this the panel had no way to say so: the field either showed a
+  // green tick for a box we never typed into, or sat in the same muted
+  // "skipped" row used for genuine failures. `skip_reason` is the sentence
+  // shown to the user, so it has to read as a reason, not a field name.
+  skip_when_empty?: boolean;
+  skip_reason?: string;
   // Injected at fill time (not present in the config file itself).
   _step?: number;
 }

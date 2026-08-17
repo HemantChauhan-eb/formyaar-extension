@@ -27,7 +27,14 @@ import { attachOperatorReviewHandlers } from "./operator/reviewScreen";
 
 export { removeTab };
 export { showOperatorPanel };
-export { showFillingScreen, showVerifyScreen, updateFillProgress } from "./fillingScreen";
+export {
+  showFillingScreen,
+  showVerifyScreen,
+  updateFillProgress,
+  showStepReview,
+  resetFillingScreenChrome,
+  type ProgressItem,
+} from "./fillingScreen";
 export { celebrateTimeSaved } from "./celebration";
 
 export async function showContextualBanner() {

@@ -8,8 +8,10 @@ import { BACKEND_URL } from "../constants";
 const BASE_PRICE = 39;
 const COUPON_PRICE = 29;
 let appliedCoupon: string | null = null;
+let couponIsFree = false;
 let currentTotal = BASE_PRICE;
-const payBtnLabel = () => `Pay ₹${currentTotal} securely`;
+const payBtnLabel = () =>
+  couponIsFree ? "Start filling — free" : `Pay ₹${currentTotal} securely`;
 
 // ── Inline brand marks (extension-safe: no external requests) ──────────
 const LOGO_UPI = `<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="#EE7C22" d="M9.5 2.5 19 12l-9.5 9.5-2.1-2.1L14.8 12 7.4 4.6z"/><path fill="#1B8F3A" d="M13.6 2.5 23.1 12l-9.5 9.5-2.1-2.1L18.9 12l-7.4-7.4z"/></svg>`;
@@ -67,7 +69,7 @@ export function renderPaymentScreen(): string {
           </div>
           <div id="fy-discount-row" style="display:none;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--fy-body);margin-top:8px;">
             <span>Distributor code <b id="fy-discount-code" style="color:var(--fy-ink);"></b></span>
-            <span style="font-weight:700;color:#0e9f6e;flex-shrink:0;">−₹10.00</span>
+            <span id="fy-discount-amount" style="font-weight:700;color:#0e9f6e;flex-shrink:0;">−₹10.00</span>
           </div>
           <div style="border-top:1px dashed #d7dbe4;margin:11px 0;"></div>
           <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:800;color:var(--fy-ink);">
@@ -93,7 +95,7 @@ export function renderPaymentScreen(): string {
           </div>
           <div id="fy-coupon-applied" style="display:none;align-items:center;gap:9px;background:#e7f7f0;border-radius:10px;padding:11px 13px;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0e9f6e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 6 9 17l-5-5"/></svg>
-            <span style="font-size:12px;font-weight:700;color:#0b7a54;"><b id="fy-applied-code"></b> applied · you saved ₹10</span>
+            <span style="font-size:12px;font-weight:700;color:#0b7a54;"><b id="fy-applied-code"></b> <span id="fy-applied-saved">applied · you saved ₹10</span></span>
           </div>
         </div>
 
@@ -143,21 +145,26 @@ export function renderPaymentScreen(): string {
 }
 
 // Reflect an applied coupon across the price hero, receipt, and pay button.
-function applyCouponUI(code: string): void {
+// `free` codes take the total to ₹0 and skip checkout entirely.
+function applyCouponUI(code: string, free = false): void {
   appliedCoupon = code;
-  currentTotal = COUPON_PRICE;
+  couponIsFree = free;
+  currentTotal = free ? 0 : COUPON_PRICE;
+  const saved = BASE_PRICE - currentTotal;
 
   const hero = document.getElementById("fy-price-hero");
   if (hero)
     hero.innerHTML =
-      `<span style="font-size:26px;color:var(--fy-faint);text-decoration:line-through;font-weight:600;margin-right:8px;vertical-align:5px;">₹${BASE_PRICE}</span>₹${COUPON_PRICE}`;
+      `<span style="font-size:26px;color:var(--fy-faint);text-decoration:line-through;font-weight:600;margin-right:8px;vertical-align:5px;">₹${BASE_PRICE}</span>${free ? "FREE" : `₹${COUPON_PRICE}`}`;
 
   const drow = document.getElementById("fy-discount-row");
   if (drow) drow.style.display = "flex";
   const dcode = document.getElementById("fy-discount-code");
   if (dcode) dcode.textContent = code;
+  const damount = document.getElementById("fy-discount-amount");
+  if (damount) damount.textContent = `−₹${saved}.00`;
   const total = document.getElementById("fy-receipt-total");
-  if (total) total.textContent = `₹${COUPON_PRICE}.00`;
+  if (total) total.textContent = `₹${currentTotal}.00`;
 
   const prompt = document.getElementById("fy-coupon-prompt");
   if (prompt) prompt.style.display = "none";
@@ -165,6 +172,9 @@ function applyCouponUI(code: string): void {
   if (applied) applied.style.display = "flex";
   const appliedCode = document.getElementById("fy-applied-code");
   if (appliedCode) appliedCode.textContent = code;
+  const savedLabel = document.getElementById("fy-applied-saved");
+  if (savedLabel)
+    savedLabel.textContent = free ? "applied · this one's free" : `applied · you saved ₹${saved}`;
 
   const payBtn = document.getElementById("fy-pay-btn");
   if (payBtn) payBtn.innerHTML = payBtnLabel();
@@ -199,7 +209,7 @@ export function attachPaymentScreenHandlers() {
       );
       const data = await res.json();
       if (data?.valid) {
-        applyCouponUI(data.coupon ?? code);
+        applyCouponUI(data.coupon ?? code, Boolean(data.free));
         trackEvent("coupon_applied", "pan_card", { coupon: data.coupon ?? code });
       } else {
         couponMsg.textContent =
@@ -224,7 +234,7 @@ export function attachPaymentScreenHandlers() {
   // ── Pay ───────────────────────────────────────────────────────────
   document.getElementById("fy-pay-btn")?.addEventListener("click", async () => {
     const btn = document.getElementById("fy-pay-btn") as HTMLButtonElement;
-    btn.innerHTML = `<div style="width:15px;height:15px;border:2.5px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:fy-spin 0.8s linear infinite;"></div> Opening secure checkout…`;
+    btn.innerHTML = `<div style="width:15px;height:15px;border:2.5px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:fy-spin 0.8s linear infinite;"></div> ${couponIsFree ? "Getting started…" : "Opening secure checkout…"}`;
     btn.style.opacity = "0.7";
     btn.style.cursor = "default";
 

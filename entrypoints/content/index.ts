@@ -1,6 +1,7 @@
 import { SITE_CONFIGS, BANNER_DELAY_MS, BACKEND_URL } from "./constants";
 import { showContextualBanner } from "./panel";
 import { showUploadScreen } from "./uploadScreen";
+import { watchStepReview } from "./stepReview";
 import { runAutofill } from "./autofill";
 import { getUserData, resolveFormSlug } from "./userData";
 
@@ -138,13 +139,27 @@ export default defineContentScript({
       // first await, so showUploadScreen can find the screen nodes right after.
       showContextualBanner();
       showUploadScreen();
+      // Both of these re-run on every load: the page reloads itself after each
+      // uploaded document and comes back with its defaults restored.
+      // DigiLocker is the site's default upload method and we don't support
+      // it, so put the applicant on manual upload first.
+      selectManualDocUpload();
       // The upload page resets the eKYC photo-consent dropdown on every
       // self-reload, so Submit errors with "please select a consent". Re-apply
       // it on each load so it survives however many documents the user uploads.
       reapplyEkycConsent();
+      // This page still renders the full stepper, so the applicant can click
+      // back through the steps they've already filled. Returning to the
+      // document step restores the upload guidance they need here.
+      watchStepReview(() => showUploadScreen());
     } else if (SITE_CONFIGS[hostname] || hostname === "formyaar.in") {
-      // Show contextual banner on supported sites + formyaar website
-      setTimeout(() => showContextualBanner(), BANNER_DELAY_MS);
+      // Show contextual banner on supported sites + formyaar website, but not
+      // on the payment page: the user is mid-checkout and about to be sent
+      // back to the form, so a "start your PAN application" prompt there is
+      // just one more thing to decode.
+      const isPayPage = /^\/pay(\.html)?$/.test(window.location.pathname);
+      if (!isPayPage)
+        setTimeout(() => showContextualBanner(), BANNER_DELAY_MS);
     }
 
     // Allow formyaar.in buttons to open the panel via a custom DOM event
@@ -153,6 +168,13 @@ export default defineContentScript({
         await showContextualBanner();
         const p = document.getElementById("formyaar-panel");
         if (p) p.style.right = "0px";
+      });
+
+      // The /pay page announces a confirmed payment here. Treated purely as a
+      // "check now" nudge — the page can't prove anything, the background
+      // re-verifies with the backend before the form is unlocked.
+      document.addEventListener("fy:payment-done", () => {
+        browser.runtime.sendMessage({ type: "PAYMENT_CHECK_NOW" });
       });
     }
 
@@ -192,6 +214,12 @@ export default defineContentScript({
       } catch (err) {
         console.warn("FormYaar: could not check autofill state", err);
       }
+
+      // Follow the stepper here too, so a step can be reviewed part-way
+      // through the flow and not only from the document page at the end. No
+      // restore callback: on this page the fill owns the panel, and the guard
+      // inside the watcher keeps it from interfering while one is running.
+      watchStepReview();
     }
   },
 });
@@ -273,6 +301,61 @@ function showStartOverlay(form: string): void {
       runAutofill(form);
     }, 200);
   });
+}
+
+// ─── Force "Manual Document Upload" on the document-upload page ───────
+// NSDL added a DigiLocker upload option and made it the default. That path
+// fetches documents from the applicant's DigiLocker account and FormYaar has
+// no part in it — so the applicant lands on a section we can't guide them
+// through, on the one page that already causes the most support load.
+// Selecting the manual radio puts them back on the flow we support.
+//
+// Setting `.checked` isn't enough on its own: the page keeps the manual
+// upload UI (#hideManualDocDiv) hidden until its own handler runs, and that
+// handler is bound to the radio's click/change. So dispatch a real click and
+// nudge jQuery too, then keep checking until the manual section is actually
+// on screen — the page's scripts initialise on jQuery-ready, which can land
+// either side of our content script. Same race, same remedy as the eKYC
+// consent below.
+function selectManualDocUpload(): void {
+  let tries = 0;
+  const tick = () => {
+    tries += 1;
+    const done = applyManualDocUpload();
+    if (!done && tries < 15) setTimeout(tick, 300);
+  };
+  tick();
+}
+
+// Returns true once the manual radio is selected AND the manual upload
+// section is visible — until both hold, the caller keeps retrying.
+function applyManualDocUpload(): boolean {
+  const radio = document.getElementById("manualDoc") as HTMLInputElement | null;
+  if (!radio) return false;
+
+  const manualDiv = document.getElementById("hideManualDocDiv");
+  // offsetParent goes null for a display:none ancestor, which is exactly how
+  // the page hides this section.
+  const manualVisible = !!manualDiv && manualDiv.offsetParent !== null;
+
+  if (!radio.checked) {
+    // A real click sets .checked and fires the events the page listens for.
+    radio.click();
+  } else if (!manualVisible) {
+    // Already selected but the section is still hidden — the page's handler
+    // probably bound after our click. Re-fire what it listens for.
+    radio.dispatchEvent(new Event("click", { bubbles: true }));
+    radio.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  try {
+    const jq = (window as any).$;
+    if (jq) jq(radio).trigger("change");
+  } catch {
+    // no jQuery yet — the native click above already applied
+  }
+
+  return radio.checked && !!manualDiv && manualDiv.offsetParent !== null;
 }
 
 // ─── Re-apply eKYC photo consent on the document-upload page ──────────
