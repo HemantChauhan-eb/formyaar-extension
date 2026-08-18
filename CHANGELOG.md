@@ -1,5 +1,10 @@
 # FormYaar Extension — Changelog
 
+## [0.20.4] — 2026-08-17
+
+### Fixed
+- The panel now answers formyaar.in's `fy:panel-opened` handshake. The site had always listened for it and nothing ever sent it, so every "Start my PAN application" click reported the extension as missing — even with the panel open on screen. The site no longer depends on this reply (it watches for the panel element instead, which works on every build already installed), so this only settles the check sooner.
+
 ## [0.20.3] — 2026-08-17
 
 ### Changed

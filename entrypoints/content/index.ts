@@ -168,6 +168,13 @@ export default defineContentScript({
         await showContextualBanner();
         const p = document.getElementById("formyaar-panel");
         if (p) p.style.right = "0px";
+        // Answer the site's handshake. It has always listened for this and
+        // nothing ever sent it, so every "Start my PAN application" click
+        // reported the extension as missing — even with the panel open on
+        // screen. The site no longer depends on this reply (it watches for the
+        // panel element instead, which works on builds that never sent it),
+        // but sending it settles the check immediately.
+        document.dispatchEvent(new CustomEvent("fy:panel-opened"));
       });
 
       // The /pay page announces a confirmed payment here. Treated purely as a
