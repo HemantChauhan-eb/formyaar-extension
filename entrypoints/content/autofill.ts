@@ -31,7 +31,7 @@ const FORMS_WITH_DOC_UPLOAD_PAGE = new Set([
 ]);
 
 // ─── Field-friendly labels (used in progress UI) ─────────────────────
-const FIELD_LABELS: Record<string, string> = {
+export const FIELD_LABELS: Record<string, string> = {
   // Step 1
   application_type: "Application type",
   applicant_category: "Applicant category",

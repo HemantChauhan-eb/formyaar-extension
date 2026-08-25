@@ -1,5 +1,30 @@
 # FormYaar Extension — Changelog
 
+## [0.22.1] — 2026-08-26
+
+### Fixed
+- The language toggle's own label was `हिं` — a clipped abbreviation that assumed the reader already knew what a shortened Hindi word for "Hindi" looked like. Someone who reads only Hindi is exactly the person this button is for, and they were the ones least likely to recognise it. Spelled out in full both directions now: `हिंदी` and `English`.
+
+## [0.22.0] — 2026-08-25
+
+### Added
+- **Hindi translation infrastructure** (`panel/i18n.ts`) — a `STRINGS` dictionary, `t()`, and `applyLang()`. Scoped to what the Android app actually renders: home, chooser, the five-pane intake wizard, and the document-upload screen carry `data-i18n` attributes now; `applyLang()` is never called from the extension's own code, so this is inert here — the desktop panel renders exactly the English text it always has. The toggle itself lives only in the Android app (`app-shell.html`); see its changelog.
+
+## [0.21.0] — 2026-08-24
+
+### Changed
+- Point at the migrated Railway backend (`formyaar-backend-production-ad09`). Same three places as the last migration: the `BACKEND_URL` fallback in `constants.ts`, both `.env` files, and — via `backendUrl` in `wxt.config.ts` — the `host_permissions` entry in the manifest. Chrome blocks every request to a host that isn't in `host_permissions`, so all four have to move together.
+
+## [0.20.5] — 2026-08-18
+
+### Added
+- **Recovery-contact capture.** The mobile number in the panel's intake form is now sent to the backend the moment it looks complete, not just on final submit. Submit only ever fires at the end of the five-pane wizard, which is exactly the point most applicants who abandon never reach — until now that left nothing recorded anywhere, not even in extension storage, so there was no way to follow up with someone who started and disappeared. A one-line disclosure sits under the field. This is a recovery list only: the sole intended use is checking in with someone who started an application and didn't finish, never marketing. A number is dropped from the outreach list the moment that person pays (backend-side, via the existing save-session call).
+
+## [0.20.4] — 2026-08-18
+
+### Changed
+- The panel has a defined left edge instead of relying on its drop shadow alone. Most of the sites it opens over are white, and so is the panel, so the two ran together — a soft shadow was the only thing saying where one ended and the other began. Now a 1px neutral border with a faint blue seam alongside it: readable as a separate surface on white without competing with the page.
+
 ## [0.20.3] — 2026-08-17
 
 ### Changed

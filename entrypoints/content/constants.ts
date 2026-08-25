@@ -1,11 +1,11 @@
 // Single source of truth — version comes from package.json via Vite
-export const VERSION = (import.meta.env.VITE_APP_VERSION as string) ?? "0.20.3";
+export const VERSION = (import.meta.env.VITE_APP_VERSION as string) ?? "0.22.1";
 export const CWS_LISTING_URL =
   "https://chromewebstore.google.com/detail/formyaar/anibapibnfjepjpomkpoifpolbagajag";
 
 export const BACKEND_URL =
   (import.meta.env.VITE_BACKEND_URL as string) ??
-  "https://formyaar-backend-production-d3a3.up.railway.app";
+  "https://formyaar-backend-production-ad09.up.railway.app";
 
 export const PANEL_WIDTH = 400;
 export const PANEL_TRANSITION_MS = 300;

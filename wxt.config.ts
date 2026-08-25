@@ -6,7 +6,7 @@ config({ path: `.env.${process.env.NODE_ENV || "development"}` });
 const { version } = JSON.parse(readFileSync("./package.json", "utf-8"));
 const backendUrl =
   process.env.VITE_BACKEND_URL ??
-  "https://formyaar-backend-production-d3a3.up.railway.app";
+  "https://formyaar-backend-production-ad09.up.railway.app";
 
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],

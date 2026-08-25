@@ -181,45 +181,45 @@ export const USERFORM_STYLES = `
 function paneName(data: UserData): string {
   return `
     <div class="fy-pane on" data-pane="0">
-      <div class="fy-pane-caption">Step 1 of 5</div>
-      <div class="fy-pane-title">What's your name?</div>
-      <div class="fy-pane-sub">Exactly as printed on your Aadhaar card.</div>
+      <div class="fy-pane-caption" data-i18n="wizard.step1">Step 1 of 5</div>
+      <div class="fy-pane-title" data-i18n="wizard.p1_title">What's your name?</div>
+      <div class="fy-pane-sub" data-i18n="wizard.p1_sub">Exactly as printed on your Aadhaar card.</div>
 
       <div class="fy-userform-row">
         <label class="fy-userform-field">
-          <span>First name <em>*</em></span>
+          <span><span data-i18n="field.first_name">First name</span> <em>*</em></span>
           <input type="text" data-field="first_name" value="${escapeHtml(data.first_name)}" placeholder="HEMANT" autocomplete="off">
         </label>
         <label class="fy-userform-field">
-          <span>Middle name</span>
+          <span data-i18n="field.middle_name">Middle name</span>
           <input type="text" data-field="middle_name" value="${escapeHtml(data.middle_name)}" placeholder="Optional" autocomplete="off">
         </label>
       </div>
 
       <label class="fy-userform-field">
-        <span>Last name <em>*</em></span>
+        <span><span data-i18n="field.last_name">Last name</span> <em>*</em></span>
         <input type="text" data-field="last_name" value="${escapeHtml(data.last_name)}" placeholder="CHAUHAN" autocomplete="off">
       </label>
 
       <label class="fy-userform-field">
-        <span>Date of birth <em>*</em></span>
+        <span><span data-i18n="field.dob">Date of birth</span> <em>*</em></span>
         <input type="text" data-field="date_of_birth" value="${escapeHtml(data.date_of_birth)}" placeholder="DD/MM/YYYY" autocomplete="off" inputmode="numeric">
       </label>
 
       <label class="fy-userform-field">
-        <span>Gender <em>*</em></span>
+        <span><span data-i18n="field.gender">Gender</span> <em>*</em></span>
         <div class="fy-userform-radios">
           <label class="fy-userform-radio">
             <input type="radio" name="gender" data-field="gender" value="M" ${data.gender === "M" ? "checked" : ""}>
-            <span>Male</span>
+            <span data-i18n="opt.male">Male</span>
           </label>
           <label class="fy-userform-radio">
             <input type="radio" name="gender" data-field="gender" value="F" ${data.gender === "F" ? "checked" : ""}>
-            <span>Female</span>
+            <span data-i18n="opt.female">Female</span>
           </label>
           <label class="fy-userform-radio">
             <input type="radio" name="gender" data-field="gender" value="T" ${data.gender === "T" ? "checked" : ""}>
-            <span>Transgender</span>
+            <span data-i18n="opt.transgender">Transgender</span>
           </label>
         </div>
       </label>
@@ -230,18 +230,19 @@ function paneName(data: UserData): string {
 function paneContact(data: UserData): string {
   return `
     <div class="fy-pane" data-pane="1">
-      <div class="fy-pane-caption">Step 2 of 5</div>
-      <div class="fy-pane-title">How do we reach you?</div>
-      <div class="fy-pane-sub">The government sends your e-PAN to this email.</div>
+      <div class="fy-pane-caption" data-i18n="wizard.step2">Step 2 of 5</div>
+      <div class="fy-pane-title" data-i18n="wizard.p2_title">How do we reach you?</div>
+      <div class="fy-pane-sub" data-i18n="wizard.p2_sub">The government sends your e-PAN to this email.</div>
 
       <label class="fy-userform-field">
-        <span>Email <em>*</em></span>
+        <span><span data-i18n="field.email">Email</span> <em>*</em></span>
         <input type="email" data-field="email" value="${escapeHtml(data.email)}" placeholder="you@example.com" autocomplete="off">
       </label>
 
       <label class="fy-userform-field">
-        <span>Mobile number <em>*</em></span>
+        <span><span data-i18n="field.mobile">Mobile number</span> <em>*</em></span>
         <input type="tel" data-field="mobile" value="${escapeHtml(data.mobile)}" placeholder="9876543210" autocomplete="off" inputmode="numeric" maxlength="10">
+        <small class="fy-userform-hint" data-i18n="wizard.mobile_hint">If you leave your application midway, we may call this number to see if we can help.</small>
       </label>
     </div>
   `;
@@ -255,7 +256,7 @@ function paneAadhaar(form: string, data: UserData): string {
       ? ""
       : `
       <label class="fy-userform-field">
-        <span>PIN code as per Aadhaar <em>*</em></span>
+        <span><span data-i18n="field.aadhaar_pin">PIN code as per Aadhaar</span> <em>*</em></span>
         <input type="text" data-field="aadhaar_pin_code" value="${escapeHtml(data.aadhaar_pin_code)}" placeholder="243001" autocomplete="off" inputmode="numeric" maxlength="6">
         <div id="fy-ao-status" style="margin-top:7px;font-size:12px;min-height:18px;"></div>
       </label>
@@ -263,12 +264,12 @@ function paneAadhaar(form: string, data: UserData): string {
 
   return `
     <div class="fy-pane" data-pane="2">
-      <div class="fy-pane-caption">Step 3 of 5</div>
-      <div class="fy-pane-title">Your Aadhaar</div>
-      <div class="fy-pane-sub">We only ask for the last 4 digits — never your full number. This stays on your device.</div>
+      <div class="fy-pane-caption" data-i18n="wizard.step3">Step 3 of 5</div>
+      <div class="fy-pane-title" data-i18n="wizard.p3_title">Your Aadhaar</div>
+      <div class="fy-pane-sub" data-i18n="wizard.p3_sub">We only ask for the last 4 digits — never your full number. This stays on your device.</div>
 
       <label class="fy-userform-field">
-        <span>Last 4 digits of Aadhaar <em>*</em></span>
+        <span><span data-i18n="field.aadhaar_last4">Last 4 digits of Aadhaar</span> <em>*</em></span>
         <input type="text" data-field="aadhaar_last_4" value="${escapeHtml(data.aadhaar_last_4 ?? "")}" placeholder="9012" autocomplete="off" inputmode="numeric" maxlength="4">
       </label>
 
@@ -285,15 +286,15 @@ function paneFamily(form: string, data: UserData): string {
       ? ""
       : `
       <label class="fy-userform-field">
-        <span>Single parent?</span>
+        <span data-i18n="field.single_parent">Single parent?</span>
         <div class="fy-userform-radios">
           <label class="fy-userform-radio">
             <input type="radio" name="is_single_parent" data-field="is_single_parent" value="false" ${!data.is_single_parent ? "checked" : ""}>
-            <span>No</span>
+            <span data-i18n="opt.no">No</span>
           </label>
           <label class="fy-userform-radio">
             <input type="radio" name="is_single_parent" data-field="is_single_parent" value="true" ${data.is_single_parent ? "checked" : ""}>
-            <span>Yes</span>
+            <span data-i18n="opt.yes">Yes</span>
           </label>
         </div>
       </label>
@@ -301,54 +302,54 @@ function paneFamily(form: string, data: UserData): string {
 
   return `
     <div class="fy-pane" data-pane="3">
-      <div class="fy-pane-caption">Step 4 of 5</div>
-      <div class="fy-pane-title">Your parents' names</div>
-      <div class="fy-pane-sub">The PAN form asks for both. One of them gets printed on the card.</div>
+      <div class="fy-pane-caption" data-i18n="wizard.step4">Step 4 of 5</div>
+      <div class="fy-pane-title" data-i18n="wizard.p4_title">Your parents' names</div>
+      <div class="fy-pane-sub" data-i18n="wizard.p4_sub">The PAN form asks for both. One of them gets printed on the card.</div>
 
       <div class="fy-userform-row">
         <label class="fy-userform-field">
-          <span>Father's first name <em>*</em></span>
+          <span><span data-i18n="field.father_first">Father's first name</span> <em>*</em></span>
           <input type="text" data-field="father_first_name" value="${escapeHtml(data.father_first_name)}" placeholder="RAMESH" autocomplete="off">
         </label>
         <label class="fy-userform-field">
-          <span>Middle</span>
+          <span data-i18n="field.middle_short">Middle</span>
           <input type="text" data-field="father_middle_name" value="${escapeHtml(data.father_middle_name)}" placeholder="Optional" autocomplete="off">
         </label>
       </div>
 
       <label class="fy-userform-field">
-        <span>Father's last name</span>
+        <span data-i18n="field.father_last">Father's last name</span>
         <input type="text" data-field="father_last_name" value="${escapeHtml(data.father_last_name)}" placeholder="Optional" autocomplete="off">
       </label>
 
       <div class="fy-userform-row">
         <label class="fy-userform-field">
-          <span>Mother's first name <em>*</em></span>
+          <span><span data-i18n="field.mother_first">Mother's first name</span> <em>*</em></span>
           <input type="text" data-field="mother_first_name" value="${escapeHtml(data.mother_first_name)}" placeholder="RADHA" autocomplete="off">
         </label>
         <label class="fy-userform-field">
-          <span>Middle</span>
+          <span data-i18n="field.middle_short">Middle</span>
           <input type="text" data-field="mother_middle_name" value="${escapeHtml(data.mother_middle_name)}" placeholder="Optional" autocomplete="off">
         </label>
       </div>
 
       <label class="fy-userform-field">
-        <span>Mother's last name</span>
+        <span data-i18n="field.mother_last">Mother's last name</span>
         <input type="text" data-field="mother_last_name" value="${escapeHtml(data.mother_last_name)}" placeholder="Optional" autocomplete="off">
       </label>
 
       ${singleParent}
 
       <label class="fy-userform-field">
-        <span>Whose name on the card? <em>*</em></span>
+        <span><span data-i18n="field.parent_on_card">Whose name on the card?</span> <em>*</em></span>
         <div class="fy-userform-radios">
           <label class="fy-userform-radio">
             <input type="radio" name="parent_on_card" data-field="parent_on_card" value="father" ${data.parent_on_card_is_father ? "checked" : ""}>
-            <span>Father's</span>
+            <span data-i18n="opt.fathers">Father's</span>
           </label>
           <label class="fy-userform-radio">
             <input type="radio" name="parent_on_card" data-field="parent_on_card" value="mother" ${data.parent_on_card_is_mother ? "checked" : ""}>
-            <span>Mother's</span>
+            <span data-i18n="opt.mothers">Mother's</span>
           </label>
         </div>
       </label>
@@ -385,104 +386,104 @@ function paneFinal(form: string, data: UserData): string {
     ? ""
     : `
       <label class="fy-userform-field">
-        <span>Proof of your existing PAN <em>*</em></span>
+        <span><span data-i18n="field.proof_of_pan">Proof of your existing PAN</span> <em>*</em></span>
         <select data-field="proof_of_pan">
-          <option value="Copy of Pan Card" ${data.proof_of_pan === "Copy of Pan Card" ? "selected" : ""}>Copy of PAN card</option>
-          <option value="Copy of Pan Allotment Letter" ${data.proof_of_pan === "Copy of Pan Allotment Letter" ? "selected" : ""}>Copy of PAN allotment letter</option>
-          <option value="No Document" ${data.proof_of_pan === "No Document" ? "selected" : ""}>No document</option>
+          <option value="Copy of Pan Card" data-i18n="opt.pan_copy" ${data.proof_of_pan === "Copy of Pan Card" ? "selected" : ""}>Copy of PAN card</option>
+          <option value="Copy of Pan Allotment Letter" data-i18n="opt.pan_allotment" ${data.proof_of_pan === "Copy of Pan Allotment Letter" ? "selected" : ""}>Copy of PAN allotment letter</option>
+          <option value="No Document" data-i18n="opt.no_document" ${data.proof_of_pan === "No Document" ? "selected" : ""}>No document</option>
         </select>
-        <small class="fy-userform-hint">What you'll upload to prove the PAN you're correcting</small>
+        <small class="fy-userform-hint" data-i18n="wizard.proof_pan_hint">What you'll upload to prove the PAN you're correcting</small>
       </label>
 
       <label class="fy-userform-field">
-        <span>Do you want a physical PAN card? <em>*</em></span>
+        <span><span data-i18n="field.wants_physical">Do you want a physical PAN card?</span> <em>*</em></span>
         <div class="fy-userform-radios">
           <label class="fy-userform-radio">
             <input type="radio" name="wants_physical_pan" data-field="wants_physical_pan" value="yes" ${data.wants_physical_pan !== "no" ? "checked" : ""}>
-            <span>Yes — ₹101</span>
+            <span data-i18n="opt.yes_101">Yes — ₹101</span>
           </label>
           <label class="fy-userform-radio">
             <input type="radio" name="wants_physical_pan" data-field="wants_physical_pan" value="no" ${data.wants_physical_pan === "no" ? "checked" : ""}>
-            <span>No — ₹66</span>
+            <span data-i18n="opt.no_66">No — ₹66</span>
           </label>
         </div>
-        <small class="fy-userform-hint">"No" means e-PAN only, sent to your email. This is the government's fee, not ours.</small>
+        <small class="fy-userform-hint" data-i18n="wizard.physical_hint">"No" means e-PAN only, sent to your email. This is the government's fee, not ours.</small>
       </label>
       `;
 
   return `
     <div class="fy-pane" data-pane="4">
-      <div class="fy-pane-caption">Step 5 of 5</div>
-      <div class="fy-pane-title">Last step</div>
-      <div class="fy-pane-sub">A few details the income tax department requires.</div>
+      <div class="fy-pane-caption" data-i18n="wizard.step5">Step 5 of 5</div>
+      <div class="fy-pane-title" data-i18n="wizard.p5_title">Last step</div>
+      <div class="fy-pane-sub" data-i18n="wizard.p5_sub">A few details the income tax department requires.</div>
 
       ${correctionOnly}
 
       <div ${hideOnCorrection}>
       <label class="fy-userform-field">
-        <span>Source of income <em>*</em></span>
-        <small class="fy-userform-hint">Select all that apply</small>
+        <span><span data-i18n="field.income_source">Source of income</span> <em>*</em></span>
+        <small class="fy-userform-hint" data-i18n="wizard.select_all">Select all that apply</small>
         <div class="fy-userform-radios fy-userform-radios-grid" id="fy-income-source-group">
           <label class="fy-userform-radio">
             <input type="checkbox" name="income_source" data-field="income_source" value="salary" ${data.income_source.includes("salary") ? "checked" : ""}>
-            <span>Salary</span>
+            <span data-i18n="opt.salary">Salary</span>
           </label>
           <label class="fy-userform-radio">
             <input type="checkbox" name="income_source" data-field="income_source" value="business" ${data.income_source.includes("business") ? "checked" : ""}>
-            <span>Business</span>
+            <span data-i18n="opt.business">Business</span>
           </label>
           <label class="fy-userform-radio">
             <input type="checkbox" name="income_source" data-field="income_source" value="house_property" ${data.income_source.includes("house_property") ? "checked" : ""}>
-            <span>House property</span>
+            <span data-i18n="opt.house_property">House property</span>
           </label>
           <label class="fy-userform-radio">
             <input type="checkbox" name="income_source" data-field="income_source" value="other_sources" ${data.income_source.includes("other_sources") ? "checked" : ""}>
-            <span>Other sources</span>
+            <span data-i18n="opt.other_sources">Other sources</span>
           </label>
           <label class="fy-userform-radio">
             <input type="checkbox" name="income_source" data-field="income_source" value="capital_gains" ${data.income_source.includes("capital_gains") ? "checked" : ""}>
-            <span>Capital gains</span>
+            <span data-i18n="opt.capital_gains">Capital gains</span>
           </label>
           <label class="fy-userform-radio">
             <input type="checkbox" name="income_source" data-field="income_source" value="no_income" ${data.income_source.includes("no_income") ? "checked" : ""}>
-            <span>No income</span>
+            <span data-i18n="opt.no_income">No income</span>
           </label>
         </div>
       </label>
       </div>
 
       <label class="fy-userform-field">
-        <span>Place (district) <em>*</em></span>
+        <span><span data-i18n="field.place">Place (district)</span> <em>*</em></span>
         <input type="text" data-field="place" value="${escapeHtml(data.place)}" placeholder="BAREILLY" autocomplete="off">
-        <small class="fy-userform-hint">The city where you're filing this application</small>
+        <small class="fy-userform-hint" data-i18n="wizard.place_hint">The city where you're filing this application</small>
       </label>
 
       <label class="fy-userform-field">
-        <span>Proof of date of birth <em>*</em></span>
+        <span><span data-i18n="field.proof_of_dob">Proof of date of birth</span> <em>*</em></span>
         <select data-field="proof_of_dob">
-          <option value="">Select a document…</option>
-          <option value="Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate" ${data.proof_of_dob === "Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate" ? "selected" : ""}>Birth Certificate</option>
-          <option value="Matriculation certificate" ${data.proof_of_dob === "Matriculation certificate" ? "selected" : ""}>Matriculation Certificate</option>
-          <option value="Matriculation Marksheet of recognised board" ${data.proof_of_dob === "Matriculation Marksheet of recognised board" ? "selected" : ""}>Matriculation Marksheet</option>
-          <option value="Driving License" ${data.proof_of_dob === "Driving License" ? "selected" : ""}>Driving License</option>
-          <option value="Passport" ${data.proof_of_dob === "Passport" ? "selected" : ""}>Passport</option>
-          <option value="Elector's photo identity card" ${data.proof_of_dob === "Elector's photo identity card" ? "selected" : ""}>Voter ID</option>
-          <option value="Pension payment order" ${data.proof_of_dob === "Pension payment order" ? "selected" : ""}>Pension Payment Order</option>
+          <option value="" data-i18n="opt.select_document">Select a document…</option>
+          <option value="Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate" data-i18n="opt.birth_cert" ${data.proof_of_dob === "Birth Certificate issued by the Municipal Authority or any office authorized to issue Birth and Death Certificate by the Registrar of Birth and Death of the Indian Consulate" ? "selected" : ""}>Birth Certificate</option>
+          <option value="Matriculation certificate" data-i18n="opt.matric_cert" ${data.proof_of_dob === "Matriculation certificate" ? "selected" : ""}>Matriculation Certificate</option>
+          <option value="Matriculation Marksheet of recognised board" data-i18n="opt.matric_marksheet" ${data.proof_of_dob === "Matriculation Marksheet of recognised board" ? "selected" : ""}>Matriculation Marksheet</option>
+          <option value="Driving License" data-i18n="opt.driving_license" ${data.proof_of_dob === "Driving License" ? "selected" : ""}>Driving License</option>
+          <option value="Passport" data-i18n="opt.passport" ${data.proof_of_dob === "Passport" ? "selected" : ""}>Passport</option>
+          <option value="Elector's photo identity card" data-i18n="opt.voter_id" ${data.proof_of_dob === "Elector's photo identity card" ? "selected" : ""}>Voter ID</option>
+          <option value="Pension payment order" data-i18n="opt.pension_order" ${data.proof_of_dob === "Pension payment order" ? "selected" : ""}>Pension Payment Order</option>
         </select>
-        <small class="fy-userform-hint">The document you'll upload as proof</small>
+        <small class="fy-userform-hint" data-i18n="wizard.proof_dob_hint">The document you'll upload as proof</small>
       </label>
 
       <div ${hideOnCorrection}>
       <label class="fy-userform-field">
-        <span>Are you a defence personnel? <em>*</em></span>
+        <span><span data-i18n="field.is_defence">Are you a defence personnel?</span> <em>*</em></span>
         <div class="fy-userform-radios">
           <label class="fy-userform-radio">
             <input type="radio" name="is_defence" data-field="is_defence" value="false" ${!data.is_defence ? "checked" : ""}>
-            <span>No</span>
+            <span data-i18n="opt.no">No</span>
           </label>
           <label class="fy-userform-radio">
             <input type="radio" name="is_defence" data-field="is_defence" value="true" ${data.is_defence ? "checked" : ""}>
-            <span>Yes</span>
+            <span data-i18n="opt.yes">Yes</span>
           </label>
         </div>
       </label>
@@ -491,15 +492,15 @@ function paneFinal(form: string, data: UserData): string {
         data.is_defence
           ? `
       <label class="fy-userform-field" id="fy-defence-branch-field">
-        <span>Defence branch</span>
+        <span data-i18n="field.defence_branch">Defence branch</span>
         <div class="fy-userform-radios">
           <label class="fy-userform-radio">
             <input type="radio" name="defence_branch" data-field="defence_branch" value="army" ${data.defence_branch === "army" ? "checked" : ""}>
-            <span>Army</span>
+            <span data-i18n="opt.army">Army</span>
           </label>
           <label class="fy-userform-radio">
             <input type="radio" name="defence_branch" data-field="defence_branch" value="air_force" ${data.defence_branch === "air_force" ? "checked" : ""}>
-            <span>Air Force</span>
+            <span data-i18n="opt.air_force">Air Force</span>
           </label>
         </div>
       </label>
@@ -508,18 +509,18 @@ function paneFinal(form: string, data: UserData): string {
       }
 
       <label class="fy-userform-field">
-        <span>Is your current address the same as your Aadhaar address? <em>*</em></span>
+        <span><span data-i18n="field.address_same">Is your current address the same as your Aadhaar address?</span> <em>*</em></span>
         <div class="fy-userform-radios" id="fy-address-match-group">
           <label class="fy-userform-radio">
             <input type="radio" name="address_same_as_aadhaar" data-field="address_same_as_aadhaar" value="true" ${data.address_same_as_aadhaar !== false ? "checked" : ""}>
-            <span>Yes</span>
+            <span data-i18n="opt.yes">Yes</span>
           </label>
           <label class="fy-userform-radio">
             <input type="radio" name="address_same_as_aadhaar" data-field="address_same_as_aadhaar" value="false" ${data.address_same_as_aadhaar === false ? "checked" : ""}>
-            <span>No</span>
+            <span data-i18n="opt.no">No</span>
           </label>
         </div>
-        <small class="fy-userform-hint">"Yes" uses the regular Aadhaar eKYC application. "No" switches to the PAN application with supporting documents, so you can enter your current address.</small>
+        <small class="fy-userform-hint" data-i18n="wizard.address_hint">"Yes" uses the regular Aadhaar eKYC application. "No" switches to the PAN application with supporting documents, so you can enter your current address.</small>
       </label>
 
       <div id="fy-current-address-block" style="display:${data.address_same_as_aadhaar === false ? "block" : "none"};">
@@ -625,15 +626,15 @@ function paneFinal(form: string, data: UserData): string {
       </div>
 
       <details class="fy-uf-optional"${data.passport_number || data.tin_number ? " open" : ""}>
-        <summary>+ Optional — passport, TIN</summary>
+        <summary data-i18n="wizard.optional_summary">+ Optional — passport, TIN</summary>
 
         <label class="fy-userform-field">
-          <span>Passport number</span>
+          <span data-i18n="field.passport_number">Passport number</span>
           <input type="text" data-field="passport_number" value="${escapeHtml(data.passport_number)}" placeholder="Optional" autocomplete="off">
         </label>
 
         <label class="fy-userform-field">
-          <span>TIN number</span>
+          <span data-i18n="field.tin_number">TIN number</span>
           <input type="text" data-field="tin_number" value="${escapeHtml(data.tin_number)}" placeholder="Optional" autocomplete="off">
         </label>
       </details>
@@ -652,7 +653,10 @@ export function renderUserFormScreen(form: string, data: UserData): string {
           <button class="fy-hdr-back" id="fy-userform-back" aria-label="Back">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           </button>`,
-      })}
+      }).replace(
+        '<div class="fy-hdr-sub">Your details · ~5 min</div>',
+        '<div class="fy-hdr-sub" data-i18n="wizard.header_subtitle">Your details · ~5 min</div>',
+      )}
       <div class="fy-flowbar"><div class="fy-flowbar-fill" id="fy-uf-bar" style="width:20%;"></div></div>
 
       <div class="fy-userform-body" id="fy-uf-body">
@@ -664,15 +668,15 @@ export function renderUserFormScreen(form: string, data: UserData): string {
       </div>
 
       <div class="fy-userform-footer">
-        <button class="fy-btn fy-btn-primary fy-btn-block" id="fy-userform-next">
+        <button class="fy-btn fy-btn-primary fy-btn-block" id="fy-userform-next" data-i18n="wizard.continue">
           Continue
         </button>
-        <button class="fy-btn fy-btn-primary fy-btn-block" id="fy-userform-submit" style="display:none;">
+        <button class="fy-btn fy-btn-primary fy-btn-block" id="fy-userform-submit" data-i18n="wizard.save_continue" style="display:none;">
           Save &amp; continue →
         </button>
         <div class="fy-userform-privacy">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>
-          Saved on your device only — never sent to us
+          <span data-i18n="wizard.privacy">Saved on your device only — never sent to us</span>
         </div>
       </div>
     </div>
@@ -809,6 +813,51 @@ function attachUserFormHandlers(
     field.scrollIntoView({ behavior: "smooth", block: "center" });
     field.focus();
   };
+
+  // Recovery-contact capture: the mobile number is sent to the backend the
+  // moment it looks like a complete, valid number — not on submit. Submit
+  // only ever fires at the end of this five-pane wizard, which is exactly the
+  // point most applicants who abandon never reach; today that leaves nothing
+  // recorded anywhere, extension storage included, so there's no way to
+  // follow up with someone who started and disappeared.
+  //
+  // This is a recovery list, not a marketing one — the only use is "did
+  // something go wrong we can help with", to a number the applicant typed
+  // into this form themselves. The disclosure line above the input says so.
+  // Fire-and-forget: no loading state, no error surfaced, and it never
+  // blocks the wizard — a failed capture just means one fewer number on a
+  // best-effort outreach list, not a broken application.
+  const mobileInput = document.querySelector<HTMLInputElement>(
+    '[data-field="mobile"]',
+  );
+  let leadCaptureTimer: ReturnType<typeof setTimeout> | null = null;
+  let leadCapturedFor = ""; // last number already sent, so retyping the same
+  // number after a pause doesn't re-fire pointlessly
+
+  const captureLead = (mobile: string) => {
+    if (!/^[6-9]\d{9}$/.test(mobile) || mobile === leadCapturedFor) return;
+    leadCapturedFor = mobile;
+    fetch(`${BACKEND_URL}/leads/capture`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mobile, form_type: form }),
+    }).catch(() => {
+      // Offline or backend hiccup — leadCapturedFor stays set deliberately.
+      // A silent retry loop here isn't worth the complexity for a best-effort
+      // list; the number is still captured for anyone who reaches payment.
+    });
+  };
+
+  if (mobileInput) {
+    mobileInput.addEventListener("input", () => {
+      const mobile = mobileInput.value.replace(/\D/g, "");
+      if (leadCaptureTimer) clearTimeout(leadCaptureTimer);
+      leadCaptureTimer = setTimeout(() => captureLead(mobile), 600);
+    });
+    // Already filled in (resuming saved data) — capture without waiting for
+    // the user to touch the field at all.
+    if (mobileInput.value.length === 10) captureLead(mobileInput.value);
+  }
 
   // Live AO code availability check — fires when user finishes typing PIN
   const pinInput = pinInputEl;
@@ -964,35 +1013,8 @@ function attachUserFormHandlers(
   if (dobInput) {
     dobInput.addEventListener("input", (e) => {
       const input = e.target as HTMLInputElement;
-      const isDeleting = (e as InputEvent).inputType?.startsWith("delete");
-      let digits = input.value.replace(/\D/g, "");
-
-      // Clamp day to 31
-      if (digits.length >= 2) {
-        const day = parseInt(digits.slice(0, 2), 10);
-        if (day > 31) digits = "31" + digits.slice(2);
-        if (day === 0) digits = "01" + digits.slice(2);
-      }
-      // Clamp month to 12
-      if (digits.length >= 4) {
-        const month = parseInt(digits.slice(2, 4), 10);
-        if (month > 12) digits = digits.slice(0, 2) + "12" + digits.slice(4);
-        if (month === 0) digits = digits.slice(0, 2) + "01" + digits.slice(4);
-      }
-
-      let formatted = digits.slice(0, 2);
-      if (digits.length === 2 && !isDeleting) {
-        formatted += "/";
-      } else if (digits.length > 2) {
-        formatted += "/" + digits.slice(2, 4);
-        if (digits.length === 4 && !isDeleting) {
-          formatted += "/";
-        } else if (digits.length > 4) {
-          formatted += "/" + digits.slice(4, 8);
-        }
-      }
-
-      input.value = formatted;
+      const isDeleting = !!(e as InputEvent).inputType?.startsWith("delete");
+      input.value = formatDobValue(input.value, isDeleting);
     });
   }
 
@@ -1170,7 +1192,19 @@ function showEligibilityModal(form: string): Promise<boolean> {
   });
 }
 
-function collectFormData(form: string): UserData {
+/**
+ * Read the intake wizard back out as a UserData record.
+ *
+ * Exported because the Android app renders this same markup and has to read it
+ * back the same way. Its first attempt did the obvious thing — copy each
+ * control's `.value` into a key of the same name — and that is wrong in ways
+ * that only show up on the government form: a "No" radio carries the string
+ * "false", which is truthy, so the fill ticked Yes on the single-parent
+ * question the applicant had answered No. Fields like is_single_parent_father
+ * aren't controls at all; they're derived from two separate answers. That
+ * knowledge lives here, and there should be exactly one copy of it.
+ */
+export function collectFormData(form: string): UserData {
   const get = (field: string): string => {
     const el = document.querySelector(
       `[data-field="${field}"]`,
@@ -1245,4 +1279,43 @@ function collectFormData(form: string): UserData {
     wants_physical_pan: getRadio("wants_physical_pan") === "no" ? "no" : "yes",
     proof_of_pan: get("proof_of_pan") || "Copy of Pan Card",
   };
+}
+
+/**
+ * DD/MM/YYYY as you type: inserts the slashes, clamps day to 31 and month to
+ * 12. Pure so the Android app can share it — a phone's numeric keyboard has no
+ * slash key, so without this the date can't be entered there at all, and a
+ * second implementation would be free to drift from this one.
+ *
+ * `isDeleting` stops a backspace from immediately re-adding the separator the
+ * user just removed.
+ */
+export function formatDobValue(raw: string, isDeleting: boolean): string {
+  let digits = raw.replace(/\D/g, "");
+
+  // Clamp day to 31
+  if (digits.length >= 2) {
+    const day = parseInt(digits.slice(0, 2), 10);
+    if (day > 31) digits = "31" + digits.slice(2);
+    if (day === 0) digits = "01" + digits.slice(2);
+  }
+  // Clamp month to 12
+  if (digits.length >= 4) {
+    const month = parseInt(digits.slice(2, 4), 10);
+    if (month > 12) digits = digits.slice(0, 2) + "12" + digits.slice(4);
+    if (month === 0) digits = digits.slice(0, 2) + "01" + digits.slice(4);
+  }
+
+  let formatted = digits.slice(0, 2);
+  if (digits.length === 2 && !isDeleting) {
+    formatted += "/";
+  } else if (digits.length > 2) {
+    formatted += "/" + digits.slice(2, 4);
+    if (digits.length === 4 && !isDeleting) {
+      formatted += "/";
+    } else if (digits.length > 4) {
+      formatted += "/" + digits.slice(4, 8);
+    }
+  }
+  return formatted;
 }

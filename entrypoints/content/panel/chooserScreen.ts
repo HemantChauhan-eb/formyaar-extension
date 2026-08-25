@@ -19,7 +19,9 @@ interface PanOption {
   // Empty for options that aren't built yet.
   slug: string;
   title: string;
+  titleKey: string;
   subtitle: string;
+  subKey: string;
   price: string;
   icon: string;
   available: boolean;
@@ -36,7 +38,9 @@ const PAN_OPTIONS: PanOption[] = [
   {
     slug: "pan_card",
     title: "New PAN card",
+    titleKey: "chooser.opt_new_title",
     subtitle: "You don't have a PAN yet",
+    subKey: "chooser.opt_new_sub",
     price: "₹39",
     icon: ICON_CARD,
     available: true,
@@ -44,7 +48,9 @@ const PAN_OPTIONS: PanOption[] = [
   {
     slug: "correction_pan_card",
     title: "Correct existing PAN",
+    titleKey: "chooser.opt_correction_title",
     subtitle: "Name, DOB, photo, address & more",
+    subKey: "chooser.opt_correction_sub",
     price: "₹39",
     icon: ICON_PENCIL,
     available: true,
@@ -52,7 +58,9 @@ const PAN_OPTIONS: PanOption[] = [
   {
     slug: "",
     title: "PAN for a minor",
+    titleKey: "chooser.opt_minor_title",
     subtitle: "Applicant is under 18",
+    subKey: "chooser.opt_minor_sub",
     price: "",
     icon: ICON_PERSON,
     available: false,
@@ -91,7 +99,7 @@ function renderOptionRow(opt: PanOption): string {
 
   const right = opt.available
     ? `<span class="fy-optrow-price">${opt.price}</span>${chevron}`
-    : `<span class="fy-optrow-soon-pill">Soon</span>`;
+    : `<span class="fy-optrow-soon-pill" data-i18n="chooser.soon">Soon</span>`;
 
   return `
     <button class="fy-optrow${opt.available ? "" : " soon"}" data-slug="${opt.slug}" data-title="${opt.title}">
@@ -99,8 +107,8 @@ function renderOptionRow(opt: PanOption): string {
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${opt.icon}</svg>
       </span>
       <span class="fy-optrow-text">
-        <span class="fy-optrow-title">${opt.title}</span>
-        <span class="fy-optrow-sub">${opt.subtitle}</span>
+        <span class="fy-optrow-title" data-i18n="${opt.titleKey}">${opt.title}</span>
+        <span class="fy-optrow-sub" data-i18n="${opt.subKey}">${opt.subtitle}</span>
       </span>
       <span class="fy-optrow-right">${right}</span>
     </button>
@@ -116,14 +124,17 @@ export function renderChooserScreen(): string {
           <button class="fy-hdr-back" id="fy-chooser-back" aria-label="Back">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           </button>`,
-      })}
+      }).replace(
+        '<div class="fy-hdr-sub">Choose your application</div>',
+        '<div class="fy-hdr-sub" data-i18n="chooser.header">Choose your application</div>',
+      )}
 
       <div style="flex:1;overflow-y:auto;padding:22px 12px 20px;">
         <div style="padding:0 12px;margin-bottom:14px;">
-          <h1 style="font-size:19px;font-weight:800;color:var(--fy-ink);letter-spacing:-0.4px;line-height:1.3;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
+          <h1 data-i18n="chooser.title" style="font-size:19px;font-weight:800;color:var(--fy-ink);letter-spacing:-0.4px;line-height:1.3;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
             What do you need?
           </h1>
-          <p style="margin-top:5px;font-size:12.5px;color:var(--fy-muted);line-height:1.55;">
+          <p data-i18n="chooser.sub" style="margin-top:5px;font-size:12.5px;color:var(--fy-muted);line-height:1.55;">
             Pick one — we'll fill that government form for you.
           </p>
         </div>
@@ -133,7 +144,7 @@ export function renderChooserScreen(): string {
         <div style="margin-top:20px;padding:0 12px;">
           <div class="fy-quietrow">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>
-            <span>Not sure? Pick <strong>Correct existing PAN</strong> only if you already hold one — applying twice is an offence.</span>
+            <span data-i18n-html="chooser.hint_html">Not sure? Pick <strong>Correct existing PAN</strong> only if you already hold one — applying twice is an offence.</span>
           </div>
         </div>
       </div>

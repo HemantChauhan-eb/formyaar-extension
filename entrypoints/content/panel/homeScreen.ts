@@ -33,15 +33,15 @@ export function renderHomeScreen(): string {
         <div style="display:flex;flex-direction:column;gap:9px;margin-top:26px;">
           <div class="fy-quietrow">
             ${icon('<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/>')}
-            <span>Your details are saved <strong>only on this device</strong> — never on our servers</span>
+            <span data-i18n-html="home.trust1_html">Your details are saved <strong>only on this device</strong> — never on our servers</span>
           </div>
           <div class="fy-quietrow">
             ${icon('<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3.5V8h4.5"/>')}
-            <span><strong>Full refund</strong> if the government rejects your form</span>
+            <span data-i18n-html="home.trust2_html"><strong>Full refund</strong> if the government rejects your form</span>
           </div>
           <div class="fy-quietrow">
             ${icon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>')}
-            <span>You review everything before it's submitted</span>
+            <span data-i18n="home.trust3">You review everything before it's submitted</span>
           </div>
         </div>
 
@@ -49,20 +49,20 @@ export function renderHomeScreen(): string {
 
         <!-- Footer: everything secondary stays whisper-quiet -->
         <div style="border-top:1px solid var(--fy-line);padding-top:14px;margin-top:26px;">
-          <div style="font-size:10.5px;color:var(--fy-faint);text-align:center;margin-bottom:8px;">
+          <div data-i18n="home.coming_soon" style="font-size:10.5px;color:var(--fy-faint);text-align:center;margin-bottom:8px;">
             Coming soon — Aadhaar · Driving Licence · Passport · Voter ID
           </div>
           <div style="display:flex;gap:18px;justify-content:center;">
-            <button id="fy-operator-mode" class="fy-textlink">Cafe operator?</button>
-            <button id="fy-recover-session" class="fy-textlink">Already paid? Recover</button>
+            <button id="fy-operator-mode" class="fy-textlink" data-i18n="home.operator">Cafe operator?</button>
+            <button id="fy-recover-session" class="fy-textlink" data-i18n="home.recover">Already paid? Recover</button>
           </div>
-          <p style="font-size:9px;color:var(--fy-faint);line-height:1.5;text-align:center;margin-top:10px;">
+          <p data-i18n="home.footer_note" style="font-size:9px;color:var(--fy-faint);line-height:1.5;text-align:center;margin-top:10px;">
             Not affiliated with any government entity. FormYaar is a private service. Anonymous usage events are collected to improve it.
           </p>
         </div>
       </div>
 
-      <button id="fy-clear-data" title="Delete my saved details" style="position:absolute;top:13px;right:52px;width:30px;height:30px;border-radius:9px;background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;color:var(--fy-faint);transition:color 0.15s,background 0.15s;"
+      <button id="fy-clear-data" data-i18n-title="home.clear_data_title" title="Delete my saved details" style="position:absolute;top:13px;right:52px;width:30px;height:30px;border-radius:9px;background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;color:var(--fy-faint);transition:color 0.15s,background 0.15s;"
         onmouseover="this.style.color='#d43c33';this.style.background='#fdf0ef';"
         onmouseout="this.style.color='#b6bcc9';this.style.background='transparent';">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -111,17 +111,17 @@ export function renderPanCard(): string {
         <text x="73" y="38" font-size="2.4" fill="#bbb" text-anchor="middle" font-family="Arial">PHOTO</text>
       </svg>
 
-      <h1 style="margin-top:22px;font-size:21px;font-weight:800;color:var(--fy-ink);letter-spacing:-0.4px;line-height:1.25;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
+      <h1 data-i18n="home.title" style="margin-top:22px;font-size:21px;font-weight:800;color:var(--fy-ink);letter-spacing:-0.4px;line-height:1.25;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;">
         Get your PAN card made.
       </h1>
-      <p style="margin:9px auto 0;font-size:13px;color:var(--fy-muted);line-height:1.6;max-width:270px;">
+      <p data-i18n="home.subtitle" style="margin:9px auto 0;font-size:13px;color:var(--fy-muted);line-height:1.6;max-width:270px;">
         We type the entire government form for you. You just check it and submit.
       </p>
 
-      <button id="fy-pan-card" class="fy-btn fy-btn-primary fy-btn-block" style="margin-top:22px;">
+      <button id="fy-pan-card" class="fy-btn fy-btn-primary fy-btn-block" data-i18n="home.cta" style="margin-top:22px;">
         Start — it takes 5 minutes
       </button>
-      <div style="margin-top:9px;font-size:11px;color:var(--fy-muted);">
+      <div data-i18n="home.price_note" style="margin-top:9px;font-size:11px;color:var(--fy-muted);">
         ₹39 · pay only when your details are ready
       </div>
     </div>
