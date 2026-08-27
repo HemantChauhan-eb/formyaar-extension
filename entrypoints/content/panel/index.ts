@@ -53,7 +53,8 @@ export async function showContextualBanner() {
     background: #ffffff;
     z-index: ${Z_INDEX.PANEL};
     font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    box-shadow: -4px 0 32px rgba(0,0,0,0.18);
+    border-left: 1px solid #d3d8e2;
+    box-shadow: -10px 0 40px rgba(12,19,34,0.16), -1px 0 0 rgba(48,94,255,0.35);
     transition: right 0.3s ease;
     display: flex;
     flex-direction: column;

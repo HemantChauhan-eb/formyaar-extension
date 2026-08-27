@@ -1,4 +1,4 @@
-import { BACKEND_URL } from "./content/constants";
+import { BACKEND_URL, VERSION } from "./content/constants";
 
 // Requested interval. Chrome clamps alarm periods in packed builds, so the real
 // gap is closer to 30s than the 6s asked for — which is why the /pay page nudges
@@ -19,6 +19,45 @@ type PendingPayment = {
   paymentTabId?: number;
   attempts: number;
 };
+
+// A random id per browser profile, and a second one per browser session.
+// Neither is derived from anything about the user or their device — they
+// exist only so a sequence of events can be recognised as one person's run
+// through the form, which is the whole basis of a drop-off funnel.
+//
+// anon_id lives in storage.local (survives restarts, cleared with the
+// extension's data); session_id lives in storage.session (dies with the
+// browser), so "returned a week later" and "did it in one sitting" are
+// distinguishable.
+async function getTelemetryIds(): Promise<{
+  anon_id: string;
+  session_id: string;
+  platform: string;
+  app_version: string;
+}> {
+  const newId = () => crypto.randomUUID();
+
+  const local = await browser.storage.local.get("fy_anon_id");
+  let anonId = local.fy_anon_id as string | undefined;
+  if (!anonId) {
+    anonId = newId();
+    await browser.storage.local.set({ fy_anon_id: anonId });
+  }
+
+  const session = await browser.storage.session.get("fy_session_id");
+  let sessionId = session.fy_session_id as string | undefined;
+  if (!sessionId) {
+    sessionId = newId();
+    await browser.storage.session.set({ fy_session_id: sessionId });
+  }
+
+  return {
+    anon_id: anonId,
+    session_id: sessionId,
+    platform: "extension",
+    app_version: VERSION,
+  };
+}
 
 export default defineBackground(() => {
   // Allow content scripts to read/write session storage
@@ -220,11 +259,27 @@ export default defineBackground(() => {
         return true;
       }
       if (message.type === "TELEMETRY_EVENT") {
-        fetch(`${BACKEND_URL}/telemetry/event`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(message.payload),
-        }).catch(() => {});
+        // Enriched here rather than at the call site: every event in the
+        // extension funnels through this one handler, so the ids are attached
+        // in exactly one place and no trackEvent() caller can forget them.
+        // Without anon_id the backend has rows but no funnel — nothing ties
+        // step1_view to the payment_success by the same person.
+        // Stamped before the async id lookup, so it is the time the event
+        // happened rather than the time this handler got around to sending it.
+        const clientTs = new Date().toISOString();
+        getTelemetryIds()
+          .then((ids) =>
+            fetch(`${BACKEND_URL}/telemetry/event`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...message.payload,
+                ...ids,
+                client_ts: clientTs,
+              }),
+            }),
+          )
+          .catch(() => {});
         return;
       }
     },
