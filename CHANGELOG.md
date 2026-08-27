@@ -1,5 +1,12 @@
 # FormYaar Extension — Changelog
 
+## [0.23.2] — 2026-08-27
+
+### Changed
+
+- **The fill now reports when it works, not only when it breaks.** `step_match_failed`, `field_fill_failed` and `autofill_error` covered every way a fill could fail, and nothing marked one that succeeded — so a failure rate had a numerator and no denominator. `guide_started`/`guide_completed` (names left over from when this guided rather than filled) become `autofill_started`/`autofill_completed`, and the completion event now carries `duration_seconds` plus `filled`/`skipped`/`failed`. Those per-field outcomes were already sitting in the `progress` array and were being discarded.
+- The old `guide_*` names stay accepted by the backend, because installed extensions below this version still send them.
+
 ## [0.23.1] — 2026-08-27
 
 ### Fixed

@@ -158,7 +158,14 @@ async function runAutofillInner(form: string = "pan_card") {
     });
     return;
   }
-  trackEvent("guide_started", form);
+  // Renamed from guide_started, which dated from when this was a guide rather
+  // than a fill. guide_started/guide_completed stay in the backend's allowed
+  // list because installed extensions below this version still send them.
+  const fillStartedAt = Date.now();
+  trackEvent("autofill_started", form, {
+    step: step.step,
+    field_count: step.fields.length,
+  });
 
   // If this is the last step we have a config for, clear the active flag
   // so autofill doesn't re-trigger on future visits
@@ -240,7 +247,18 @@ async function runAutofillInner(form: string = "pan_card") {
     }
   }
 
-  trackEvent("guide_completed", form);
+  // The success side of the ledger. Failures were already reported
+  // (step_match_failed, field_fill_failed, autofill_error) but nothing marked
+  // a fill that worked, so a failure rate had a numerator and no denominator.
+  // The per-field outcomes are already sitting in `progress` — this just
+  // counts them instead of discarding them.
+  trackEvent("autofill_completed", form, {
+    step: step.step,
+    duration_seconds: Math.round((Date.now() - fillStartedAt) / 1000),
+    filled: progress.filter((p) => p.status === "done").length,
+    skipped: progress.filter((p) => p.status === "intentional").length,
+    failed: progress.filter((p) => p.status === "skipped").length,
+  });
 
   // Fill AO code fields directly on step 4.
   // Gated on the AO input actually being present, not on the step index alone:
