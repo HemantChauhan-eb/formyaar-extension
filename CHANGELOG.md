@@ -1,5 +1,11 @@
 # FormYaar Extension — Changelog
 
+## [0.23.3] — 2026-08-27
+
+### Fixed
+
+- `autofill_completed` is sent before a `button_click` field rather than after the loop. The click navigates and tears the content script down, so a step ending in one never reached the completion call — and most step configs end in one. Same defect the Android engine had, found in its telemetry first.
+
 ## [0.23.2] — 2026-08-27
 
 ### Changed

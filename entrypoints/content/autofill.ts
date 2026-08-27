@@ -190,10 +190,36 @@ async function runAutofillInner(form: string = "pan_card") {
   }));
   updateFillProgress(progress);
 
+  // The success side of the ledger. Failures were already reported
+  // (step_match_failed, field_fill_failed, autofill_error) but nothing marked
+  // a fill that worked, so a failure rate had a numerator and no denominator.
+  // The per-field outcomes are already sitting in `progress` — this counts
+  // them instead of discarding them.
+  //
+  // Sent from two places and only ever once: a button_click submits the page,
+  // which tears this script down mid-loop, so a step whose last field is a
+  // click would never reach the call at the end. Most step configs end in a
+  // click, so left alone this reports a success rate far below the truth.
+  let completionSent = false;
+  const sendFillCompletion = () => {
+    if (completionSent) return;
+    completionSent = true;
+    trackEvent("autofill_completed", form, {
+      step: step.step,
+      duration_seconds: Math.round((Date.now() - fillStartedAt) / 1000),
+      filled: progress.filter((p) => p.status === "done").length,
+      skipped: progress.filter((p) => p.status === "intentional").length,
+      failed: progress.filter((p) => p.status === "skipped").length,
+    });
+  };
+
   // Fill each field with delay
   for (let i = 0; i < step.fields.length; i++) {
     const field = { ...step.fields[i], _step: step.step };
     const value = resolveValue(field, userData);
+
+    // The click is the navigation, so the tally has to go out before it.
+    if (field.type === "button_click") sendFillCompletion();
 
     // Optional field the applicant has no value for. Don't touch it, and say
     // why — left to the normal path it would report a green tick for an empty
@@ -247,18 +273,8 @@ async function runAutofillInner(form: string = "pan_card") {
     }
   }
 
-  // The success side of the ledger. Failures were already reported
-  // (step_match_failed, field_fill_failed, autofill_error) but nothing marked
-  // a fill that worked, so a failure rate had a numerator and no denominator.
-  // The per-field outcomes are already sitting in `progress` — this just
-  // counts them instead of discarding them.
-  trackEvent("autofill_completed", form, {
-    step: step.step,
-    duration_seconds: Math.round((Date.now() - fillStartedAt) / 1000),
-    filled: progress.filter((p) => p.status === "done").length,
-    skipped: progress.filter((p) => p.status === "intentional").length,
-    failed: progress.filter((p) => p.status === "skipped").length,
-  });
+  // No-op if a button_click in the loop above already sent it.
+  sendFillCompletion();
 
   // Fill AO code fields directly on step 4.
   // Gated on the AO input actually being present, not on the step index alone:
