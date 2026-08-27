@@ -67,6 +67,11 @@ export async function showContextualBanner() {
     panel.style.right = "0px";
   }, 100);
   trackEvent("banner_shown");
+  // The funnel's first step, and deliberately separate from banner_shown /
+  // panel_opened: both of those have carried their own meaning since before
+  // there was a funnel, and quietly repurposing either would change what
+  // every historical row means. The home screen is what the panel opens on.
+  trackEvent("home_screen_view");
   createTab();
   attachClickOutsideHandler();
   attachPanelEventHandlers();

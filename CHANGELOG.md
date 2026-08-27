@@ -1,5 +1,14 @@
 # FormYaar Extension — Changelog
 
+## [0.24.0] — 2026-08-27
+
+### Added
+
+- **The desktop panel now reports the same funnel the app does.** Every funnel event built so far went into the Android shell; the extension has its own panel code and was never instrumented, so it fired 17 events and none of the funnel. Any drop-off chart filtered to the extension would have come back empty, and "install → submitted" was silently an Android-only number. Thirty events now fire identically on both, verified by a parity diff: `home_screen_view`, `service_type_selected`, the five-pane view/continue/abandon set, `callback_eligible`, `pincode_entered`, `ao_code_check_result` (including `not_recognised`, which is a different failure from `not_available` and would misdirect AO expansion if conflated), `step3_blocked`, the whole payment sequence, `autofill_start_click`, `govt_site_opened`, `govt_form_submitted` and `confirmation_screen_view`.
+- **`govt_form_submitted` on desktop** is a real terminal-URL check against the same page list the Android app uses, not the existing "session completed" flag — that flag marks *reaching* the upload page, which is not the same as submitting. Deduped through `storage.session` so a reload or a Back press can't count twice.
+- `payment_failed` with `failure_reason: order_creation_failed` — the order never reached Razorpay, which is a different failure from a payment that opened and was declined.
+- `razorpay_opened` is suppressed for free-coupon orders, which never open checkout. `pay_button_click` carries `final_amount`, which is the only way a ₹0 conversion is countable — those never produce `payment_success`.
+
 ## [0.23.3] — 2026-08-27
 
 ### Fixed

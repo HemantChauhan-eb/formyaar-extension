@@ -3,7 +3,8 @@ import { showContextualBanner } from "./panel";
 import { showUploadScreen } from "./uploadScreen";
 import { watchStepReview } from "./stepReview";
 import { runAutofill } from "./autofill";
-import { getUserData, resolveFormSlug } from "./userData";
+import { getUserData, resolveFormSlug, getActiveSession } from "./userData";
+import { trackEvent } from "./telemetry";
 
 const NSDL_START_URL = "https://onlineservices.proteantech.in/paam/endUserRegisterContact.html";
 export default defineContentScript({
@@ -50,6 +51,58 @@ export default defineContentScript({
         pathname.includes("uploadFile")) &&
       !document.getElementById("confirmSubmit");
 
+    // The government site loaded and the content script got to run on it.
+    // load_success is always true here by construction — if the page failed
+    // to load there would be no script to report it — but the field is kept
+    // so the shape matches the Android app, which can see a failed load.
+    if (hostname === "onlineservices.proteantech.in") {
+      getActiveSession().then((session) => {
+        if (session && !session.completed) {
+          trackEvent("govt_site_opened", session.form, { load_success: true });
+        }
+      });
+    }
+
+    // ── The real conversion ─────────────────────────────────────────
+    // Payment says money moved; this says an application was actually lodged
+    // with the government. The gap between the two is the paid non-customer —
+    // someone who paid ₹39, stalled on NSDL and never submitted — and nothing
+    // recorded that they existed.
+    //
+    // Same page list the Android app uses (TERMINAL_PAGES in MainActivity),
+    // so both clients mean the same thing by "submitted". Guarded through
+    // storage.session because a terminal page can be reloaded or returned to
+    // with Back, and each would otherwise count as another submission.
+    if (hostname === "onlineservices.proteantech.in") {
+      const terminal = [
+        "fullFormSubmit",
+        "ddSave",
+        "continuePayment",
+        "paytmResponseAfterStatus",
+      ].some((p) => pathname.includes(p));
+
+      if (terminal) {
+        getActiveSession().then((session) => {
+          const key = `fy_submitted_${session?.order_id ?? "unknown"}`;
+          browser.storage.session.get(key).then((seen) => {
+            if (seen[key]) return;
+            browser.storage.session.set({ [key]: true });
+            const page = pathname.split("/").pop()?.slice(0, 80) ?? "";
+            trackEvent("govt_form_submitted", session?.form ?? "pan_card", {
+              page,
+            });
+            // Same moment, separate question: one is "was it lodged", the
+            // other is "did the person actually see proof of it". The
+            // acknowledgement number is deliberately not scraped — it
+            // identifies a real application and nothing here needs it.
+            trackEvent("confirmation_screen_view", session?.form ?? "pan_card", {
+              page,
+            });
+          });
+        });
+      }
+    }
+
     // Message listener
     browser.runtime.onMessage.addListener((message) => {
       if (message.type === "OPEN_PANEL") {
@@ -60,6 +113,12 @@ export default defineContentScript({
 
         getUserData().then((userData) => {
           const formSlug = resolveFormSlug(userData);
+
+          // The paid conversion, matching the Android app's own
+          // payment_success. Fired here because this is the point the
+          // extension learns the payment was verified — the panel that
+          // started it may be on a different tab by now.
+          trackEvent("payment_success", formSlug, { order_id: orderId });
 
           // Persist session server-side (payment proof only — no form data)
           if (userData.mobile) {
@@ -291,6 +350,9 @@ function showStartOverlay(form: string): void {
   document.body.appendChild(overlay);
 
   document.getElementById("fy-start-btn")!.addEventListener("click", () => {
+    // The applicant opting in to the fill, as distinct from the fill itself
+    // starting — the gap between the two is how long the overlay sat unread.
+    trackEvent("autofill_start_click", form);
     clearInterval(titleInterval);
     document.title = originalTitle;
     overlay.style.opacity = "0";

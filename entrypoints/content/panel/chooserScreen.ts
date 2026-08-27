@@ -202,6 +202,9 @@ export function attachChooserHandlers(): void {
       }
 
       trackEvent("form_selected", slug);
+      // Same event the Android chooser fires, so "which service do people
+      // pick" is one number across both clients rather than two half-numbers.
+      trackEvent("service_type_selected", slug, { type: slug });
       showUserForm(slug);
     });
   });

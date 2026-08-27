@@ -6,6 +6,7 @@ import {
   type UserData,
 } from "../userData";
 import { escapeHtml, renderHeader } from "./shared";
+import { trackEvent } from "../telemetry";
 
 export const USERFORM_STYLES = `
       /* ===== Details wizard — one small step at a time ===== */
@@ -720,6 +721,7 @@ export function showUserForm(form: string): void {
       // onSubmit: data is saved, now go to payment
       () => {
         wrapper.remove();
+        trackEvent("payment_screen_view", form);
         document.getElementById("fy-payment")!.style.display = "flex";
       },
       // onBack: return to the chooser the user came in through, so backing out
@@ -786,6 +788,48 @@ function attachUserFormHandlers(
     if (submit) submit.disabled = !aoOk;
   };
 
+  // ── Funnel instrumentation ──────────────────────────────────────────
+  // Mirrors the Android shell exactly, including the event names, so both
+  // clients land in one dataset rather than two that have to be reconciled.
+  //
+  // The abandon half is why this is not just click tracking: someone who
+  // closes the tab on step 3 clicks nothing, so without it "left here" and
+  // "still here" are indistinguishable and the drop-off step — the one thing
+  // this exists to find — stays invisible.
+  let stepEnteredAt = 0;
+  let stepViewed = -1; // pane whose _view has already fired
+  let stepResolved = false; // continued or abandoned; stops a double-fire
+
+  const secondsOnStep = () =>
+    stepEnteredAt ? Math.round((Date.now() - stepEnteredAt) / 1000) : 0;
+
+  const trackStepView = () => {
+    if (stepViewed === paneIdx) return;
+    stepViewed = paneIdx;
+    stepEnteredAt = Date.now();
+    stepResolved = false;
+    trackEvent(`step${paneIdx + 1}_view`, form);
+  };
+
+  const trackStepContinue = () => {
+    stepResolved = true;
+    // The last pane leaves via Save & continue, not Next — a different
+    // button, so a different event name, matching the Android shell.
+    const name =
+      paneIdx === panes.length - 1
+        ? "step5_save_continue_click"
+        : `step${paneIdx + 1}_continue_click`;
+    trackEvent(name, form, { time_spent_seconds: secondsOnStep() });
+  };
+
+  const trackStepAbandon = () => {
+    if (stepResolved || stepViewed < 0) return;
+    stepResolved = true;
+    trackEvent(`step${stepViewed + 1}_abandon`, form, {
+      time_spent_seconds: secondsOnStep(),
+    });
+  };
+
   const showPane = (i: number) => {
     paneIdx = Math.max(0, Math.min(panes.length - 1, i));
     panes.forEach((p, idx) => p.classList.toggle("on", idx === paneIdx));
@@ -795,11 +839,28 @@ function attachUserFormHandlers(
     if (submit) submit.style.display = isLast ? "flex" : "none";
     if (bodyEl) bodyEl.scrollTop = 0;
     updateNavState();
+    trackStepView();
   };
 
   updateNavState();
+  // The wizard is created and mounted only when the applicant opens it, so
+  // unlike the Android shell there is no hidden-render to guard against —
+  // reaching this line means step 1 is genuinely on screen.
+  trackStepView();
 
-  next?.addEventListener("click", () => showPane(paneIdx + 1));
+  // Leaving the page, or switching away from it, is what abandonment looks
+  // like on desktop. Best-effort: a hard tab kill can outrun the send, so
+  // abandon counts are a floor rather than a census.
+  const onLeaving = () => {
+    if (document.visibilityState === "hidden") trackStepAbandon();
+  };
+  document.addEventListener("visibilitychange", onLeaving);
+  window.addEventListener("pagehide", trackStepAbandon);
+
+  next?.addEventListener("click", () => {
+    trackStepContinue();
+    showPane(paneIdx + 1);
+  });
   back?.addEventListener("click", () => {
     if (paneIdx > 0) showPane(paneIdx - 1);
     else onBack();
@@ -846,6 +907,10 @@ function attachUserFormHandlers(
       // A silent retry loop here isn't worth the complexity for a best-effort
       // list; the number is still captured for anyone who reaches payment.
     });
+    // This number is now reachable by phone. Its own event so that "how many
+    // abandoners did we ring, and how many paid after the call" is a number
+    // rather than a guess.
+    trackEvent("callback_eligible", form);
   };
 
   if (mobileInput) {
@@ -894,6 +959,13 @@ function attachUserFormHandlers(
       try {
         const res = await fetch(`${BACKEND_URL}/pincode/${pin}`);
         if (!res.ok) {
+          // A PIN the service doesn't know, which is a different failure from
+          // an area we have no AO code for — conflating the two would
+          // misdirect where coverage actually needs extending.
+          trackEvent("ao_code_check_result", form, {
+            pincode: pin,
+            result: "not_recognised",
+          });
           setAO(
             false,
             `<span style="color:#d43c33;font-weight:600;">✗ PIN code not recognised — please double-check it</span>`,
@@ -902,11 +974,23 @@ function attachUserFormHandlers(
         }
         const { ao_code } = await res.json();
         if (ao_code) {
+          trackEvent("ao_code_check_result", form, {
+            pincode: pin,
+            result: "available",
+          });
           setAO(
             true,
             `<span style="color:#157347;font-weight:600;">✓ AO code available for your area</span>`,
           );
         } else {
+          trackEvent("ao_code_check_result", form, {
+            pincode: pin,
+            result: "not_available",
+          });
+          // Distinct from a plain abandon: this applicant reached the gate and
+          // was turned away by us, not by their own hesitation. Every one of
+          // these is demand we could serve if the AO data covered their area.
+          trackEvent("step3_blocked", form, { pincode: pin });
           setAO(
             false,
             `<span style="color:#d43c33;font-weight:600;">✗ We don't have the AO code for this area yet</span><br><span style="color:#8a92a3;">FormYaar can't complete this form correctly without it. Please write to us and we'll add your area.</span>`,
@@ -919,10 +1003,18 @@ function attachUserFormHandlers(
         );
       }
     };
+    let pinTracked = "";
     pinInput.addEventListener("input", () => {
       const pin = pinInput.value.replace(/\D/g, "");
       if (aoCheckTimer) clearTimeout(aoCheckTimer);
-      aoCheckTimer = setTimeout(() => checkAO(pin), 600);
+      aoCheckTimer = setTimeout(() => {
+        // Once per distinct complete PIN, not once per keystroke.
+        if (pin.length === 6 && pin !== pinTracked) {
+          pinTracked = pin;
+          trackEvent("pincode_entered", form, { pincode: pin });
+        }
+        checkAO(pin);
+      }, 600);
     });
     // Connection came back — re-run automatically rather than leaving a stale
     // failure on screen that the user has to notice and clear themselves.

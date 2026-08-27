@@ -199,6 +199,7 @@ export function attachPaymentScreenHandlers() {
     if (!couponInput || !applyBtn || !couponMsg) return;
     const code = couponInput.value.trim().toUpperCase();
     if (!code) return;
+    trackEvent("coupon_code_entered", "pan_card", { code });
     applyBtn.disabled = true;
     applyBtn.textContent = "…";
     couponMsg.textContent = "";
@@ -212,6 +213,7 @@ export function attachPaymentScreenHandlers() {
         applyCouponUI(data.coupon ?? code, Boolean(data.free));
         trackEvent("coupon_applied", "pan_card", { coupon: data.coupon ?? code });
       } else {
+        trackEvent("coupon_invalid", "pan_card", { code });
         couponMsg.textContent =
           "That code isn't valid. Check it, or continue at ₹39.";
         couponMsg.style.color = "#c0392b";
@@ -240,6 +242,15 @@ export function attachPaymentScreenHandlers() {
 
     const formSlug = resolveFormSlug(await getUserData());
 
+    // final_amount is what makes a free-coupon conversion countable at all: a
+    // free order never reaches Razorpay and so never produces
+    // payment_success, and counting conversions by payment_success alone
+    // silently undercounts every one of them.
+    trackEvent("pay_button_click", formSlug, {
+      final_amount: currentTotal,
+      coupon: appliedCoupon ?? null,
+    });
+
     const orderRes = await browser.runtime.sendMessage({
       type: "CREATE_PAYMENT",
       form: formSlug,
@@ -247,6 +258,9 @@ export function attachPaymentScreenHandlers() {
     });
 
     if (!orderRes?.success) {
+      trackEvent("payment_failed", formSlug, {
+        failure_reason: "order_creation_failed",
+      });
       btn.innerHTML = payBtnLabel();
       btn.style.opacity = "1";
       btn.style.cursor = "pointer";
@@ -254,6 +268,11 @@ export function attachPaymentScreenHandlers() {
       return;
     }
     trackEvent("payment_started", formSlug);
+    // A free order is settled server-side and never opens checkout, so
+    // razorpay_opened would be a lie for it.
+    if (!String(orderRes.order_id).startsWith("free_")) {
+      trackEvent("razorpay_opened", formSlug, { order_id: orderRes.order_id });
+    }
     await browser.runtime.sendMessage({
       type: "OPEN_RAZORPAY",
       order_id: orderRes.order_id,
