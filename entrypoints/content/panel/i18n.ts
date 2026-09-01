@@ -212,6 +212,10 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
     en: "\"Yes\" uses the regular Aadhaar eKYC application. \"No\" switches to the PAN application with supporting documents, so you can enter your current address.",
     hi: "“हाँ” सामान्य आधार eKYC आवेदन उपयोग करता है। “नहीं” सहायक दस्तावेज़ों वाले PAN आवेदन पर ले जाता है, ताकि आप अपना वर्तमान पता दर्ज कर सकें।",
   },
+  // Placeholder on every field the form does not require. The
+  // placeholder-translation hook existed but nothing used it, so these
+  // read "Optional" in English even with the panel switched to Hindi.
+  "field.optional_ph": { en: "Optional", hi: "वैकल्पिक" },
   "wizard.optional_summary": { en: "+ Optional — passport, TIN", hi: "+ वैकल्पिक — पासपोर्ट, टिन" },
   "field.passport_number": { en: "Passport number", hi: "पासपोर्ट नंबर" },
   "field.tin_number": { en: "TIN number", hi: "टिन नंबर" },

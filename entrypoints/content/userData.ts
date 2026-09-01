@@ -172,7 +172,17 @@ export async function saveUserData(data: UserData): Promise<void> {
 }
 
 export interface ValidationError {
-  field: keyof UserData;
+  /**
+   * The `data-field` to highlight and scroll to, which is a DOM name rather
+   * than a data key. Those are the same string for almost every field, but
+   * not all: a radio group is one input named `parent_on_card`, while
+   * collectFormData turns it into the derived booleans
+   * `parent_on_card_is_father` / `_is_mother`. Typing this as
+   * `keyof UserData` forced the derived name, which the error jump then
+   * looked for in the DOM and never found — so the message appeared and the
+   * form silently failed to move to the field it was about.
+   */
+  field: keyof UserData | "parent_on_card";
   message: string;
 }
 
@@ -223,14 +233,24 @@ export function validateUserData(
       message: "Father's first name is required",
     });
 
-  if (!data.mother_first_name.trim())
+  // Optional, with one exception. The form asks for both parents but only
+  // prints one name on the card, and an applicant who has chosen their
+  // mother's name has to supply it — leaving it blank would put an empty
+  // name in the one field that ends up printed on the PAN card.
+  if (data.parent_on_card_is_mother && !data.mother_first_name.trim())
     errors.push({
       field: "mother_first_name",
-      message: "Mother's first name is required",
+      message:
+        "Mother's first name is needed because you chose to print it on the card",
     });
   if (!data.parent_on_card_is_father && !data.parent_on_card_is_mother)
     errors.push({
-      field: "parent_on_card_is_father",
+      // Keyed to the radio's own data-field, not to the derived boolean.
+      // The error jump does querySelector([data-field="…"]), and
+      // parent_on_card_is_father is a collectFormData output rather than
+      // anything in the DOM — so this used to show the message but never
+      // highlight the field or move to the pane holding it.
+      field: "parent_on_card",
       message: "Choose whose name to print on the PAN card",
     });
 

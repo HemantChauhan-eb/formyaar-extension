@@ -1,5 +1,16 @@
 # FormYaar Extension — Changelog
 
+## [0.25.0] — 2026-08-27
+
+### Changed
+
+- **Mother's first name is optional**, on both clients — the field is generated from one source, so the app and the panel change together. It keeps one condition: if the applicant chose to print their mother's name on the card, it is still required, because leaving it blank would put an empty name in the one field that actually gets printed. The fill config already had `skip_when_empty` on it, so a blank name is reported as a deliberate skip rather than a failure.
+
+### Fixed
+
+- **A missing "whose name on the card?" answer showed the error but never jumped to the field.** Validation keyed the error to `parent_on_card_is_father`, which is a `collectFormData` output rather than anything in the DOM; the error jump does `querySelector([data-field="…"])` and so found nothing. Keyed to the radio's own `parent_on_card` now. `ValidationError.field` is documented as a DOM name rather than a data key, which is what it has always been used as.
+- **14 "Optional" placeholders stayed English in Hindi mode.** `applyLang` has had a `data-i18n-ph` hook since the Hindi pass, and nothing used it. All of them now translate.
+
 ## [0.24.0] — 2026-08-27
 
 ### Added

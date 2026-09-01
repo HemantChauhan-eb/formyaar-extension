@@ -193,7 +193,7 @@ function paneName(data: UserData): string {
         </label>
         <label class="fy-userform-field">
           <span data-i18n="field.middle_name">Middle name</span>
-          <input type="text" data-field="middle_name" value="${escapeHtml(data.middle_name)}" placeholder="Optional" autocomplete="off">
+          <input type="text" data-field="middle_name" value="${escapeHtml(data.middle_name)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
         </label>
       </div>
 
@@ -314,29 +314,29 @@ function paneFamily(form: string, data: UserData): string {
         </label>
         <label class="fy-userform-field">
           <span data-i18n="field.middle_short">Middle</span>
-          <input type="text" data-field="father_middle_name" value="${escapeHtml(data.father_middle_name)}" placeholder="Optional" autocomplete="off">
+          <input type="text" data-field="father_middle_name" value="${escapeHtml(data.father_middle_name)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
         </label>
       </div>
 
       <label class="fy-userform-field">
         <span data-i18n="field.father_last">Father's last name</span>
-        <input type="text" data-field="father_last_name" value="${escapeHtml(data.father_last_name)}" placeholder="Optional" autocomplete="off">
+        <input type="text" data-field="father_last_name" value="${escapeHtml(data.father_last_name)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
       </label>
 
       <div class="fy-userform-row">
         <label class="fy-userform-field">
-          <span><span data-i18n="field.mother_first">Mother's first name</span> <em>*</em></span>
-          <input type="text" data-field="mother_first_name" value="${escapeHtml(data.mother_first_name)}" placeholder="RADHA" autocomplete="off">
+          <span data-i18n="field.mother_first">Mother's first name</span>
+          <input type="text" data-field="mother_first_name" value="${escapeHtml(data.mother_first_name)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
         </label>
         <label class="fy-userform-field">
           <span data-i18n="field.middle_short">Middle</span>
-          <input type="text" data-field="mother_middle_name" value="${escapeHtml(data.mother_middle_name)}" placeholder="Optional" autocomplete="off">
+          <input type="text" data-field="mother_middle_name" value="${escapeHtml(data.mother_middle_name)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
         </label>
       </div>
 
       <label class="fy-userform-field">
         <span data-i18n="field.mother_last">Mother's last name</span>
-        <input type="text" data-field="mother_last_name" value="${escapeHtml(data.mother_last_name)}" placeholder="Optional" autocomplete="off">
+        <input type="text" data-field="mother_last_name" value="${escapeHtml(data.mother_last_name)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
       </label>
 
       ${singleParent}
@@ -584,27 +584,27 @@ function paneFinal(form: string, data: UserData): string {
 
         <label class="fy-userform-field">
           <span>Flat / Door / Building</span>
-          <input type="text" data-field="current_address_flat" value="${escapeHtml(data.current_address_flat)}" placeholder="Optional" autocomplete="off">
+          <input type="text" data-field="current_address_flat" value="${escapeHtml(data.current_address_flat)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
         </label>
 
         <label class="fy-userform-field">
           <span>Road / Street / Block / Sector</span>
-          <input type="text" data-field="current_address_street" value="${escapeHtml(data.current_address_street)}" placeholder="Optional" autocomplete="off">
+          <input type="text" data-field="current_address_street" value="${escapeHtml(data.current_address_street)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
         </label>
 
         <label class="fy-userform-field">
           <span>Post Office</span>
-          <input type="text" data-field="current_address_post_office" value="${escapeHtml(data.current_address_post_office)}" placeholder="Optional" autocomplete="off">
+          <input type="text" data-field="current_address_post_office" value="${escapeHtml(data.current_address_post_office)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
         </label>
 
         <label class="fy-userform-field">
           <span>Area / Locality / Town / City</span>
-          <input type="text" data-field="current_address_city" value="${escapeHtml(data.current_address_city)}" placeholder="Optional" autocomplete="off">
+          <input type="text" data-field="current_address_city" value="${escapeHtml(data.current_address_city)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
         </label>
 
         <label class="fy-userform-field">
           <span>District</span>
-          <input type="text" data-field="current_address_district" value="${escapeHtml(data.current_address_district)}" placeholder="Optional" autocomplete="off">
+          <input type="text" data-field="current_address_district" value="${escapeHtml(data.current_address_district)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
         </label>
 
         <label class="fy-userform-field">
@@ -620,7 +620,7 @@ function paneFinal(form: string, data: UserData): string {
 
         <label class="fy-userform-field">
           <span>PIN Code</span>
-          <input type="text" data-field="current_address_pin_code" value="${escapeHtml(data.current_address_pin_code)}" placeholder="Optional" maxlength="6" inputmode="numeric" autocomplete="off">
+          <input type="text" data-field="current_address_pin_code" value="${escapeHtml(data.current_address_pin_code)}" placeholder="Optional" data-i18n-ph="field.optional_ph" maxlength="6" inputmode="numeric" autocomplete="off">
         </label>
 
       </div>
@@ -631,12 +631,12 @@ function paneFinal(form: string, data: UserData): string {
 
         <label class="fy-userform-field">
           <span data-i18n="field.passport_number">Passport number</span>
-          <input type="text" data-field="passport_number" value="${escapeHtml(data.passport_number)}" placeholder="Optional" autocomplete="off">
+          <input type="text" data-field="passport_number" value="${escapeHtml(data.passport_number)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
         </label>
 
         <label class="fy-userform-field">
           <span data-i18n="field.tin_number">TIN number</span>
-          <input type="text" data-field="tin_number" value="${escapeHtml(data.tin_number)}" placeholder="Optional" autocomplete="off">
+          <input type="text" data-field="tin_number" value="${escapeHtml(data.tin_number)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
         </label>
       </details>
 
