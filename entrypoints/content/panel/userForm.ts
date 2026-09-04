@@ -7,6 +7,9 @@ import {
 } from "../userData";
 import { escapeHtml, renderHeader } from "./shared";
 import { trackEvent } from "../telemetry";
+// Only used by syncDocChecklist, which builds list rows at runtime rather than
+// in markup — so a data-i18n attribute alone can't give them their first text.
+import { t, getLang } from "./i18n";
 
 export const USERFORM_STYLES = `
       /* ===== Details wizard — one small step at a time ===== */
@@ -135,6 +138,71 @@ export const USERFORM_STYLES = `
   font-size: 10.5px;
   color: var(--fy-muted);
   margin-top: 5px;
+}
+/* Deliberately louder than .fy-userform-hint: on the minor flow the document
+   you pick here is one you will physically have to put in an envelope weeks
+   later, and there is no screen that shows the choice back to you afterwards.
+   A grey hint reads as optional detail; this has to read as an instruction. */
+.fy-userform-remember {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #d43c33;
+  margin-top: 5px;
+  line-height: 1.5;
+}
+.fy-uf-screenshot {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--fy-warn-bg, #fff8ec);
+  border: 1px solid var(--fy-warn-line, #f0d9a8);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--fy-ink);
+}
+.fy-uf-checklist {
+  border: 1px solid var(--fy-line, #e6e8ef);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.fy-uf-checklist-group + .fy-uf-checklist-group {
+  border-top: 1px solid var(--fy-line, #e6e8ef);
+}
+.fy-uf-checklist-group h4 {
+  margin: 0;
+  padding: 9px 13px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fy-muted);
+  background: var(--fy-soft, #f6f7fb);
+}
+.fy-uf-checklist-group ul {
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+}
+.fy-uf-checklist-group li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 13px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--fy-ink);
+}
+.fy-uf-checklist-group li span {
+  font-size: 10.5px;
+  color: var(--fy-muted);
+}
+.fy-uf-checklist-group li strong {
+  font-weight: 700;
+}
+.fy-uf-checklist-missing {
+  color: #d43c33;
 }
 .fy-uf-optional {
   margin-top: 4px;
@@ -274,6 +342,12 @@ function paneAadhaar(form: string, data: UserData): string {
         <input type="text" data-field="aadhaar_last_4" value="${escapeHtml(data.aadhaar_last_4 ?? "")}" placeholder="9012" autocomplete="off" inputmode="numeric" maxlength="4">
       </label>
 
+      <label class="fy-userform-field">
+        <span><span data-i18n="field.name_as_per_aadhaar">Name exactly as printed on your Aadhaar</span> <em>*</em></span>
+        <input type="text" data-field="name_as_per_aadhaar" value="${escapeHtml(data.name_as_per_aadhaar ?? "")}" placeholder="HEMANT CHAUHAN" autocomplete="off" maxlength="100">
+        <small class="fy-userform-hint" data-i18n="wizard.name_aadhaar_hint">Copy it letter for letter from the card — the government checks this against Aadhaar, so even a missing middle name can fail the match.</small>
+      </label>
+
       ${pinCode}
     </div>
   `;
@@ -372,20 +446,193 @@ const INDIAN_STATES = [
   "UTTARAKHAND", "WEST BENGAL",
 ];
 
+// The minor flow ends at a post office: whatever is picked in these dropdowns
+// has to be printed in colour and couriered to Protean's Pune office, and the
+// government form never shows the choice back.
+//
+// Every mention of payment here names the *government's* fee and says it's
+// paid on their website. A bare "after paying" reads as FormYaar's own fee —
+// which the applicant hasn't even been asked for yet at this point in the
+// wizard — so it would land as "wait, pay for what?" rather than as a
+// deadline. Same wording in paneMinorNotice and the checklist pane.
+//
+// Marked data-flow rather than gated on the slug because the Android panel is
+// baked once as "pan_card" — see applyFlowVisibility.
+const rememberNote = `
+        <small class="fy-userform-remember" data-flow="minor" style="display:none;" data-i18n="wizard.remember_doc">Remember which document you pick — once you've paid the government's fee on their own website, a colour printout of it has to be couriered to their Pune office.</small>`;
+
+// Shared by the new-PAN "supporting documents" flow (optional, gated behind
+// the address-match toggle) and the correction flow (always required, since
+// correction now defaults to scanned-images e-Sign instead of Aadhaar eKYC —
+// see submission_mode_scanned in correction_pan_card.json).
+function proofOfIdentityField(
+  selected: string,
+  required: boolean,
+  field = "proof_of_identity",
+  labelText = "Proof of identity",
+): string {
+  const label = required
+    ? `<span>${labelText} <em>*</em></span>`
+    : `<span>${labelText}</span>`;
+  const hint = required
+    ? `<small class="fy-userform-hint">The document you'll submit as proof of identity</small>`
+    : `<small class="fy-userform-hint">For "PAN application with supporting documents" — not needed for the Aadhaar eKYC option</small>`;
+  return `
+      <label class="fy-userform-field">
+        ${label}
+        <select data-field="${field}">
+          <option value="">Select a document…</option>
+          <option value="AADHAAR Card issued by the Unique Identification Authority of India" ${selected === "AADHAAR Card issued by the Unique Identification Authority of India" ? "selected" : ""}>Aadhaar Card</option>
+          <option value="Driving License" ${selected === "Driving License" ? "selected" : ""}>Driving License</option>
+          <option value="Passport" ${selected === "Passport" ? "selected" : ""}>Passport</option>
+          <option value="Elector's photo identity card" ${selected === "Elector's photo identity card" ? "selected" : ""}>Voter ID</option>
+          <option value="Central Government Health Scheme Card" ${selected === "Central Government Health Scheme Card" ? "selected" : ""}>Central Government Health Scheme Card</option>
+          <option value="Ex-Servicemen Contributory Health Scheme photo card" ${selected === "Ex-Servicemen Contributory Health Scheme photo card" ? "selected" : ""}>Ex-Servicemen Contributory Health Scheme Card</option>
+          <option value="Pensioner Card having photograph of the applicant" ${selected === "Pensioner Card having photograph of the applicant" ? "selected" : ""}>Pensioner Card</option>
+          <option value="Ration card having photograph of the applicant" ${selected === "Ration card having photograph of the applicant" ? "selected" : ""}>Ration Card</option>
+          <option value="Photo identity card issued by the Central Government or State Government or Public Sector Undertaking." ${selected === "Photo identity card issued by the Central Government or State Government or Public Sector Undertaking." ? "selected" : ""}>Govt./PSU Photo ID Card</option>
+          <option value="Transgender Identity Card / Certificate issued under the Transgender Persons (Protection of Rights) Act 2019 having photograph of the applicant" ${selected === "Transgender Identity Card / Certificate issued under the Transgender Persons (Protection of Rights) Act 2019 having photograph of the applicant" ? "selected" : ""}>Transgender Identity Card</option>
+          <option value="Bank certificate in Original on letter head from the branch (along with name and stamp of the issuing officer) containing duly attested photograph and bank account number of the applicant" ${selected === "Bank certificate in Original on letter head from the branch (along with name and stamp of the issuing officer) containing duly attested photograph and bank account number of the applicant" ? "selected" : ""}>Bank Certificate (Original)</option>
+          <option value="Certificate of Identity signed by a Gazetted Officer" ${selected === "Certificate of Identity signed by a Gazetted Officer" ? "selected" : ""}>Certificate of Identity — Gazetted Officer</option>
+          <option value="Certificate of Identity signed by a Member of Parliament" ${selected === "Certificate of Identity signed by a Member of Parliament" ? "selected" : ""}>Certificate of Identity — MP</option>
+          <option value="Certificate of Identity signed by a Member of Legislative Assembly" ${selected === "Certificate of Identity signed by a Member of Legislative Assembly" ? "selected" : ""}>Certificate of Identity — MLA</option>
+          <option value="Certificate of Identity signed by a Municipal Councillor" ${selected === "Certificate of Identity signed by a Municipal Councillor" ? "selected" : ""}>Certificate of Identity — Municipal Councillor</option>
+        </select>
+        ${hint}${rememberNote}
+      </label>`;
+}
+
+function proofOfAddressField(
+  selected: string,
+  required: boolean,
+  field = "proof_of_address",
+  labelText = "Proof of address (current address)",
+): string {
+  const label = required
+    ? `<span>${labelText} <em>*</em></span>`
+    : `<span>${labelText}</span>`;
+  const hint = required
+    ? `<small class="fy-userform-hint">The document you'll submit as proof of your current address</small>`
+    : `<small class="fy-userform-hint">Proof for your current address — used only in the "supporting documents" option</small>`;
+  return `
+      <label class="fy-userform-field">
+        ${label}
+        <select data-field="${field}">
+          <option value="">Select a document…</option>
+          <option value="AADHAAR Card issued by the Unique Identification Authority of India" ${selected === "AADHAAR Card issued by the Unique Identification Authority of India" ? "selected" : ""}>Aadhaar Card</option>
+          <option value="Driving License" ${selected === "Driving License" ? "selected" : ""}>Driving License</option>
+          <option value="Passport" ${selected === "Passport" ? "selected" : ""}>Passport</option>
+          <option value="Passport of the spouse" ${selected === "Passport of the spouse" ? "selected" : ""}>Passport of Spouse</option>
+          <option value="Elector's photo identity card" ${selected === "Elector's photo identity card" ? "selected" : ""}>Voter ID</option>
+          <option value="Electricity Bill (Not more than 3 months old from the date of application)" ${selected === "Electricity Bill (Not more than 3 months old from the date of application)" ? "selected" : ""}>Electricity Bill (≤3 months)</option>
+          <option value="Water Bill (Not more than 3 months old from the date of application)" ${selected === "Water Bill (Not more than 3 months old from the date of application)" ? "selected" : ""}>Water Bill (≤3 months)</option>
+          <option value="Landline Telephone Bill (Not more than 3 months old from the date of application)" ${selected === "Landline Telephone Bill (Not more than 3 months old from the date of application)" ? "selected" : ""}>Landline Bill (≤3 months)</option>
+          <option value="Broadband Connection Bill (Not more than 3 months old from the date of application)" ${selected === "Broadband Connection Bill (Not more than 3 months old from the date of application)" ? "selected" : ""}>Broadband Bill (≤3 months)</option>
+          <option value="Consumer gas connection card or book or piped gas bill(Not more than 3 months old from date of application)" ${selected === "Consumer gas connection card or book or piped gas bill(Not more than 3 months old from date of application)" ? "selected" : ""}>Gas Connection Card/Bill (≤3 months)</option>
+          <option value="Bank account statement/passbook (Not more than 3 months old from the date of application)" ${selected === "Bank account statement/passbook (Not more than 3 months old from the date of application)" ? "selected" : ""}>Bank Statement/Passbook (≤3 months)</option>
+          <option value="Post office passbook having address of the applicant" ${selected === "Post office passbook having address of the applicant" ? "selected" : ""}>Post Office Passbook</option>
+          <option value="Depository account statement (Not more than 3 months old from the date of application)" ${selected === "Depository account statement (Not more than 3 months old from the date of application)" ? "selected" : ""}>Depository Account Statement (≤3 months)</option>
+          <option value="Credit card statement (Not more than 3 months old from the date of application)" ${selected === "Credit card statement (Not more than 3 months old from the date of application)" ? "selected" : ""}>Credit Card Statement (≤3 months)</option>
+          <option value="Property Registration Document" ${selected === "Property Registration Document" ? "selected" : ""}>Property Registration Document</option>
+          <option value="Latest property tax assessment order" ${selected === "Latest property tax assessment order" ? "selected" : ""}>Property Tax Assessment Order</option>
+          <option value="Domicile certificate issued by the Government" ${selected === "Domicile certificate issued by the Government" ? "selected" : ""}>Domicile Certificate</option>
+          <option value="Allotment letter of accommodation issued by Central or State Government of not more than three years old" ${selected === "Allotment letter of accommodation issued by Central or State Government of not more than three years old" ? "selected" : ""}>Govt. Accommodation Allotment Letter (≤3 years)</option>
+          <option value="Employer certificate in original" ${selected === "Employer certificate in original" ? "selected" : ""}>Employer Certificate (Original)</option>
+          <option value="Certificate of Address signed by a Gazetted Officer" ${selected === "Certificate of Address signed by a Gazetted Officer" ? "selected" : ""}>Certificate of Address — Gazetted Officer</option>
+          <option value="Certificate of Address signed by a Member of Parliament" ${selected === "Certificate of Address signed by a Member of Parliament" ? "selected" : ""}>Certificate of Address — MP</option>
+          <option value="Certificate of Address signed by a Member of Legislative Assembly" ${selected === "Certificate of Address signed by a Member of Legislative Assembly" ? "selected" : ""}>Certificate of Address — MLA</option>
+          <option value="Certificate of Address signed by a Municipal Councillor" ${selected === "Certificate of Address signed by a Municipal Councillor" ? "selected" : ""}>Certificate of Address — Municipal Councillor</option>
+          <option value="Bank Account Statement in the country of residence (Not more than 3 months old from the date of application)" ${selected === "Bank Account Statement in the country of residence (Not more than 3 months old from the date of application)" ? "selected" : ""}>Bank Statement — Country of Residence (≤3 months)</option>
+          <option value="NRE bank account statement (Not more than 3 months old from the date of application)" ${selected === "NRE bank account statement (Not more than 3 months old from the date of application)" ? "selected" : ""}>NRE Bank Account Statement (≤3 months)</option>
+        </select>
+        ${hint}${rememberNote}
+      </label>`;
+}
+
+// Post Office and Zip Code stay optional either way — the govt form itself
+// doesn't require them (Zip Code is only meaningful for a foreign address,
+// which our applicants don't have since we hardcode Country to India).
+function currentAddressFields(data: UserData, required: boolean): string {
+  const reqMark = required ? " <em>*</em>" : "";
+  const valueAttrs = (value: string) =>
+    required
+      ? `value="${escapeHtml(value)}" autocomplete="off"`
+      : `value="${escapeHtml(value)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off"`;
+
+  return `
+        <label class="fy-userform-field">
+          <span>Flat / Door / Building${reqMark}</span>
+          <input type="text" data-field="current_address_flat" ${valueAttrs(data.current_address_flat)}>
+        </label>
+
+        <label class="fy-userform-field">
+          <span>Road / Street / Block / Sector${reqMark}</span>
+          <input type="text" data-field="current_address_street" ${valueAttrs(data.current_address_street)}>
+        </label>
+
+        <label class="fy-userform-field">
+          <span>Post Office</span>
+          <input type="text" data-field="current_address_post_office" value="${escapeHtml(data.current_address_post_office)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
+        </label>
+
+        <label class="fy-userform-field">
+          <span>Area / Locality / Town / City${reqMark}</span>
+          <input type="text" data-field="current_address_city" ${valueAttrs(data.current_address_city)}>
+        </label>
+
+        <label class="fy-userform-field">
+          <span>District${reqMark}</span>
+          <input type="text" data-field="current_address_district" ${valueAttrs(data.current_address_district)}>
+        </label>
+
+        <label class="fy-userform-field">
+          <span>State / Union Territory${reqMark}</span>
+          <select data-field="current_address_state">
+            <option value="">Select a state…</option>
+            ${INDIAN_STATES.map(
+              (state) =>
+                `<option value="${state}" ${data.current_address_state === state ? "selected" : ""}>${state}</option>`,
+            ).join("")}
+          </select>
+        </label>
+
+        <label class="fy-userform-field">
+          <span>PIN Code${reqMark}</span>
+          <input type="text" data-field="current_address_pin_code" ${valueAttrs(data.current_address_pin_code)} maxlength="6" inputmode="numeric">
+        </label>
+
+      `;
+}
+
 function paneFinal(form: string, data: UserData): string {
   const isCorrection = form === "correction_pan_card";
-  // Source of income, defence status and the current-address branch all feed
-  // parts of the new-PAN application that the correction form simply doesn't
-  // have. Kept in the DOM (rather than dropped) so collectFormData still reads
-  // their defaults and the address-toggle handler has something to bind to.
+  const isMinor = form === "minor_pan_card";
+  // Both flows type the applicant's address and both proofs out in full:
+  // correction because it submits scanned documents through e-Sign, minor
+  // because a minor's application can't use eKYC at all.
+  const needsOwnAddress = isCorrection || isMinor;
+  // The government charges a minor's application differently.
+  const feePhysical = isMinor ? "107" : "101";
+  const feeEpan = isMinor ? "72" : "66";
+  // Source of income and defence status feed parts of the new-PAN application
+  // that the correction form simply doesn't have. Kept in the DOM (rather than
+  // dropped) so collectFormData still reads their defaults. The address-match
+  // question and current-address block are handled separately below — they're
+  // omitted outright for correction rather than hidden, since correction now
+  // always needs the address (see `isCorrection` branch further down) and
+  // duplicating the same data-field names in a hidden copy would confuse
+  // collectFormData's querySelector-based field lookup.
   const hideOnCorrection = isCorrection ? `style="display:none;"` : "";
 
   // Two questions only the correction application asks. A new-PAN applicant
   // has no PAN to prove, and pan_card.json hardcodes the physical card, so
   // showing either of these on that flow would be noise.
-  const correctionOnly = !isCorrection
-    ? ""
-    : `
+  // Rendered for every flow and marked instead of gated, because the Android
+  // panel is baked once from renderUserFormScreen("pan_card", …) — anything
+  // switched on the slug here simply would not exist there. applyFlowVisibility
+  // below is what actually shows or hides it, on both clients.
+  const proofOfPanBlock = `
+      <div data-flow="correction" ${isCorrection ? "" : 'style="display:none;"'}>
       <label class="fy-userform-field">
         <span><span data-i18n="field.proof_of_pan">Proof of your existing PAN</span> <em>*</em></span>
         <select data-field="proof_of_pan">
@@ -395,21 +642,63 @@ function paneFinal(form: string, data: UserData): string {
         </select>
         <small class="fy-userform-hint" data-i18n="wizard.proof_pan_hint">What you'll upload to prove the PAN you're correcting</small>
       </label>
+      </div>
+      `;
 
+  // Asked by both flows that let the applicant choose, with the fee the
+  // government actually charges for that flow. pan_card.json still hardcodes
+  // the physical card, so the new-PAN flow doesn't show it.
+  const deliveryBlock = `
+      <div data-flow="correction minor" ${needsOwnAddress ? "" : 'style="display:none;"'}>
       <label class="fy-userform-field">
         <span><span data-i18n="field.wants_physical">Do you want a physical PAN card?</span> <em>*</em></span>
         <div class="fy-userform-radios">
           <label class="fy-userform-radio">
             <input type="radio" name="wants_physical_pan" data-field="wants_physical_pan" value="yes" ${data.wants_physical_pan !== "no" ? "checked" : ""}>
-            <span data-i18n="opt.yes_101">Yes — ₹101</span>
+            <span data-fee="physical" data-fee-adult="101" data-fee-minor="107">Yes — ₹${feePhysical}</span>
           </label>
           <label class="fy-userform-radio">
             <input type="radio" name="wants_physical_pan" data-field="wants_physical_pan" value="no" ${data.wants_physical_pan === "no" ? "checked" : ""}>
-            <span data-i18n="opt.no_66">No — ₹66</span>
+            <span data-fee="epan" data-fee-adult="66" data-fee-minor="72">No — ₹${feeEpan}</span>
           </label>
         </div>
         <small class="fy-userform-hint" data-i18n="wizard.physical_hint">"No" means e-PAN only, sent to your email. This is the government's fee, not ours.</small>
       </label>
+
+      <div data-flow="minor" id="fy-pan-delivery-block" style="display:${!isMinor || data.wants_physical_pan === "no" ? "none" : "block"};">
+        <label class="fy-userform-field">
+          <span><span data-i18n="field.pan_delivery">Where should the card be posted?</span> <em>*</em></span>
+          <div class="fy-userform-radios">
+            <label class="fy-userform-radio">
+              <input type="radio" name="pan_delivery_address" data-field="pan_delivery_address" value="residence" ${data.pan_delivery_address !== "guardian" ? "checked" : ""}>
+              <span data-i18n="opt.delivery_applicant">The applicant's address</span>
+            </label>
+            <label class="fy-userform-radio">
+              <input type="radio" name="pan_delivery_address" data-field="pan_delivery_address" value="guardian" ${data.pan_delivery_address === "guardian" ? "checked" : ""}>
+              <span data-i18n="opt.delivery_guardian">The guardian's address</span>
+            </label>
+          </div>
+        </label>
+      </div>
+      </div>
+      `;
+
+  // The proofs and the applicant's own address stay gated on the flow rather
+  // than marked, and deliberately so: the new-PAN branch further down renders
+  // its own copy inside #fy-current-address-block, and rendering both would
+  // put two elements behind each of these data-field names. Android reaches
+  // the same fields through that other block, which applyFormVariant unhides.
+  const ownAddressBlock = !needsOwnAddress
+    ? ""
+    : `
+      ${proofOfIdentityField(data.proof_of_identity, true)}
+      ${proofOfAddressField(data.proof_of_address, true)}
+
+      <div class="fy-userform-field" style="margin-bottom:0;">
+        <span data-i18n="field.current_address">Your current address</span>
+        <small class="fy-userform-hint">${isMinor ? "The applicant's own address. A minor's application is filed on paper, so the government needs it written out." : "Required by the government form now that your correction submits via scanned documents + e-Sign instead of Aadhaar eKYC."}</small>
+      </div>
+      ${currentAddressFields(data, true)}
       `;
 
   return `
@@ -418,7 +707,9 @@ function paneFinal(form: string, data: UserData): string {
       <div class="fy-pane-title" data-i18n="wizard.p5_title">Last step</div>
       <div class="fy-pane-sub" data-i18n="wizard.p5_sub">A few details the income tax department requires.</div>
 
-      ${correctionOnly}
+      ${proofOfPanBlock}
+      ${deliveryBlock}
+      ${ownAddressBlock}
 
       <div ${hideOnCorrection}>
       <label class="fy-userform-field">
@@ -471,7 +762,7 @@ function paneFinal(form: string, data: UserData): string {
           <option value="Elector's photo identity card" data-i18n="opt.voter_id" ${data.proof_of_dob === "Elector's photo identity card" ? "selected" : ""}>Voter ID</option>
           <option value="Pension payment order" data-i18n="opt.pension_order" ${data.proof_of_dob === "Pension payment order" ? "selected" : ""}>Pension Payment Order</option>
         </select>
-        <small class="fy-userform-hint" data-i18n="wizard.proof_dob_hint">The document you'll upload as proof</small>
+        <small class="fy-userform-hint" data-i18n="wizard.proof_dob_hint">The document you'll upload as proof</small>${rememberNote}
       </label>
 
       <div ${hideOnCorrection}>
@@ -508,7 +799,18 @@ function paneFinal(form: string, data: UserData): string {
       `
           : ""
       }
+      </div>
 
+      ${
+        // Not just `isCorrection`: the minor flow renders its own copy of the
+        // address and both proofs above, and a second set here would put two
+        // elements behind every one of those data-field names — collectFormData
+        // does document.querySelector and would silently read whichever came
+        // first. The address-vs-Aadhaar routing this block exists for doesn't
+        // apply to either flow anyway.
+        needsOwnAddress
+          ? ""
+          : `
       <label class="fy-userform-field">
         <span><span data-i18n="field.address_same">Is your current address the same as your Aadhaar address?</span> <em>*</em></span>
         <div class="fy-userform-radios" id="fy-address-match-group">
@@ -525,106 +827,12 @@ function paneFinal(form: string, data: UserData): string {
       </label>
 
       <div id="fy-current-address-block" style="display:${data.address_same_as_aadhaar === false ? "block" : "none"};">
-
-      <label class="fy-userform-field">
-        <span>Proof of identity</span>
-        <select data-field="proof_of_identity">
-          <option value="">Select a document…</option>
-          <option value="AADHAAR Card issued by the Unique Identification Authority of India" ${data.proof_of_identity === "AADHAAR Card issued by the Unique Identification Authority of India" ? "selected" : ""}>Aadhaar Card</option>
-          <option value="Driving License" ${data.proof_of_identity === "Driving License" ? "selected" : ""}>Driving License</option>
-          <option value="Passport" ${data.proof_of_identity === "Passport" ? "selected" : ""}>Passport</option>
-          <option value="Elector's photo identity card" ${data.proof_of_identity === "Elector's photo identity card" ? "selected" : ""}>Voter ID</option>
-          <option value="Central Government Health Scheme Card" ${data.proof_of_identity === "Central Government Health Scheme Card" ? "selected" : ""}>Central Government Health Scheme Card</option>
-          <option value="Ex-Servicemen Contributory Health Scheme photo card" ${data.proof_of_identity === "Ex-Servicemen Contributory Health Scheme photo card" ? "selected" : ""}>Ex-Servicemen Contributory Health Scheme Card</option>
-          <option value="Pensioner Card having photograph of the applicant" ${data.proof_of_identity === "Pensioner Card having photograph of the applicant" ? "selected" : ""}>Pensioner Card</option>
-          <option value="Ration card having photograph of the applicant" ${data.proof_of_identity === "Ration card having photograph of the applicant" ? "selected" : ""}>Ration Card</option>
-          <option value="Photo identity card issued by the Central Government or State Government or Public Sector Undertaking." ${data.proof_of_identity === "Photo identity card issued by the Central Government or State Government or Public Sector Undertaking." ? "selected" : ""}>Govt./PSU Photo ID Card</option>
-          <option value="Transgender Identity Card / Certificate issued under the Transgender Persons (Protection of Rights) Act 2019 having photograph of the applicant" ${data.proof_of_identity === "Transgender Identity Card / Certificate issued under the Transgender Persons (Protection of Rights) Act 2019 having photograph of the applicant" ? "selected" : ""}>Transgender Identity Card</option>
-          <option value="Bank certificate in Original on letter head from the branch (along with name and stamp of the issuing officer) containing duly attested photograph and bank account number of the applicant" ${data.proof_of_identity === "Bank certificate in Original on letter head from the branch (along with name and stamp of the issuing officer) containing duly attested photograph and bank account number of the applicant" ? "selected" : ""}>Bank Certificate (Original)</option>
-          <option value="Certificate of Identity signed by a Gazetted Officer" ${data.proof_of_identity === "Certificate of Identity signed by a Gazetted Officer" ? "selected" : ""}>Certificate of Identity — Gazetted Officer</option>
-          <option value="Certificate of Identity signed by a Member of Parliament" ${data.proof_of_identity === "Certificate of Identity signed by a Member of Parliament" ? "selected" : ""}>Certificate of Identity — MP</option>
-          <option value="Certificate of Identity signed by a Member of Legislative Assembly" ${data.proof_of_identity === "Certificate of Identity signed by a Member of Legislative Assembly" ? "selected" : ""}>Certificate of Identity — MLA</option>
-          <option value="Certificate of Identity signed by a Municipal Councillor" ${data.proof_of_identity === "Certificate of Identity signed by a Municipal Councillor" ? "selected" : ""}>Certificate of Identity — Municipal Councillor</option>
-        </select>
-        <small class="fy-userform-hint">For "PAN application with supporting documents" — not needed for the Aadhaar eKYC option</small>
-      </label>
-
-      <label class="fy-userform-field">
-        <span>Proof of address (current address)</span>
-        <select data-field="proof_of_address">
-          <option value="">Select a document…</option>
-          <option value="AADHAAR Card issued by the Unique Identification Authority of India" ${data.proof_of_address === "AADHAAR Card issued by the Unique Identification Authority of India" ? "selected" : ""}>Aadhaar Card</option>
-          <option value="Driving License" ${data.proof_of_address === "Driving License" ? "selected" : ""}>Driving License</option>
-          <option value="Passport" ${data.proof_of_address === "Passport" ? "selected" : ""}>Passport</option>
-          <option value="Passport of the spouse" ${data.proof_of_address === "Passport of the spouse" ? "selected" : ""}>Passport of Spouse</option>
-          <option value="Elector's photo identity card" ${data.proof_of_address === "Elector's photo identity card" ? "selected" : ""}>Voter ID</option>
-          <option value="Electricity Bill (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Electricity Bill (Not more than 3 months old from the date of application)" ? "selected" : ""}>Electricity Bill (≤3 months)</option>
-          <option value="Water Bill (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Water Bill (Not more than 3 months old from the date of application)" ? "selected" : ""}>Water Bill (≤3 months)</option>
-          <option value="Landline Telephone Bill (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Landline Telephone Bill (Not more than 3 months old from the date of application)" ? "selected" : ""}>Landline Bill (≤3 months)</option>
-          <option value="Broadband Connection Bill (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Broadband Connection Bill (Not more than 3 months old from the date of application)" ? "selected" : ""}>Broadband Bill (≤3 months)</option>
-          <option value="Consumer gas connection card or book or piped gas bill(Not more than 3 months old from date of application)" ${data.proof_of_address === "Consumer gas connection card or book or piped gas bill(Not more than 3 months old from date of application)" ? "selected" : ""}>Gas Connection Card/Bill (≤3 months)</option>
-          <option value="Bank account statement/passbook (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Bank account statement/passbook (Not more than 3 months old from the date of application)" ? "selected" : ""}>Bank Statement/Passbook (≤3 months)</option>
-          <option value="Post office passbook having address of the applicant" ${data.proof_of_address === "Post office passbook having address of the applicant" ? "selected" : ""}>Post Office Passbook</option>
-          <option value="Depository account statement (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Depository account statement (Not more than 3 months old from the date of application)" ? "selected" : ""}>Depository Account Statement (≤3 months)</option>
-          <option value="Credit card statement (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Credit card statement (Not more than 3 months old from the date of application)" ? "selected" : ""}>Credit Card Statement (≤3 months)</option>
-          <option value="Property Registration Document" ${data.proof_of_address === "Property Registration Document" ? "selected" : ""}>Property Registration Document</option>
-          <option value="Latest property tax assessment order" ${data.proof_of_address === "Latest property tax assessment order" ? "selected" : ""}>Property Tax Assessment Order</option>
-          <option value="Domicile certificate issued by the Government" ${data.proof_of_address === "Domicile certificate issued by the Government" ? "selected" : ""}>Domicile Certificate</option>
-          <option value="Allotment letter of accommodation issued by Central or State Government of not more than three years old" ${data.proof_of_address === "Allotment letter of accommodation issued by Central or State Government of not more than three years old" ? "selected" : ""}>Govt. Accommodation Allotment Letter (≤3 years)</option>
-          <option value="Employer certificate in original" ${data.proof_of_address === "Employer certificate in original" ? "selected" : ""}>Employer Certificate (Original)</option>
-          <option value="Certificate of Address signed by a Gazetted Officer" ${data.proof_of_address === "Certificate of Address signed by a Gazetted Officer" ? "selected" : ""}>Certificate of Address — Gazetted Officer</option>
-          <option value="Certificate of Address signed by a Member of Parliament" ${data.proof_of_address === "Certificate of Address signed by a Member of Parliament" ? "selected" : ""}>Certificate of Address — MP</option>
-          <option value="Certificate of Address signed by a Member of Legislative Assembly" ${data.proof_of_address === "Certificate of Address signed by a Member of Legislative Assembly" ? "selected" : ""}>Certificate of Address — MLA</option>
-          <option value="Certificate of Address signed by a Municipal Councillor" ${data.proof_of_address === "Certificate of Address signed by a Municipal Councillor" ? "selected" : ""}>Certificate of Address — Municipal Councillor</option>
-          <option value="Bank Account Statement in the country of residence (Not more than 3 months old from the date of application)" ${data.proof_of_address === "Bank Account Statement in the country of residence (Not more than 3 months old from the date of application)" ? "selected" : ""}>Bank Statement — Country of Residence (≤3 months)</option>
-          <option value="NRE bank account statement (Not more than 3 months old from the date of application)" ${data.proof_of_address === "NRE bank account statement (Not more than 3 months old from the date of application)" ? "selected" : ""}>NRE Bank Account Statement (≤3 months)</option>
-        </select>
-        <small class="fy-userform-hint">Proof for your current address — used only in the "supporting documents" option</small>
-      </label>
-
-        <label class="fy-userform-field">
-          <span>Flat / Door / Building</span>
-          <input type="text" data-field="current_address_flat" value="${escapeHtml(data.current_address_flat)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
-        </label>
-
-        <label class="fy-userform-field">
-          <span>Road / Street / Block / Sector</span>
-          <input type="text" data-field="current_address_street" value="${escapeHtml(data.current_address_street)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
-        </label>
-
-        <label class="fy-userform-field">
-          <span>Post Office</span>
-          <input type="text" data-field="current_address_post_office" value="${escapeHtml(data.current_address_post_office)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
-        </label>
-
-        <label class="fy-userform-field">
-          <span>Area / Locality / Town / City</span>
-          <input type="text" data-field="current_address_city" value="${escapeHtml(data.current_address_city)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
-        </label>
-
-        <label class="fy-userform-field">
-          <span>District</span>
-          <input type="text" data-field="current_address_district" value="${escapeHtml(data.current_address_district)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
-        </label>
-
-        <label class="fy-userform-field">
-          <span>State / Union Territory</span>
-          <select data-field="current_address_state">
-            <option value="">Select a state…</option>
-            ${INDIAN_STATES.map(
-              (state) =>
-                `<option value="${state}" ${data.current_address_state === state ? "selected" : ""}>${state}</option>`,
-            ).join("")}
-          </select>
-        </label>
-
-        <label class="fy-userform-field">
-          <span>PIN Code</span>
-          <input type="text" data-field="current_address_pin_code" value="${escapeHtml(data.current_address_pin_code)}" placeholder="Optional" data-i18n-ph="field.optional_ph" maxlength="6" inputmode="numeric" autocomplete="off">
-        </label>
-
+      ${proofOfIdentityField(data.proof_of_identity, false)}
+      ${proofOfAddressField(data.proof_of_address, false)}
+      ${currentAddressFields(data, false)}
       </div>
-      </div>
+      `
+      }
 
       <details class="fy-uf-optional"${data.passport_number || data.tin_number ? " open" : ""}>
         <summary data-i18n="wizard.optional_summary">+ Optional — passport, TIN</summary>
@@ -645,6 +853,274 @@ function paneFinal(form: string, data: UserData): string {
   `;
 }
 
+// Read this before filling anything: a minor's application ends at a post
+// office, not at a Submit button, and that changes what the applicant has to
+// have ready. Told first because it is the one thing that would make someone
+// abandon halfway, and finding it out at the end — after paying — is the worst
+// possible moment.
+//
+// Rendered for every flow and filtered out by the wizard for the ones it
+// doesn't apply to, for the same reason as the guardian pane: the Android
+// panel is baked once as "pan_card", so a pane gated on the slug at render
+// time would not exist there at all.
+function paneMinorNotice(): string {
+  return `
+    <div class="fy-pane fy-pane-minor" data-pane="-1">
+      <div class="fy-pane-caption">Before you start</div>
+      <div class="fy-pane-title" data-i18n="wizard.minor_notice_title">This one finishes by post</div>
+      <div class="fy-pane-sub" data-i18n="wizard.minor_notice_sub">A PAN for a child can't be verified online — the government doesn't offer it for minors.</div>
+
+      <div class="fy-userform-field" style="background:var(--fy-warn-bg,#fff8ec);border:1px solid var(--fy-warn-line,#f0d9a8);border-radius:12px;padding:14px 16px;">
+        <div style="font-size:13px;line-height:1.65;color:var(--fy-ink,#0a0a2e);" data-i18n-html="wizard.minor_notice_body">
+          <p style="margin:0 0 10px;">Once the form is filled and the government's own fee is paid on their website, you'll need to <strong>print it, sign it, and courier the documents to the government's Pune office</strong> for verification.</p>
+          <p style="margin:0 0 10px;">Have <strong>colour printouts</strong> ready of whichever documents you pick for verification later in this form.</p>
+          <p style="margin:0;"><strong>Write down which documents you choose.</strong> You won't be able to see your selections again after this, and every one of them has to go in the envelope.</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// The minor flow's extra step: everything about the guardian, asked in one
+// place after the applicant's own steps are done.
+//
+// Rendered for every flow rather than gated on `form`, and carrying
+// `fy-pane-minor` so both clients can filter it out of the wizard when it
+// doesn't apply. That looks redundant on desktop, where renderUserFormScreen
+// already knows the form — but the Android panel is baked once from
+// renderUserFormScreen("pan_card", …) (see prototype/build.mjs), so a pane
+// gated on the slug would simply not exist there and the app could never
+// collect any of this. No field name here is used by another block, so the
+// inert copy in the other flows collides with nothing.
+//
+// "Guardian" throughout, never "Representative Assessee" — the legal term
+// belongs in the config comments, not in front of an applicant.
+function paneGuardian(data: UserData): string {
+  const addr = (
+    field: keyof UserData,
+    label: string,
+    extra = "",
+    optional = false,
+  ) => `
+        <label class="fy-userform-field">
+          <span>${label}${optional ? "" : " <em>*</em>"}</span>
+          <input type="text" data-field="${field}" value="${escapeHtml(String(data[field] ?? ""))}" ${optional ? 'placeholder="Optional" data-i18n-ph="field.optional_ph"' : ""} autocomplete="off" ${extra}>
+        </label>`;
+
+  return `
+    <div class="fy-pane fy-pane-minor" data-pane="5">
+      <div class="fy-pane-caption">Last step</div>
+      <div class="fy-pane-title" data-i18n="wizard.guardian_title">The guardian's details</div>
+      <div class="fy-pane-sub" data-i18n="wizard.guardian_sub">A PAN for a child is always applied for by a parent or guardian, and the government asks for their details in full.</div>
+
+      ${addr("guardian_first_name", "Guardian's first name")}
+      <label class="fy-userform-field">
+        <span>Guardian's middle name</span>
+        <input type="text" data-field="guardian_middle_name" value="${escapeHtml(data.guardian_middle_name)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
+      </label>
+      ${addr("guardian_last_name", "Guardian's last name")}
+      <div class="fy-userform-hint" style="margin:-6px 0 14px;" data-i18n="wizard.guardian_name_hint">Write names out in full — the government rejects initials here.</div>
+
+      ${addr("guardian_email", "Guardian's email", 'inputmode="email"')}
+      ${addr("guardian_mobile", "Guardian's mobile number", 'inputmode="numeric" maxlength="10"')}
+
+      <label class="fy-userform-field">
+        <span><span data-i18n="field.guardian_same_address">Does the guardian live at the same address as the applicant?</span></span>
+        <div class="fy-userform-radios" id="fy-guardian-same-address">
+          <label class="fy-userform-radio">
+            <input type="radio" name="guardian_address_same_as_applicant" data-field="guardian_address_same_as_applicant" value="true" ${data.guardian_address_same_as_applicant ? "checked" : ""}>
+            <span data-i18n="opt.yes">Yes</span>
+          </label>
+          <label class="fy-userform-radio">
+            <input type="radio" name="guardian_address_same_as_applicant" data-field="guardian_address_same_as_applicant" value="false" ${data.guardian_address_same_as_applicant ? "" : "checked"}>
+            <span data-i18n="opt.no">No</span>
+          </label>
+        </div>
+        <small class="fy-userform-hint" data-i18n="wizard.guardian_same_hint">Choosing Yes copies the address you already entered, so you don't type it twice.</small>
+      </label>
+
+      <div id="fy-guardian-address-block" style="display:${data.guardian_address_same_as_applicant ? "none" : "block"};">
+        ${addr("guardian_address_flat", "Flat / Door / Building")}
+        ${addr("guardian_address_street", "Road / Street / Block / Sector")}
+
+        <label class="fy-userform-field">
+          <span data-i18n="field.guardian_post_office">Post Office — optional, skip it if you're unsure</span>
+          <input type="text" data-field="guardian_address_post_office" value="${escapeHtml(data.guardian_address_post_office)}" placeholder="Optional" data-i18n-ph="field.optional_ph" autocomplete="off">
+        </label>
+
+        ${addr("guardian_address_city", "Area / Locality / Town / City")}
+        ${addr("guardian_address_district", "District")}
+
+        <label class="fy-userform-field">
+          <span>State / Union Territory <em>*</em></span>
+          <select data-field="guardian_address_state">
+            <option value="">Select a state…</option>
+            ${INDIAN_STATES.map(
+              (s) =>
+                `<option value="${s}" ${data.guardian_address_state === s ? "selected" : ""}>${s}</option>`,
+            ).join("")}
+          </select>
+        </label>
+
+        ${addr("guardian_address_pin_code", "PIN Code", 'inputmode="numeric" maxlength="6"')}
+      </div>
+
+      ${proofOfIdentityField(data.guardian_proof_of_identity, true, "guardian_proof_of_identity", "Guardian's proof of identity")}
+      ${proofOfAddressField(data.guardian_proof_of_address, true, "guardian_proof_of_address", "Guardian's proof of address")}
+
+      <div class="fy-userform-errors" id="fy-userform-errors-guardian" hidden></div>
+    </div>
+  `;
+}
+
+// The last thing a minor's applicant sees before paying: the documents they
+// picked, read back to them. Everything in this list has to be printed in
+// colour and posted to Protean's Pune office, and once the government form is
+// open the selections are no longer visible anywhere — so this is the only
+// chance to write them down.
+//
+// Rendered for every flow and carried by `fy-pane-minor` so the wizard filters
+// it out of the others, for the same reason as paneGuardian: the Android panel
+// is baked once as "pan_card".
+function paneDocChecklist(): string {
+  return `
+    <div class="fy-pane fy-pane-minor" data-pane="6">
+      <div class="fy-pane-caption" data-i18n="wizard.checklist_caption">Before you continue</div>
+      <div class="fy-pane-title" data-i18n="wizard.checklist_title">The documents you'll have to post</div>
+      <div class="fy-pane-sub" data-i18n="wizard.checklist_sub">These are the documents you selected for verification.</div>
+
+      <div class="fy-uf-screenshot" data-i18n="wizard.checklist_screenshot">📸 Take a screenshot of this page. This is the only place your choices are shown — you won't be able to see this list again.</div>
+
+      <div class="fy-uf-checklist" id="fy-doc-checklist">
+        <div class="fy-uf-checklist-group">
+          <h4 data-i18n="wizard.checklist_applicant">Applicant's documents</h4>
+          <ul id="fy-doc-checklist-applicant"></ul>
+        </div>
+        <div class="fy-uf-checklist-group">
+          <h4 data-i18n="wizard.checklist_guardian">Guardian's documents</h4>
+          <ul id="fy-doc-checklist-guardian"></ul>
+        </div>
+      </div>
+
+      <small class="fy-userform-remember" style="margin-top:12px;" data-i18n="wizard.checklist_warning">Print every one of these as a colour photocopy. Once the government's fee is paid on their own website, they all have to be couriered to the government's Pune office — the application isn't processed until they arrive.</small>
+    </div>
+  `;
+}
+
+/**
+ * Fills the checklist pane from whatever is currently selected in the proof
+ * dropdowns. Reads the option's own text rather than its value: the values are
+ * the government's full legal descriptions ("Bank certificate in Original on
+ * letter head from the branch…"), which nobody can copy onto an envelope.
+ *
+ * Exported for the same reason as syncPanDeliveryVisibility — the Android
+ * shell has its own render loop and needs to call this from it.
+ */
+export function syncDocChecklist(root: ParentNode): void {
+  const lang = getLang();
+  const list = (id: string, fields: [string, string][]) => {
+    const ul = root.querySelector<HTMLElement>(id);
+    if (!ul) return;
+    ul.innerHTML = fields
+      .map(([field, key]) => {
+        const label = escapeHtml(t(key, lang));
+        const sel = root.querySelector<HTMLSelectElement>(
+          `[data-field="${field}"]`,
+        );
+        const text = escapeHtml(sel?.selectedOptions[0]?.text?.trim() ?? "");
+        // An empty select means nothing has been picked yet. Saying so beats
+        // omitting the row, which would read as "nothing needed here" — and
+        // this pane is the applicant's only record of what to put in the
+        // envelope, so a silent gap is the worst outcome.
+        return !sel || !sel.value
+          ? `<li class="fy-uf-checklist-missing"><span data-i18n="${key}">${label}</span><strong data-i18n="checklist.not_chosen">${escapeHtml(t("checklist.not_chosen", lang))}</strong></li>`
+          : `<li><span data-i18n="${key}">${label}</span><strong>${text}</strong></li>`;
+      })
+      .join("");
+  };
+
+  list("#fy-doc-checklist-applicant", [
+    ["proof_of_identity", "checklist.poi"],
+    ["proof_of_address", "checklist.poa"],
+    ["proof_of_dob", "checklist.pod"],
+  ]);
+  list("#fy-doc-checklist-guardian", [
+    ["guardian_proof_of_identity", "checklist.poi"],
+    ["guardian_proof_of_address", "checklist.poa"],
+  ]);
+}
+
+/**
+ * Shows or hides the blocks that belong to one flow, and puts the right fee on
+ * the physical-card question.
+ *
+ * This exists because the two clients render the panel differently and one of
+ * them can't use the form slug at render time. The extension calls
+ * renderUserFormScreen per flow; the Android app bakes it once from
+ * renderUserFormScreen("pan_card", …) at build time and picks the flow later,
+ * from a chooser. Anything switched on the slug inside the render therefore
+ * doesn't exist in the app at all — which is how the physical-card question,
+ * the delivery-address question and proof-of-PAN all went missing there
+ * without anyone noticing.
+ *
+ * So those blocks are always rendered, tagged `data-flow="…"` with the flows
+ * they belong to, and this is what reveals them. Both clients call it, which
+ * is the point: one rule, not two that drift.
+ */
+/**
+ * "Where should the card be posted?" only means something when a card is being
+ * posted. Exported because both clients need it on every change of the
+ * physical-card answer, and because applyFlowVisibility has to re-apply it —
+ * that function shows blocks by flow alone, which would otherwise bring this
+ * one back for a minor who asked for the e-PAN.
+ */
+export function syncPanDeliveryVisibility(root: ParentNode): void {
+  const block = root.querySelector<HTMLElement>("#fy-pan-delivery-block");
+  if (!block) return;
+  // Only ever shown on the flow it belongs to. data-flow is the single source
+  // of truth for that; this narrows it, never widens it.
+  const flows = (block.dataset.flow ?? "").split(/\s+/).filter(Boolean);
+  const belongsHere = block.dataset.flowActive === "true";
+  const wantsCard =
+    root.querySelector<HTMLInputElement>(
+      'input[name="wants_physical_pan"]:checked',
+    )?.value !== "no";
+  block.style.display = belongsHere && wantsCard && flows.length ? "block" : "none";
+}
+
+export function applyFlowVisibility(root: ParentNode, form: string): void {
+  const flow =
+    form === "correction_pan_card"
+      ? "correction"
+      : form === "minor_pan_card"
+        ? "minor"
+        : "new";
+
+  root.querySelectorAll<HTMLElement>("[data-flow]").forEach((el) => {
+    const flows = (el.dataset.flow ?? "").split(/\s+/).filter(Boolean);
+    const belongs = flows.includes(flow);
+    el.style.display = belongs ? "" : "none";
+    // Recorded so a narrower rule can consult it without re-deriving the flow.
+    el.dataset.flowActive = String(belongs);
+  });
+
+  // Must run after the loop above, which would otherwise re-reveal the
+  // delivery question purely because the flow matches — ignoring the fact that
+  // there is nothing to deliver.
+  syncPanDeliveryVisibility(root);
+
+  // The government charges a minor's application differently: ₹107/₹72 rather
+  // than ₹101/₹66. Both amounts ride on the element so this can swap them
+  // without re-rendering.
+  const minor = flow === "minor";
+  root.querySelectorAll<HTMLElement>("[data-fee]").forEach((el) => {
+    const amount = minor ? el.dataset.feeMinor : el.dataset.feeAdult;
+    if (!amount) return;
+    el.textContent =
+      el.dataset.fee === "physical" ? `Yes — ₹${amount}` : `No — ₹${amount}`;
+  });
+}
+
 export function renderUserFormScreen(form: string, data: UserData): string {
   return `
     <div class="fy-userform">
@@ -661,11 +1137,14 @@ export function renderUserFormScreen(form: string, data: UserData): string {
       <div class="fy-flowbar"><div class="fy-flowbar-fill" id="fy-uf-bar" style="width:20%;"></div></div>
 
       <div class="fy-userform-body" id="fy-uf-body">
+        ${paneMinorNotice()}
         ${paneName(data)}
         ${paneContact(data)}
         ${paneAadhaar(form, data)}
         ${paneFamily(form, data)}
         ${paneFinal(form, data)}
+        ${paneGuardian(data)}
+        ${paneDocChecklist()}
       </div>
 
       <div class="fy-userform-footer">
@@ -677,7 +1156,7 @@ export function renderUserFormScreen(form: string, data: UserData): string {
         </button>
         <div class="fy-userform-privacy">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>
-          <span data-i18n="wizard.privacy">Saved on your device only — never sent to us</span>
+          <span data-i18n="wizard.privacy">Saved on your device — only your mobile number reaches us</span>
         </div>
       </div>
     </div>
@@ -753,8 +1232,17 @@ function attachUserFormHandlers(
   const errorBox = document.getElementById("fy-userform-errors");
 
   // ── Wizard navigation (pure presentation — all fields stay in the DOM) ──
+  // The guardian pane is rendered for every flow so the Android build can bake
+  // it (see paneGuardian), so it has to be filtered out of the wizard itself
+  // for the flows that don't ask for a guardian. Its fields stay in the DOM
+  // and collect as empty strings, which is what those flows want anyway.
+  applyFlowVisibility(document, form);
+
   const panes = Array.from(
     document.querySelectorAll<HTMLElement>(".fy-userform .fy-pane"),
+  ).filter(
+    (p) =>
+      form === "minor_pan_card" || !p.classList.contains("fy-pane-minor"),
   );
   const bar = document.getElementById("fy-uf-bar");
   const bodyEl = document.getElementById("fy-uf-body");
@@ -778,9 +1266,14 @@ function attachUserFormHandlers(
   );
   const aoStatusEl0 = document.getElementById("fy-ao-status");
   const aoGated = !!(pinInputEl && aoStatusEl0);
-  const pinPaneIdx = pinInputEl
-    ? Number(pinInputEl.closest<HTMLElement>(".fy-pane")?.dataset.pane ?? -1)
-    : -1;
+  // Indexed into `panes` — the list this flow actually walks — not read off
+  // the authored data-pane attribute. Those two agree only when every pane is
+  // walked. The minor flow prepends the courier notice, which shifts every
+  // walked index by one, so reading the attribute gated the pane *before* the
+  // PIN one: Continue was dead on the mobile-number step and the PIN step
+  // itself was left ungated.
+  const pinPane = pinInputEl?.closest<HTMLElement>(".fy-pane") ?? null;
+  const pinPaneIdx = pinPane ? panes.indexOf(pinPane) : -1;
   let aoOk = !aoGated;
 
   const updateNavState = () => {
@@ -838,6 +1331,10 @@ function attachUserFormHandlers(
     if (next) next.style.display = isLast ? "none" : "flex";
     if (submit) submit.style.display = isLast ? "flex" : "none";
     if (bodyEl) bodyEl.scrollTop = 0;
+    // Recomputed on arrival rather than on every change: the dropdowns it
+    // reads all live on earlier panes, so there is no way to reach this one
+    // without passing them.
+    syncDocChecklist(document);
     updateNavState();
     trackStepView();
   };
@@ -868,7 +1365,9 @@ function attachUserFormHandlers(
 
   const jumpToField = (field: HTMLElement) => {
     const pane = field.closest<HTMLElement>(".fy-pane");
-    if (pane) showPane(Number(pane.dataset.pane ?? 0));
+    // Same reason as pinPaneIdx above: showPane takes a walked index, and
+    // data-pane is the authored one.
+    if (pane) showPane(panes.indexOf(pane));
     const details = field.closest<HTMLDetailsElement>("details.fy-uf-optional");
     if (details) details.open = true;
     field.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1071,6 +1570,54 @@ function attachUserFormHandlers(
         radio.addEventListener("change", () => {
           const sameAsAadhaar = radio.value === "true" && radio.checked;
           currentAddressBlock.style.display = sameAsAadhaar ? "none" : "block";
+        });
+      });
+  }
+
+  // "Where should the card be posted?" follows the physical-card answer.
+  document
+    .querySelectorAll<HTMLInputElement>('input[name="wants_physical_pan"]')
+    .forEach((radio) => {
+      radio.addEventListener("change", () =>
+        syncPanDeliveryVisibility(document),
+      );
+    });
+
+  // Guardian address: hide the block when it's the same as the applicant's,
+  // and copy the values across so the applicant can see what will be sent
+  // rather than trusting an invisible copy. collectFormData resolves this
+  // again on submit, so the data is right even if this never ran.
+  const guardianAddressBlock = document.getElementById(
+    "fy-guardian-address-block",
+  );
+  if (guardianAddressBlock) {
+    const GUARDIAN_ADDRESS_PAIRS: [string, string][] = [
+      ["guardian_address_flat", "current_address_flat"],
+      ["guardian_address_street", "current_address_street"],
+      ["guardian_address_post_office", "current_address_post_office"],
+      ["guardian_address_city", "current_address_city"],
+      ["guardian_address_district", "current_address_district"],
+      ["guardian_address_state", "current_address_state"],
+      ["guardian_address_pin_code", "current_address_pin_code"],
+    ];
+    document
+      .querySelectorAll<HTMLInputElement>(
+        'input[name="guardian_address_same_as_applicant"]',
+      )
+      .forEach((radio) => {
+        radio.addEventListener("change", () => {
+          const same = radio.value === "true" && radio.checked;
+          guardianAddressBlock.style.display = same ? "none" : "block";
+          if (!same) return;
+          for (const [to, from] of GUARDIAN_ADDRESS_PAIRS) {
+            const src = document.querySelector<HTMLInputElement>(
+              `[data-field="${from}"]`,
+            );
+            const dst = document.querySelector<HTMLInputElement>(
+              `[data-field="${to}"]`,
+            );
+            if (src && dst) dst.value = src.value;
+          }
         });
       });
   }
@@ -1318,6 +1865,15 @@ export function collectFormData(form: string): UserData {
 
   const parentOnCard = getRadio("parent_on_card");
 
+  // "The guardian lives at the same address" is resolved here rather than only
+  // by the copy-across in the UI. The block is hidden when it's on, and a
+  // hidden block that was never populated would otherwise collect as empty and
+  // put a blank address on the government form.
+  const guardianSameAddress =
+    getRadio("guardian_address_same_as_applicant") === "true";
+  const guardianAddr = (guardianField: string, applicantField: string) =>
+    get(guardianSameAddress ? applicantField : guardianField).toUpperCase();
+
   return {
     first_name: get("first_name").toUpperCase(),
     middle_name: get("middle_name").toUpperCase(),
@@ -1326,6 +1882,7 @@ export function collectFormData(form: string): UserData {
     email: get("email"),
     mobile: get("mobile"),
     aadhaar_last_4: get("aadhaar_last_4").replace(/\D/g, "").slice(0, 4),
+    name_as_per_aadhaar: get("name_as_per_aadhaar").toUpperCase(),
     gender: getRadio("gender") as "M" | "F" | "T" | "",
     father_first_name: get("father_first_name").toUpperCase(),
     father_middle_name: get("father_middle_name").toUpperCase(),
@@ -1370,6 +1927,43 @@ export function collectFormData(form: string): UserData {
     // EMPTY_USER_DATA carries.
     wants_physical_pan: getRadio("wants_physical_pan") === "no" ? "no" : "yes",
     proof_of_pan: get("proof_of_pan") || "Copy of Pan Card",
+    guardian_first_name: get("guardian_first_name").toUpperCase(),
+    guardian_middle_name: get("guardian_middle_name").toUpperCase(),
+    guardian_last_name: get("guardian_last_name").toUpperCase(),
+    guardian_email: get("guardian_email"),
+    guardian_mobile: get("guardian_mobile").replace(/\D/g, "").slice(0, 10),
+    guardian_address_same_as_applicant: guardianSameAddress,
+    guardian_address_flat: guardianAddr(
+      "guardian_address_flat",
+      "current_address_flat",
+    ),
+    guardian_address_street: guardianAddr(
+      "guardian_address_street",
+      "current_address_street",
+    ),
+    guardian_address_post_office: guardianAddr(
+      "guardian_address_post_office",
+      "current_address_post_office",
+    ),
+    guardian_address_city: guardianAddr(
+      "guardian_address_city",
+      "current_address_city",
+    ),
+    guardian_address_district: guardianAddr(
+      "guardian_address_district",
+      "current_address_district",
+    ),
+    guardian_address_state: guardianAddr(
+      "guardian_address_state",
+      "current_address_state",
+    ),
+    guardian_address_pin_code: guardianSameAddress
+      ? get("current_address_pin_code")
+      : get("guardian_address_pin_code"),
+    guardian_proof_of_identity: get("guardian_proof_of_identity"),
+    guardian_proof_of_address: get("guardian_proof_of_address"),
+    pan_delivery_address:
+      getRadio("pan_delivery_address") === "guardian" ? "guardian" : "residence",
   };
 }
 

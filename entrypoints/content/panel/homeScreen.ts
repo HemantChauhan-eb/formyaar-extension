@@ -57,7 +57,7 @@ export function renderHomeScreen(): string {
             <button id="fy-recover-session" class="fy-textlink" data-i18n="home.recover">Already paid? Recover</button>
           </div>
           <p data-i18n="home.footer_note" style="font-size:9px;color:var(--fy-faint);line-height:1.5;text-align:center;margin-top:10px;">
-            Not affiliated with any government entity. FormYaar is a private service. Anonymous usage events are collected to improve it.
+            Not affiliated with any government entity. FormYaar is a private service. Usage data and your mobile number are collected — see formyaar.in/privacy-policy
           </p>
         </div>
       </div>

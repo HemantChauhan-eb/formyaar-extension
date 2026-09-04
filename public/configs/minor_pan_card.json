@@ -1,0 +1,872 @@
+{
+  "form": "minor_pan_card",
+  "version": 2,
+  "site": "onlineservices.proteantech.in",
+  "steps": [
+    {
+      "step": 1,
+      "page_pattern": "endUserRegisterContact",
+      "page": "registerEndUser",
+      "fields": [
+        {
+          "field_id": "application_type",
+          "type": "select",
+          "selector": "#type",
+          "value_source": "static",
+          "static_value": "49A",
+          "match_by": "value",
+          "explanation": "PAN application type — New PAN for Indian Citizens."
+        },
+        {
+          "field_id": "applicant_category",
+          "type": "select",
+          "selector": "#cat_applicant1",
+          "value_source": "static",
+          "static_value": "P",
+          "match_by": "value",
+          "explanation": "Applicant category — Individual."
+        },
+        {
+          "field_id": "first_name",
+          "type": "text",
+          "selector": "#f_name_end",
+          "value_source": "user.first_name",
+          "explanation": "Your first name as per Aadhaar."
+        },
+        {
+          "field_id": "middle_name",
+          "type": "text",
+          "selector": "#m_name_end",
+          "value_source": "user.middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "You don't have a middle name, so there's nothing to fill.",
+          "explanation": "Your middle name as per Aadhaar."
+        },
+        {
+          "field_id": "last_name",
+          "type": "text",
+          "selector": "#l_name_end",
+          "value_source": "user.last_name",
+          "explanation": "Your last name as per Aadhaar."
+        },
+        {
+          "field_id": "date_of_birth",
+          "type": "text",
+          "selector": "#date_of_birth_reg",
+          "value_source": "user.date_of_birth",
+          "explanation": "Your date of birth in DD/MM/YYYY format."
+        },
+        {
+          "field_id": "email",
+          "type": "text",
+          "selector": "#email_id2",
+          "value_source": "user.email",
+          "explanation": "Your email — your ePAN will be sent here."
+        },
+        {
+          "field_id": "mobile",
+          "type": "text",
+          "selector": "#rvContactNo",
+          "value_source": "user.mobile",
+          "explanation": "Your 10-digit mobile number."
+        },
+        {
+          "field_id": "consent",
+          "type": "checkbox",
+          "selector": "#consent",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Consent to data processing."
+        }
+      ],
+      "completion": {
+        "title": "Registration filled!",
+        "subtitle": "Solve the CAPTCHA, then generate your token",
+        "manual_steps": [
+          "Solve the CAPTCHA and wait for the green check ✓",
+          "Click <strong>Submit</strong>"
+        ],
+        "info": "Your token will appear on the next screen."
+      },
+      "page_coach": {
+        "selector": "#submitForm",
+        "message": "Solve the CAPTCHA, wait for the green check ✓, then click Submit"
+      }
+    },
+    {
+      "step": 1,
+      "page_pattern": "registerEndUser",
+      "page": "tokenGenerated",
+      "stop_message": "Token generated. Clicking Continue to proceed.",
+      "fields": [
+        {
+          "field_id": "continue_after_token",
+          "type": "button_click",
+          "selector": "#submitForm",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Continue past the token confirmation screen."
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "page_pattern": "endUserLogin",
+      "page": "tokenPage",
+      "is_token_page": true,
+      "stepy_index": -1,
+      "stop_message": "Existing application found. Selecting your previous token.",
+      "fields": [
+        {
+          "field_id": "existing_token",
+          "type": "radio",
+          "selector": "input.tokenButton",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Select existing token to resume previous application."
+        },
+        {
+          "field_id": "use_token_btn",
+          "type": "button_click",
+          "selector": "#submitForm11",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Click Use above Token to proceed."
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "page_pattern": "endUserLogin",
+      "page": "endUserLogin",
+      "stepy_index": 1,
+      "auto_advance": true,
+      "stop_message": "Personal details filled. Please verify and click Next.",
+      "fields": [
+        {
+          "field_id": "submission_mode_courier",
+          "type": "radio",
+          "selector": "#eVerfication1",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Fill online, then courier or speed post the signed form with supporting documents. It is the only mode open to a minor — s.160 of the Income-tax Act bars eKYC and e-Sign once a Representative Assessee is appointed — and the site already ships it selected. Set explicitly so a changed default cannot silently reroute the application."
+        },
+        {
+          "field_id": "physical_pan_yes",
+          "type": "radio",
+          "selector": "#appli_epan_op1_y",
+          "value_source": "user.wants_physical_pan",
+          "static_value": "yes",
+          "skip_when_empty": true,
+          "skip_reason": "You chose the e-PAN only, so this option is left unselected.",
+          "explanation": "Physical PAN card + e-PAN. ₹107 for a minor, not ₹101."
+        },
+        {
+          "field_id": "physical_pan_no",
+          "type": "radio",
+          "selector": "#appli_epan_op1_n",
+          "value_source": "user.wants_physical_pan",
+          "static_value": "no",
+          "skip_when_empty": true,
+          "skip_reason": "You chose to receive a physical card, so this option is left unselected.",
+          "explanation": "e-PAN only, no physical card. ₹72 for a minor, not ₹66."
+        },
+        {
+          "field_id": "aadhaar_last_4",
+          "type": "text",
+          "selector": "#aadhaarNo_2",
+          "value_source": "user.aadhaar_last_4",
+          "explanation": "Last 4 digits of the MINOR's Aadhaar, not the guardian's. The form states this explicitly and it is the easiest thing on the page to get backwards."
+        },
+        {
+          "field_id": "name_as_per_aadhaar",
+          "type": "text",
+          "selector": "#rvNameAadhaar_id",
+          "value_source": "computed.name_as_per_aadhaar",
+          "force_enable": true,
+          "explanation": "The minor's name exactly as printed on their Aadhaar, typed by the applicant in the panel. The site disables this box on page load and never re-enables it off the eKYC path, so we force it enabled."
+        },
+        {
+          "field_id": "first_name_step2",
+          "type": "text",
+          "selector": "#f_name",
+          "value_source": "user.first_name",
+          "explanation": "First name as per Aadhaar."
+        },
+        {
+          "field_id": "middle_name_step2",
+          "type": "text",
+          "selector": "#m_name",
+          "value_source": "user.middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "You don't have a middle name, so there's nothing to fill.",
+          "explanation": "Middle name as per Aadhaar."
+        },
+        {
+          "field_id": "last_name_step2",
+          "type": "text",
+          "selector": "#l_name",
+          "value_source": "user.last_name",
+          "explanation": "Last name as per Aadhaar."
+        },
+        {
+          "field_id": "gender",
+          "type": "select",
+          "selector": "#gender",
+          "value_source": "user.gender",
+          "match_by": "value",
+          "explanation": "Your gender as per Aadhaar."
+        },
+        {
+          "field_id": "single_parent_yes",
+          "type": "radio",
+          "selector": "#single_parent_yes",
+          "value_source": "user.is_single_parent",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't tell us this is a single-parent application, so this option is left unselected.",
+          "min_delay_ms": 2000,
+          "explanation": "Click Yes only if single parent — 2s delay lets NSDL JS show the which-parent selector."
+        },
+        {
+          "field_id": "single_parent_father_select",
+          "type": "radio",
+          "selector": "#single_parent_father",
+          "value_source": "user.is_single_parent_father",
+          "skip_when_empty": true,
+          "skip_reason": "Not the single-parent option that applies to you.",
+          "min_delay_ms": 1500,
+          "explanation": "Select Father as single parent when applicable — 1.5s delay lets NSDL enable father fields."
+        },
+        {
+          "field_id": "single_parent_mother_select",
+          "type": "radio",
+          "selector": "#single_parent_mother",
+          "value_source": "user.is_single_parent_mother",
+          "skip_when_empty": true,
+          "skip_reason": "Not the single-parent option that applies to you.",
+          "min_delay_ms": 1500,
+          "explanation": "Select Mother as single parent when applicable — 1.5s delay lets NSDL enable mother fields."
+        },
+        {
+          "field_id": "father_first_name",
+          "type": "text",
+          "selector": "#faf_name",
+          "value_source": "user.father_first_name",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't provide your father's details, and they aren't required for your PAN.",
+          "explanation": "Father's first name."
+        },
+        {
+          "field_id": "father_middle_name",
+          "type": "text",
+          "selector": "#fam_name",
+          "value_source": "user.father_middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "No middle name given for your father.",
+          "explanation": "Father's middle name."
+        },
+        {
+          "field_id": "father_last_name",
+          "type": "text",
+          "selector": "#fal_name",
+          "value_source": "user.father_last_name",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't provide your father's details, and they aren't required for your PAN.",
+          "explanation": "Father's last name."
+        },
+        {
+          "field_id": "mother_first_name",
+          "type": "text",
+          "selector": "#mof_name",
+          "value_source": "user.mother_first_name",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't provide your mother's details, and they aren't required for your PAN.",
+          "explanation": "Mother's first name."
+        },
+        {
+          "field_id": "mother_middle_name",
+          "type": "text",
+          "selector": "#mom_name",
+          "value_source": "user.mother_middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "No middle name given for your mother.",
+          "explanation": "Mother's middle name."
+        },
+        {
+          "field_id": "mother_last_name",
+          "type": "text",
+          "selector": "#mol_name",
+          "value_source": "user.mother_last_name",
+          "skip_when_empty": true,
+          "skip_reason": "You didn't provide your mother's details, and they aren't required for your PAN.",
+          "explanation": "Mother's last name."
+        },
+        {
+          "field_id": "parent_on_card_father",
+          "type": "radio",
+          "selector": "#parent_father",
+          "value_source": "user.parent_on_card_is_father",
+          "skip_when_empty": true,
+          "skip_reason": "You chose your mother's name to appear on the card.",
+          "explanation": "Father's name on PAN card."
+        },
+        {
+          "field_id": "parent_on_card_mother",
+          "type": "radio",
+          "selector": "#parent_mother",
+          "value_source": "user.parent_on_card_is_mother",
+          "skip_when_empty": true,
+          "skip_reason": "You chose your father's name to appear on the card.",
+          "explanation": "Mother's name on PAN card."
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "page_pattern": "endUserLogin",
+      "page": "endUserLogin",
+      "stepy_index": 2,
+      "auto_advance": true,
+      "stop_message": "Contact, address and guardian details filled. Please verify and click Next.",
+      "fields": [
+        {
+          "field_id": "income_salary",
+          "type": "checkbox",
+          "selector": "#sal_id",
+          "value_source": "user.income_source",
+          "skip_when_empty": true,
+          "skip_reason": "Not one of the income sources you selected.",
+          "static_value": "salary",
+          "explanation": "Source of income — Salary."
+        },
+        {
+          "field_id": "income_business",
+          "type": "checkbox",
+          "selector": "#buss",
+          "value_source": "user.income_source",
+          "skip_when_empty": true,
+          "skip_reason": "Not one of the income sources you selected.",
+          "static_value": "business",
+          "explanation": "Source of income — Business/Profession."
+        },
+        {
+          "field_id": "income_house",
+          "type": "checkbox",
+          "selector": "#inc_house",
+          "value_source": "user.income_source",
+          "skip_when_empty": true,
+          "skip_reason": "Not one of the income sources you selected.",
+          "static_value": "house_property",
+          "explanation": "Source of income — House property."
+        },
+        {
+          "field_id": "income_other",
+          "type": "checkbox",
+          "selector": "#inc_other_sources",
+          "value_source": "user.income_source",
+          "skip_when_empty": true,
+          "skip_reason": "Not one of the income sources you selected.",
+          "static_value": "other_sources",
+          "explanation": "Source of income — Other sources."
+        },
+        {
+          "field_id": "income_capital",
+          "type": "checkbox",
+          "selector": "#capital_gains",
+          "value_source": "user.income_source",
+          "skip_when_empty": true,
+          "skip_reason": "Not one of the income sources you selected.",
+          "static_value": "capital_gains",
+          "explanation": "Source of income — Capital gains."
+        },
+        {
+          "field_id": "income_no_income",
+          "type": "checkbox",
+          "selector": "#no_income",
+          "value_source": "user.income_source",
+          "skip_when_empty": true,
+          "skip_reason": "Not one of the income sources you selected.",
+          "static_value": "no_income",
+          "explanation": "Source of income — No income."
+        },
+        {
+          "field_id": "address_for_communication_residence",
+          "type": "radio",
+          "selector": "#add_comm",
+          "value_source": "user.pan_delivery_address",
+          "static_value": "residence",
+          "skip_when_empty": true,
+          "skip_reason": "You asked for the card to go to the guardian's address, so this option is left unselected.",
+          "explanation": "Address for communication — the minor's own residence. Also the default when only an e-PAN was chosen, since nothing is being posted."
+        },
+        {
+          "field_id": "address_for_communication_guardian",
+          "type": "radio",
+          "selector": "#add_comm_ra",
+          "value_source": "user.pan_delivery_address",
+          "static_value": "guardian",
+          "skip_when_empty": true,
+          "skip_reason": "You asked for the card to go to the applicant's address, so this option is left unselected.",
+          "explanation": "Address for communication — the guardian's address. The form calls this Representative Assessee (RA)."
+        },
+        {
+          "field_id": "current_address_flat",
+          "type": "text",
+          "selector": "#rFlat",
+          "value_source": "user.current_address_flat",
+          "explanation": "Flat/Door/Building of the minor's residence."
+        },
+        {
+          "field_id": "current_address_street",
+          "type": "text",
+          "selector": "#rName",
+          "value_source": "user.current_address_street",
+          "explanation": "Road/Street/Block/Sector of the minor's residence."
+        },
+        {
+          "field_id": "current_address_post_office",
+          "type": "text",
+          "selector": "#rRoad",
+          "value_source": "user.current_address_post_office",
+          "skip_when_empty": true,
+          "skip_reason": "Post Office is optional and you left it blank — the government does not require it.",
+          "explanation": "Post office of the minor's residence."
+        },
+        {
+          "field_id": "current_address_city",
+          "type": "text",
+          "selector": "#rArea",
+          "value_source": "user.current_address_city",
+          "explanation": "Area/Locality/Town/City of the minor's residence."
+        },
+        {
+          "field_id": "current_address_district",
+          "type": "text",
+          "selector": "#rCountry",
+          "value_source": "user.current_address_district",
+          "explanation": "District of the minor's residence."
+        },
+        {
+          "field_id": "current_address_country",
+          "type": "select",
+          "selector": "#country_name",
+          "value_source": "static",
+          "static_value": "91",
+          "match_by": "value",
+          "min_delay_ms": 1500,
+          "explanation": "Country — India. The delay lets the site's AJAX repopulate the State dropdown before a state is picked."
+        },
+        {
+          "field_id": "current_address_state",
+          "type": "select",
+          "selector": "#state",
+          "value_source": "user.current_address_state",
+          "match_by": "text",
+          "explanation": "State/Union Territory of the minor's residence."
+        },
+        {
+          "field_id": "current_address_pin_code",
+          "type": "text",
+          "selector": "#res_pin_code",
+          "value_source": "user.current_address_pin_code",
+          "explanation": "PIN code of the minor's residence. Zip Code is left alone — it only applies to a foreign address."
+        },
+        {
+          "field_id": "isd_code",
+          "type": "select",
+          "selector": "#tel_num_isdcode",
+          "value_source": "static",
+          "static_value": "91",
+          "match_by": "value",
+          "explanation": "Country code — India (91). Area/STD code and landline are deliberately left blank; neither is required."
+        },
+        {
+          "field_id": "mobile_num",
+          "type": "text",
+          "selector": "#mobile_num",
+          "value_source": "user.mobile",
+          "explanation": "The applicant's 10-digit mobile number."
+        },
+        {
+          "field_id": "email_id",
+          "type": "text",
+          "selector": "#email_id",
+          "value_source": "user.email",
+          "explanation": "The applicant's email."
+        },
+        {
+          "field_id": "residential_status_resident",
+          "type": "radio",
+          "selector": "#residential_status_r",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Residential status — Resident."
+        },
+        {
+          "field_id": "passport_num",
+          "type": "text",
+          "selector": "#passport_num",
+          "value_source": "user.passport_number",
+          "skip_when_empty": true,
+          "skip_reason": "Only needed if you are a non-resident. Not required for this PAN.",
+          "explanation": "Passport number — mandatory only for non-residents."
+        },
+        {
+          "field_id": "tin_num",
+          "type": "text",
+          "selector": "#tin_num",
+          "value_source": "user.tin_number",
+          "skip_when_empty": true,
+          "skip_reason": "Only needed if you pay tax in another country. Not required for this PAN.",
+          "explanation": "Foreign Taxpayer Identification Number — mandatory only for foreign applicants."
+        },
+        {
+          "field_id": "rep_assessee_yes",
+          "type": "radio",
+          "selector": "#rep_ase_yes",
+          "value_source": "static",
+          "static_value": true,
+          "min_delay_ms": 1200,
+          "explanation": "Appointing a Representative Assessee — Yes. A minor cannot file in their own right, so this is always Yes and the panel never offers No. The delay lets the site reveal #hideRA before anything below it is filled."
+        },
+        {
+          "field_id": "rep_assessee_by_pan",
+          "type": "radio",
+          "selector": "#ra_pan_Id",
+          "value_source": "static",
+          "static_value": true,
+          "min_delay_ms": 600,
+          "explanation": "Identify the guardian by PAN rather than Aadhaar — the site's own default, and the one the panel is built around."
+        },
+        {
+          "field_id": "guardian_pan_manual",
+          "type": "pause_for_user",
+          "selector": "#representativePan_Id",
+          "value_source": "static",
+          "static_value": true,
+          "pause_title": "Enter the guardian's PAN",
+          "pause_message": "Type the guardian's PAN in the highlighted box, then click Continue",
+          "pause_body": "FormYaar never asks for or stores a PAN number, so this one is yours to type. Everything else about the guardian fills in automatically once you continue.",
+          "explanation": "The one field the applicant fills by hand. A PAN is the most sensitive identifier on this form, so it is never collected in the panel, never stored and never sent anywhere — the fill stops here and waits for a Continue click. It also has to come first: the site keeps the guardian's middle-name box disabled until a PAN is present."
+        },
+        {
+          "field_id": "guardian_first_name",
+          "type": "text",
+          "selector": "#representativeFirstName_Id",
+          "value_source": "user.guardian_first_name",
+          "explanation": "Guardian's first name, in full — the form rejects initials."
+        },
+        {
+          "field_id": "guardian_middle_name",
+          "type": "text",
+          "selector": "#representativeMiddleName_Id",
+          "value_source": "user.guardian_middle_name",
+          "skip_when_empty": true,
+          "skip_reason": "The guardian has no middle name, so there is nothing to fill.",
+          "explanation": "Guardian's middle name. The site only enables this box once the PAN above is present, which is the other reason the pause comes first."
+        },
+        {
+          "field_id": "guardian_last_name",
+          "type": "text",
+          "selector": "#representativeLastName_Id",
+          "value_source": "user.guardian_last_name",
+          "explanation": "Guardian's last name / surname."
+        },
+        {
+          "field_id": "guardian_address_flat",
+          "type": "text",
+          "selector": "#ra_address_Flat_Id",
+          "value_source": "user.guardian_address_flat",
+          "explanation": "Flat/Door/Building of the guardian's address."
+        },
+        {
+          "field_id": "guardian_address_street",
+          "type": "text",
+          "selector": "#ra_address_Name_Id",
+          "value_source": "user.guardian_address_street",
+          "explanation": "Road/Street/Block/Sector of the guardian's address."
+        },
+        {
+          "field_id": "guardian_address_post_office",
+          "type": "text",
+          "selector": "#ra_address_Road_Id",
+          "value_source": "user.guardian_address_post_office",
+          "skip_when_empty": true,
+          "skip_reason": "Post Office is optional and you left it blank — the government does not require it.",
+          "explanation": "Post office of the guardian's address."
+        },
+        {
+          "field_id": "guardian_address_city",
+          "type": "text",
+          "selector": "#ra_address_Area_Id",
+          "value_source": "user.guardian_address_city",
+          "explanation": "Area/Locality/Town/City of the guardian's address."
+        },
+        {
+          "field_id": "guardian_address_district",
+          "type": "text",
+          "selector": "#ra_address_Town_Id",
+          "value_source": "user.guardian_address_district",
+          "explanation": "District of the guardian's address."
+        },
+        {
+          "field_id": "guardian_address_country",
+          "type": "select",
+          "selector": "#rvRAcountryId",
+          "value_source": "static",
+          "static_value": "91",
+          "match_by": "value",
+          "min_delay_ms": 1500,
+          "explanation": "Guardian's country — India. Same AJAX-repopulates-the-state delay as the residence address above."
+        },
+        {
+          "field_id": "guardian_address_state",
+          "type": "select",
+          "selector": "#ra_address_StateCode_Id",
+          "value_source": "user.guardian_address_state",
+          "match_by": "text",
+          "explanation": "State/Union Territory of the guardian's address."
+        },
+        {
+          "field_id": "guardian_address_pin_code",
+          "type": "text",
+          "selector": "#ra_address_Pincode_Id",
+          "value_source": "user.guardian_address_pin_code",
+          "explanation": "PIN code of the guardian's address."
+        },
+        {
+          "field_id": "guardian_isd_code",
+          "type": "select",
+          "selector": "#ra_isd_code_Id",
+          "value_source": "static",
+          "static_value": "91",
+          "match_by": "value",
+          "explanation": "Guardian's country code — India (91). Area/STD code and landline left blank, as for the applicant."
+        },
+        {
+          "field_id": "guardian_mobile",
+          "type": "text",
+          "selector": "#ra_mobileNo_Id",
+          "value_source": "user.guardian_mobile",
+          "explanation": "Guardian's mobile number."
+        },
+        {
+          "field_id": "guardian_email",
+          "type": "text",
+          "selector": "#ra_email_Id",
+          "value_source": "user.guardian_email",
+          "explanation": "Guardian's email."
+        },
+        {
+          "field_id": "guardian_poi_code",
+          "type": "select",
+          "selector": "#ra_poiCode",
+          "value_source": "user.guardian_proof_of_identity",
+          "match_by": "text",
+          "explanation": "Guardian's proof of identity, as picked in the panel."
+        },
+        {
+          "field_id": "guardian_poa_code",
+          "type": "select",
+          "selector": "#ra_poaCode",
+          "value_source": "user.guardian_proof_of_address",
+          "match_by": "text",
+          "explanation": "Guardian's proof of address, as picked in the panel."
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "page_pattern": "endUserLogin",
+      "page": "endUserLogin",
+      "stepy_index": 3,
+      "stop_message": "AO Code filled automatically from your PIN code.",
+      "fields": [
+        {
+          "field_id": "ao_indian_citizen",
+          "type": "radio",
+          "selector": "#aoSelection",
+          "value_source": "user.is_defence",
+          "explanation": "AO category — Indian Citizens (or Defence if applicable).",
+          "defence_selector": "#def_aoCode"
+        }
+      ],
+      "auto_advance": true
+    },
+    {
+      "step": 5,
+      "page_pattern": "endUserLogin",
+      "page": "endUserLogin",
+      "stepy_index": 4,
+      "stop_message": "Declaration filled & saved. Review the form, then submit.",
+      "fields": [
+        {
+          "field_id": "poid_code",
+          "type": "select",
+          "selector": "#poidCode",
+          "value_source": "user.proof_of_identity",
+          "match_by": "text",
+          "explanation": "The minor's proof of identity, as picked in the panel. Not hardcoded to Aadhaar the way the eKYC flow can afford to be."
+        },
+        {
+          "field_id": "poa_code",
+          "type": "select",
+          "selector": "#poaCode",
+          "value_source": "user.proof_of_address",
+          "match_by": "text",
+          "explanation": "The minor's proof of address, as picked in the panel."
+        },
+        {
+          "field_id": "proof_dob_code",
+          "type": "select",
+          "selector": "#proof_dob_code",
+          "value_source": "user.proof_of_dob",
+          "match_by": "value",
+          "explanation": "The minor's proof of date of birth."
+        },
+        {
+          "field_id": "verifier_name",
+          "type": "text",
+          "selector": "#verifierName",
+          "value_source": "computed.guardian_full_name",
+          "explanation": "The \"I/We ___, in the capacity of\" name in the declaration. This is the GUARDIAN, not the child — the declaration is made by the Representative Assessee, and a minor cannot make it themselves."
+        },
+        {
+          "field_id": "capacity_verifier",
+          "type": "select",
+          "selector": "#capacityVerifier",
+          "value_source": "static",
+          "static_value": "07",
+          "match_by": "value",
+          "explanation": "Declaration capacity — Representative Assessee. It is the only option the site renders on a minor's form; there is no Self."
+        },
+        {
+          "field_id": "designation",
+          "type": "text",
+          "selector": "#designation",
+          "value_source": "static",
+          "static_value": "REPRESENTATIVE ASSESSEE",
+          "explanation": "Designation of the person signing. Spelled out in full — the field takes 30 characters and this is 24."
+        },
+        {
+          "field_id": "place",
+          "type": "text",
+          "selector": "#verifierPlace",
+          "value_source": "user.place",
+          "explanation": "District the application is filed from. The date beside it is readonly and set by the page, so it is left alone."
+        },
+        {
+          "field_id": "declaration_name",
+          "type": "text",
+          "selector": "#declarationName",
+          "value_source": "computed.guardian_full_name",
+          "explanation": "The Name box below the date, above Designation. The guardian again — it names the person signing the declaration, which pairs with the REPRESENTATIVE ASSESSEE designation right under it."
+        },
+        {
+          "field_id": "save_draft",
+          "type": "button_click",
+          "selector": "#saveForm",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Save Draft — preserves every filled field before the review screen."
+        }
+      ],
+      "completion": {
+        "title": "Form filled & saved!",
+        "subtitle": "Check it over, then submit — but read this first",
+        "manual_steps": [
+          "Review the form and click <strong>Submit</strong>",
+          "Enter the <strong>first 8 digits of the minor's Aadhaar</strong> on the review screen, then <strong>Proceed</strong>",
+          "Pay the government fee",
+          "<strong>Print the form, sign it, attach the documents and post it to Protean, Pune</strong> — a minor's application cannot be completed online"
+        ],
+        "info": "eKYC and e-Sign aren't available for a minor, so the last step is physical. The address to post it to is printed on the acknowledgement."
+      }
+    },
+    {
+      "step": 6,
+      "page_pattern": "fullFormSave",
+      "page": "fullFormSave",
+      "guidance_only": true,
+      "stop_message": "Make sure you've uploaded all required documents above, then click Confirm to proceed.",
+      "fields": [
+        {
+          "field_id": "confirm_submit",
+          "type": "button_click",
+          "selector": "#confirmSubmit",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Confirm your uploaded documents and proceed to payment."
+        }
+      ],
+      "completion": {
+        "title": "95% complete!",
+        "subtitle": "Just a few more clicks to go",
+        "manual_steps": [
+          "Enter your Aadhaar's first 8 digits above",
+          "Review your application on this screen",
+          "If everything is correct, click <strong>Proceed</strong>",
+          "Choose your payment method and pay"
+        ],
+        "info": "You're all done — your application will be submitted and your PAN card will arrive soon."
+      }
+    },
+    {
+      "step": 7,
+      "page_pattern": "fullFormSubmit",
+      "page": "fullFormSubmit",
+      "stop_message": "Agreeing to terms and proceeding to payment.",
+      "fields": [
+        {
+          "field_id": "agree_terms",
+          "type": "radio",
+          "selector": "#agree",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Agree to terms of service."
+        },
+        {
+          "field_id": "proceed_to_payment",
+          "type": "button_click",
+          "selector": "#pay",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Proceed to payment."
+        }
+      ]
+    },
+    {
+      "step": 8,
+      "page_pattern": "ddSave",
+      "page": "ddSave",
+      "guidance_only": true,
+      "stop_message": "Please review the fee and click Pay Confirm to proceed.",
+      "fields": [
+        {
+          "field_id": "pay_confirm",
+          "type": "button_click",
+          "selector": "#payConfirm",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Confirm payment to proceed to the payment gateway."
+        }
+      ]
+    },
+    {
+      "step": 9,
+      "page_pattern": "paytmResponseAfterStatus",
+      "page": "paytmResponseAfterStatus",
+      "stop_message": "Payment successful. Continuing to eKYC.",
+      "fields": [
+        {
+          "field_id": "continue_payment",
+          "type": "button_click",
+          "selector": "#continuePayment",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Continue after payment success."
+        }
+      ]
+    }
+  ]
+}

@@ -23,6 +23,14 @@ export interface UserData {
   email: string;
   mobile: string;
   aadhaar_last_4: string;
+  // Asked separately rather than assembled from first/middle/last, because the
+  // government form asks for both and they are genuinely different strings:
+  // Aadhaar prints one full name with its own spacing, initials and order,
+  // and the PAN form's own name fields are split. Filling this from the split
+  // names put a subtly different name in the box the Aadhaar match runs
+  // against. Empty on drafts predating this field — `computed.name_as_per_aadhaar`
+  // falls back to the assembled name so those keep working.
+  name_as_per_aadhaar: string;
   gender: "M" | "F" | "T" | "";
   father_first_name: string;
   father_middle_name: string;
@@ -48,9 +56,12 @@ export interface UserData {
   // (pan_card), false → PAN application with supporting documents
   // (adult_new_pan_card_supporting_docs), which needs the fields below.
   address_same_as_aadhaar: boolean;
-  // Current residence address — only used by the "PAN application with
-  // supporting documents" flow, for applicants whose current address
-  // differs from their Aadhaar address. Optional everywhere else.
+  // Current residence address. Required for the correction flow, which
+  // defaults to submitting scanned documents through e-Sign (not Aadhaar
+  // eKYC), so the govt form needs it filled in directly — see
+  // validateUserData. Also used, optionally, by the "PAN application with
+  // supporting documents" new-PAN flow for applicants whose current address
+  // differs from their Aadhaar address.
   current_address_flat: string;
   current_address_street: string;
   current_address_post_office: string;
@@ -62,16 +73,51 @@ export interface UserData {
   // flow — proof_of_address is for the current address above, not Aadhaar.
   proof_of_identity: string;
   proof_of_address: string;
-  // Which PAN application the user came in for: a fresh PAN, or changes /
-  // correction to one they already hold. Chosen on the home screen and carried
-  // through the wizard, not asked as a form field.
-  application_intent: "new" | "correction";
-  // Physical PAN card + ePAN (₹101) vs ePAN only (₹66). Only the correction
-  // config reads this today; pan_card.json still hardcodes the physical card.
+  // Which PAN application the user came in for: a fresh PAN, changes /
+  // correction to one they already hold, or a PAN for a minor. Chosen on the
+  // home screen and carried through the wizard, not asked as a form field.
+  application_intent: "new" | "correction" | "minor";
+  // Physical PAN card + ePAN vs ePAN only. Fees differ by flow — ₹101/₹66 for
+  // an adult, ₹107/₹72 for a minor — so the panel's copy is per-flow while the
+  // stored answer is the same yes/no either way.
   wants_physical_pan: "yes" | "no";
   // What the applicant is enclosing to prove the PAN they're correcting.
   // Correction flow only — a new-PAN applicant has no PAN to prove.
   proof_of_pan: string;
+
+  // ── Minor flow: the guardian ──────────────────────────────────────
+  // The government calls this the Representative Assessee. We never use that
+  // phrase in the panel — applicants read it as jargon and stall — so every
+  // label says "guardian" and only the config comments carry the legal term.
+  //
+  // Deliberately absent: the guardian's PAN. It is typed straight into the
+  // government form by the applicant, mid-fill, and never stored or sent
+  // anywhere — same treatment as aadhaar/passport/TIN numbers. That is what
+  // the `pause_for_user` field in minor_pan_card.json exists to do.
+  guardian_first_name: string;
+  guardian_middle_name: string;
+  guardian_last_name: string;
+  guardian_email: string;
+  guardian_mobile: string;
+  // Whether the guardian lives at the applicant's address. When true the panel
+  // copies the applicant's address across rather than asking twice.
+  guardian_address_same_as_applicant: boolean;
+  guardian_address_flat: string;
+  guardian_address_street: string;
+  // Optional, and labelled as such — applicants otherwise go hunting for their
+  // post office name and lose several minutes to a field nobody requires.
+  guardian_address_post_office: string;
+  guardian_address_city: string;
+  guardian_address_district: string;
+  guardian_address_state: string;
+  guardian_address_pin_code: string;
+  guardian_proof_of_identity: string;
+  guardian_proof_of_address: string;
+  // Where the physical card should be posted: the minor's own address, or the
+  // guardian's. Only asked when a physical card was chosen — with e-PAN there
+  // is nothing to post, so the form's "address for communication" is set to
+  // Residence and the question isn't worth the applicant's time.
+  pan_delivery_address: "residence" | "guardian";
 }
 
 export const EMPTY_USER_DATA: UserData = {
@@ -82,6 +128,7 @@ export const EMPTY_USER_DATA: UserData = {
   email: "",
   mobile: "",
   aadhaar_last_4: "",
+  name_as_per_aadhaar: "",
   gender: "",
   father_first_name: "",
   father_middle_name: "",
@@ -115,6 +162,22 @@ export const EMPTY_USER_DATA: UserData = {
   application_intent: "new",
   wants_physical_pan: "yes",
   proof_of_pan: "Copy of Pan Card",
+  guardian_first_name: "",
+  guardian_middle_name: "",
+  guardian_last_name: "",
+  guardian_email: "",
+  guardian_mobile: "",
+  guardian_address_same_as_applicant: false,
+  guardian_address_flat: "",
+  guardian_address_street: "",
+  guardian_address_post_office: "",
+  guardian_address_city: "",
+  guardian_address_district: "",
+  guardian_address_state: "",
+  guardian_address_pin_code: "",
+  guardian_proof_of_identity: "",
+  guardian_proof_of_address: "",
+  pan_delivery_address: "residence",
 };
 
 // Which NSDL/Protean config to run — the single source of truth for this
@@ -128,6 +191,10 @@ export function resolveFormSlug(
   data: Pick<UserData, "address_same_as_aadhaar" | "application_intent">,
 ): string {
   if (data.application_intent === "correction") return "correction_pan_card";
+  // A minor's application can only be filed on paper — eKYC and e-Sign are both
+  // barred under s.160 of the Income-tax Act once a Representative Assessee is
+  // appointed — so the address-vs-Aadhaar routing below simply doesn't apply.
+  if (data.application_intent === "minor") return "minor_pan_card";
   return data.address_same_as_aadhaar === false
     ? "adult_new_pan_card_supporting_docs"
     : "pan_card";
@@ -191,6 +258,7 @@ export function validateUserData(
   form = "pan_card",
 ): ValidationError[] {
   const errors: ValidationError[] = [];
+  const isMinor = form === "minor_pan_card";
   // The correction application asks for neither of these: it has no AO Code
   // fieldset (the applicant already has a jurisdiction) and no source-of-income
   // section. Requiring them would block a correction on data nobody uses.
@@ -223,6 +291,12 @@ export function validateUserData(
       message: "Enter the last 4 digits of your Aadhaar",
     });
   }
+
+  if (!data.name_as_per_aadhaar.trim())
+    errors.push({
+      field: "name_as_per_aadhaar",
+      message: "Enter your name exactly as printed on your Aadhaar",
+    });
 
   if (!data.gender)
     errors.push({ field: "gender", message: "Select your gender" });
@@ -274,6 +348,123 @@ export function validateUserData(
       field: "income_source",
       message: "Select your source of income",
     });
+
+  // Two flows need the applicant's own address and both proofs typed out.
+  // Correction, because it submits scanned documents through e-Sign rather
+  // than Aadhaar eKYC, which un-disables those government sections. Minor,
+  // because a minor's application can't use eKYC at all. Post Office and Zip
+  // Code stay optional in both, matching the government form itself.
+  if (isCorrection || isMinor) {
+    if (!data.current_address_flat.trim())
+      errors.push({
+        field: "current_address_flat",
+        message: "Flat/Door/Building is required",
+      });
+    if (!data.current_address_street.trim())
+      errors.push({
+        field: "current_address_street",
+        message: "Road/Street/Block/Sector is required",
+      });
+    if (!data.current_address_city.trim())
+      errors.push({
+        field: "current_address_city",
+        message: "Area/Locality/Town/City is required",
+      });
+    if (!data.current_address_district.trim())
+      errors.push({
+        field: "current_address_district",
+        message: "District is required",
+      });
+    if (!data.current_address_state.trim())
+      errors.push({
+        field: "current_address_state",
+        message: "Select your state",
+      });
+    if (!data.current_address_pin_code.match(/^\d{6}$/))
+      errors.push({
+        field: "current_address_pin_code",
+        message: "Enter a valid 6-digit PIN code",
+      });
+    if (!data.proof_of_identity)
+      errors.push({
+        field: "proof_of_identity",
+        message: "Select your proof of identity",
+      });
+    if (!data.proof_of_address)
+      errors.push({
+        field: "proof_of_address",
+        message: "Select your proof of address",
+      });
+  }
+
+  // The guardian. Every one of these is a required box on the government form
+  // once a Representative Assessee is appointed, and a minor's application
+  // always appoints one — so a blank here is an application that can't be
+  // filed, not a field we can quietly leave alone. The guardian's PAN is the
+  // deliberate exception: it's typed on the government page and never stored.
+  if (isMinor) {
+    if (!data.guardian_first_name.trim())
+      errors.push({
+        field: "guardian_first_name",
+        message: "Enter the guardian's first name",
+      });
+    if (!data.guardian_last_name.trim())
+      errors.push({
+        field: "guardian_last_name",
+        message: "Enter the guardian's last name",
+      });
+    if (!data.guardian_email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))
+      errors.push({
+        field: "guardian_email",
+        message: "Enter a valid email for the guardian",
+      });
+    if (!data.guardian_mobile.match(/^[6-9]\d{9}$/))
+      errors.push({
+        field: "guardian_mobile",
+        message: "Enter a valid 10-digit mobile number for the guardian",
+      });
+    if (!data.guardian_address_flat.trim())
+      errors.push({
+        field: "guardian_address_flat",
+        message: "Enter the guardian's Flat/Door/Building",
+      });
+    if (!data.guardian_address_street.trim())
+      errors.push({
+        field: "guardian_address_street",
+        message: "Enter the guardian's Road/Street/Block/Sector",
+      });
+    if (!data.guardian_address_city.trim())
+      errors.push({
+        field: "guardian_address_city",
+        message: "Enter the guardian's Area/Locality/Town/City",
+      });
+    if (!data.guardian_address_district.trim())
+      errors.push({
+        field: "guardian_address_district",
+        message: "Enter the guardian's district",
+      });
+    if (!data.guardian_address_state.trim())
+      errors.push({
+        field: "guardian_address_state",
+        message: "Select the guardian's state",
+      });
+    if (!data.guardian_address_pin_code.match(/^\d{6}$/))
+      errors.push({
+        field: "guardian_address_pin_code",
+        message: "Enter a valid 6-digit PIN code for the guardian",
+      });
+    if (!data.guardian_proof_of_identity)
+      errors.push({
+        field: "guardian_proof_of_identity",
+        message: "Select the guardian's proof of identity",
+      });
+    if (!data.guardian_proof_of_address)
+      errors.push({
+        field: "guardian_proof_of_address",
+        message: "Select the guardian's proof of address",
+      });
+  }
+
   return errors;
 }
 

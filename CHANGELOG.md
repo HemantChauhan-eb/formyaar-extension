@@ -1,6 +1,101 @@
 # FormYaar Extension — Changelog
 
-## [0.25.0] — 2026-08-27
+## [0.30.3] — 2026-09-04
+
+### Fixed
+
+- **The panel told applicants their details are "never sent to us" on the very step that sends their mobile number.** The `wizard.privacy` badge sits in the wizard footer on all five steps, including the contact step, where `userForm.ts` fires `/leads/capture` the moment a valid 10-digit number is typed. The field's own hint underneath has always been honest about the call-back ("we may call this number to see if we can help"); the badge two lines below it flatly contradicted that. Now reads "Saved on your device — only your mobile number reaches us" (and the Hindi equivalent), which is true on every step it appears on.
+- **The home-screen footer called telemetry "Anonymous usage events".** Events carry a random per-install `anon_id` and a per-launch `session_id`, which makes them pseudonymous rather than anonymous — and on the Android client the applicant's mobile number is stamped on as well. The footer now says usage data and the mobile number are collected, and points at formyaar.in/privacy-policy rather than characterising the collection in four words.
+- Both strings are fixed in `i18n.ts` (en + hi) *and* in the hardcoded markup defaults in `homeScreen.ts` / `userForm.ts` — the markup is what renders before `applyLang` runs, so fixing only the translation table would have left the false English on screen for the first frame.
+
+### Notes
+
+- `wizard.p3_sub` ("We only ask for the last 4 digits — never your full number. This stays on your device.") was checked and left alone: it is accurate. `aadhaar_last_4` is never sent to the backend by the extension — `/payment/save-session` posts only the order id, mobile and form type.
+
+## [0.30.2] — 2026-09-03
+
+### Fixed
+
+- **Continue was dead on the mobile-number step of the minor flow, and the PIN step was left ungated.** The AO-code gate compared the wizard's *walked* pane index against the pane's authored `data-pane` attribute. Those agree only when every pane is walked — and the minor flow prepends the courier notice, shifting every walked index by one. So the gate landed one pane early, on contact details, where `aoOk` is false because no PIN has been typed yet: the applicant could not get past their own phone number. The PIN pane itself, meanwhile, was never gated at all, which is the failure that gate exists to prevent. Both clients now index into the walked pane list. `jumpToField` had the same attribute-vs-index confusion and would have jumped a validation error to the wrong step on the minor flow.
+
+## [0.30.1] — 2026-09-03
+
+### Fixed
+
+- **The minor flow's panes stayed on screen after switching to another application type (Android only).** `render()` cleared the `on` class only from the panes the current flow walks, but switching flows *shrinks* that list — so a pane that dropped out kept the class it was last left holding and render() never touched it again. Anyone who opened "PAN for a minor" and then went back and chose "Correct existing PAN" carried the courier notice into the correction wizard, drawn underneath the real step. Now cleared across every pane in the panel, not just the walked subset. The extension was never affected: it re-renders the whole wizard from scratch per flow.
+
+## [0.30.0] — 2026-09-03
+
+### Added
+
+- **Every proof dropdown on the minor flow now carries a red reminder** to remember the document being picked, because a colour printout of it has to be couriered to Protean's Pune office after payment. It sits under proof of identity, proof of address and proof of date of birth for both the applicant and the guardian. Deliberately not styled as a hint: the choice has to survive until the applicant is standing at a courier counter, and until now nothing showed it back to them in between.
+- **A read-back step before payment on the minor flow**, listing the documents chosen for verification under an "Applicant's documents" and a "Guardian's documents" heading, with the instruction to print them in colour and post them after paying. This is the last screen on which the selections are visible at all — the government form doesn't show them, so anyone who didn't write them down had no way to reconstruct what belonged in the envelope. Rows read the selected *option text* rather than its value, since the values are the government's full legal descriptions and nobody can copy those onto an envelope.
+- **The read-back step opens with a prompt to screenshot it.** Asking someone to write the list down means transcribing five government document names by hand; a screenshot is one tap and cannot introduce a mistake. The sub-heading dropped its own "write them down" line so there is one instruction rather than two competing ones.
+- `syncDocChecklist` is exported into the Android shared bundle and called from both clients' pane-change handlers, so the list is built once and can't drift between them.
+
+### Changed
+
+- **Every mention of payment on the minor flow now names the government's fee and says it's paid on their own website.** "After paying" was ambiguous at exactly the wrong moment: the courier warning and the read-back step both appear *before* FormYaar's own payment screen, so an applicant who hadn't been asked for anything yet would read it as FormYaar's fee and wonder what payment they'd missed. The read-back pane's caption changed from "Before you pay" to "Before you continue" for the same reason — it sits directly above FormYaar's payment screen and was pointing at the wrong fee.
+
+## [0.29.0] — 2026-09-02
+
+### Added
+
+- **"Name exactly as printed on your Aadhaar" is now its own question**, on the Aadhaar step, across every flow. The government form asks for this *and* for first/middle/last name separately, and they are genuinely different strings — Aadhaar prints one full name with its own spacing, initials and ordering. Assembling it from the split fields put a subtly different name in the one box the Aadhaar match runs against.
+- `computed.name_as_per_aadhaar` resolves to what the applicant typed, falling back to the assembled name when it's blank. Drafts saved before this field existed keep working instead of hitting a blank required box on a form that's already been paid for — `correction_pan_card.json` v16 and `adult_new_pan_card_supporting_docs.json` v2 both point at it.
+
+## [0.28.1] — 2026-09-02
+
+### Fixed
+
+- **Coach marks drew their bubble somewhere the viewport never shows.** `showCoachMark` positioned the bubble `absolute` at `rect.top + window.scrollY`, which is only correct when the *document* scrolls. NSDL's pages scroll their content inside their own container, so `window.scrollY` stays 0 while the element's rect reflects where it really is — the outline landed on the right element (making it look like the mark had rendered) but the bubble went off-screen. Now positioned `fixed` from `getBoundingClientRect()`, repositioned on scroll (capture, so nested containers count) and resize, hidden when the target scrolls out of view, and clamped so a long message can't run off either edge. Also fixes the step-1 Submit coach mark drifting away from its button on scroll.
+
+## [0.28.0] — 2026-09-02
+
+### Removed
+
+- **The panel no longer asks for "number of documents".** Nothing consumed the answer once `#noOfDocs` stopped being autofilled, so it was a required question whose answer went nowhere. `UserData.no_of_docs` and its validation are gone with it.
+
+### Fixed
+
+- **The document-count coach mark is raised on the page that actually has the box.** 0.27.3 tried to fix this in `runFillStep`, which was the wrong diagnosis: the correction flow's last step ends in a Save Draft click that navigates from `endUserLogin` to `fullFormSave.html` and tears the content script down, so *nothing* drawn on that page survives long enough to read. It's now raised from `index.ts`'s doc-upload-page branch, alongside `reapplyEkycConsent`, and re-applied on each of that page's self-reloads until the box has a value. The `page_coach` block on the last step is removed rather than left looking functional.
+- `showCoachMark` warns in dev when its selector matches nothing. A silent no-op is what made this take three attempts to find.
+
+## [0.27.3] — 2026-09-02
+
+### Fixed
+
+- **`page_coach` never fired on any form in `FORMS_WITH_DOC_UPLOAD_PAGE`.** `runFillStep` branches on `if (FORMS_WITH_DOC_UPLOAD_PAGE.has(form) && isLastStep)` before it ever reaches the `else` branch that checks `step.page_coach` — so the `#noOfDocs` coach mark just added to `correction_pan_card.json`'s last step (and any future coach mark on any doc-upload form's last step) was dead code. Now shown from both branches.
+
+## [0.27.2] — 2026-09-02
+
+### Changed
+
+- Reworded the panel's "number of documents" hint to say plainly that this is a count of what you actually upload, not a guess made in advance.
+
+## [0.27.1] — 2026-09-02
+
+### Fixed
+
+- Added the progress-strip label for `eid_checkbox`, the new correction-flow field in `correction_pan_card.json` v12 (see backend changelog).
+
+## [0.27.0] — 2026-09-02
+
+### Changed
+
+- **"Number of documents enclosed" is now asked in the panel instead of autofilled with a static guess.** The correction flow's declaration field (`#noOfDocs`) used to always get "2" typed in, which was already wrong before 0.26.0's address/proof-of-identity/proof-of-address fields added more required uploads. `UserData.no_of_docs` (single digit, required for correction) replaces the static value; `correction_pan_card.json` v10 → v11 reads it from `user.no_of_docs`.
+
+## [0.26.0] — 2026-09-01
+
+### Changed
+
+- **Correction flow now defaults to submitting scanned images through e-Sign (Protean, ₹5.90) instead of Aadhaar eKYC**, so applicants can correct their own current address instead of it silently being forced to whatever is on Aadhaar. `submission_mode_ekyc` (`#eVerfication4`) is replaced by `submission_mode_scanned` (`#eVerfication3`) + `esign_vendor` (`#esignVendor`, static value `2`) in `correction_pan_card.json` (v9 → v10).
+- **The panel now asks correction applicants for their current address** — Flat/Door/Building, Road/Street/Block/Sector, Post Office, Area/Locality/Town/City, District, State/Union Territory, PIN Code, and a new Zip Code field — plus Proof of Identity and Proof of Address. All required except Post Office and Zip Code (Zip Code is only for addresses outside India). These were previously the exclusive domain of the "PAN application with supporting documents" new-PAN flow; the same panel fields and config field IDs are now shared, reducing duplication.
+- Declaration's "number of documents enclosed" field (`#noOfDocs`) is left at its old default of 2, which is very likely wrong now that proof of identity and proof of address are also uploaded — the completion screen tells the applicant to update it before submitting.
+
+### Added
+
+- `UserData.current_address_zip_code`, validated as optional even where the rest of the address is required.
 
 ### Changed
 

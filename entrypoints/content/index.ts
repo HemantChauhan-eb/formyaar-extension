@@ -1,8 +1,8 @@
 import { SITE_CONFIGS, BANNER_DELAY_MS, BACKEND_URL } from "./constants";
-import { showContextualBanner } from "./panel";
+import { showContextualBanner, showVerifyScreen } from "./panel";
 import { showUploadScreen } from "./uploadScreen";
 import { watchStepReview } from "./stepReview";
-import { runAutofill } from "./autofill";
+import { runAutofill, showCoachMark } from "./autofill";
 import { getUserData, resolveFormSlug, getActiveSession } from "./userData";
 import { trackEvent } from "./telemetry";
 
@@ -197,7 +197,31 @@ export default defineContentScript({
       // showContextualBanner creates the panel div synchronously before its
       // first await, so showUploadScreen can find the screen nodes right after.
       showContextualBanner();
-      showUploadScreen();
+      // ...but not for a minor's application, which uploads nothing at all:
+      // it is printed, signed and posted to Protean. This page is only a
+      // review-and-pay stop on that flow, so upload guidance here would be
+      // instructions for a step that doesn't exist. Resolved from the active
+      // session because this branch keys off the URL, which is the same for
+      // every form. Async, so the guidance is suppressed rather than never
+      // shown — the alternative is blocking the whole branch on a storage read.
+      getActiveSession().then((session) => {
+        if (session?.form === "minor_pan_card") {
+          // They still have to act on this page — it just isn't uploading.
+          showVerifyScreen({
+            title: "Form filled & saved!",
+            subtitle: "Check it over, then submit",
+            manual_steps: [
+              "Review the form and click <strong>Submit</strong>",
+              "Enter the <strong>first 8 digits of the applicant's Aadhaar</strong>, then <strong>Proceed</strong>",
+              "Pay the government fee",
+              "<strong>Print the form, sign it, attach the documents and post it to Protean, Pune</strong>",
+            ],
+            info: "A minor's application can't be completed online — eKYC and e-Sign aren't available for it, so the last step is physical. The address is printed on the acknowledgement.",
+          });
+          return;
+        }
+        showUploadScreen();
+      });
       // Both of these re-run on every load: the page reloads itself after each
       // uploaded document and comes back with its defaults restored.
       // DigiLocker is the site's default upload method and we don't support
@@ -207,6 +231,20 @@ export default defineContentScript({
       // self-reload, so Submit errors with "please select a consent". Re-apply
       // it on each load so it survives however many documents the user uploads.
       reapplyEkycConsent();
+      // "I/We have enclosed ___ (number of documents)" is the one declaration
+      // field we deliberately never autofill — the real count isn't knowable
+      // until the applicant has actually uploaded, and the upload widget can
+      // merge several documents into a single PDF. Point at it here rather
+      // than from the step config: the step that fills the rest of the
+      // declaration runs on endUserLogin and navigates here on Save Draft, so
+      // a coach mark raised there is destroyed before it can be read. Skipped
+      // once the box has a value, so it stops nagging after they fill it in.
+      // Not for a minor: nothing is enclosed on this page for that flow, so
+      // the "how many documents" prompt would be pointing at a box the
+      // applicant has no answer for.
+      getActiveSession().then((session) => {
+        if (session?.form !== "minor_pan_card") coachDocumentCount();
+      });
       // This page still renders the full stepper, so the applicant can click
       // back through the steps they've already filled. Returning to the
       // document step restores the upload guidance they need here.
@@ -428,6 +466,35 @@ function applyManualDocUpload(): boolean {
 // native <select> value AND triggering a jQuery change so select2's visible
 // label updates. select2 initialises on the page's own jQuery-ready, which can
 // land before or after our content script, so we poll briefly to win the race.
+// The declaration's document-count box. Both spellings are tried because the
+// id is what endUserLogin's markup uses and the name is what the form posts —
+// fullFormSave.html renders the same declaration in its own layout, and we
+// have no saved copy of it to confirm the id survives.
+const DOC_COUNT_SELECTOR = '#noOfDocs, input[name="no_Of_documents"]';
+
+function coachDocumentCount(): void {
+  let tries = 0;
+  const tick = () => {
+    tries += 1;
+    const box = document.querySelector(DOC_COUNT_SELECTOR) as HTMLInputElement | null;
+    // Already answered, or our own mark is already up — nothing to do.
+    if (box?.value.trim() || document.getElementById("fy-coach-mark")) return;
+    if (box) {
+      showCoachMark(
+        DOC_COUNT_SELECTOR,
+        "After uploading, enter how many documents you've uploaded",
+      );
+      return;
+    }
+    // Same reasoning as reapplyEkycConsent: the page renders progressively, so
+    // give it a few seconds before concluding the box isn't there.
+    if (tries < 15) setTimeout(tick, 300);
+    else if (import.meta.env.DEV)
+      console.warn("FormYaar: document-count box never appeared on this page");
+  };
+  tick();
+}
+
 function reapplyEkycConsent(): void {
   let tries = 0;
   const tick = () => {

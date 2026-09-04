@@ -1,6 +1,6 @@
 {
   "form": "correction_pan_card",
-  "version": 9,
+  "version": 17,
   "site": "onlineservices.proteantech.in",
   "steps": [
     {
@@ -153,12 +153,22 @@
       "stop_message": "Personal details filled. Please verify and click Next.",
       "fields": [
         {
-          "field_id": "submission_mode_ekyc",
+          "field_id": "submission_mode_scanned",
           "type": "radio",
-          "selector": "#eVerfication4",
+          "selector": "#eVerfication3",
           "value_source": "static",
           "static_value": true,
-          "explanation": "Aadhaar-based eKYC & e-Sign (paperless). Already the page default; set explicitly so a changed default can't silently reroute the application."
+          "explanation": "Submit scanned images through e-Sign — used instead of Aadhaar-based eKYC so the applicant's own current address can be filled in and corrected (eKYC forces the Aadhaar address and disables the Address / Proof-of-Identity / Proof-of-Address sections)."
+        },
+        {
+          "field_id": "esign_vendor",
+          "type": "select",
+          "selector": "#esignVendor",
+          "value_source": "static",
+          "static_value": "2",
+          "match_by": "value",
+          "min_delay_ms": 800,
+          "explanation": "e-Sign vendor — Protean (e-Sign Charges Rs. 5.90). The dropdown is disabled until the scanned-images radio is selected; the delay lets the site's JS enable it first."
         },
         {
           "field_id": "physical_pan_yes",
@@ -203,6 +213,22 @@
           "static_value": "Y",
           "match_by": "value",
           "explanation": "Consent to print your Aadhaar photo on the PAN card."
+        },
+        {
+          "field_id": "eid_checkbox",
+          "type": "checkbox",
+          "selector": "#checkboxEid_id",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "EID section tick, right after the Aadhaar digits. Its label and the EID number input are both commented out on this page — no field ever appears and no site JS reacts to it — so ticking it is inert; left it checked to match every other section's checkbox."
+        },
+        {
+          "field_id": "name_as_per_aadhaar",
+          "type": "text",
+          "selector": "#rvNameAadhaar_id",
+          "value_source": "computed.name_as_per_aadhaar",
+          "force_enable": true,
+          "explanation": "Name exactly as printed on Aadhaar, as typed by the applicant in the panel. Assembled from the split name fields only for drafts saved before that field existed. eKYC pulls this from Aadhaar directly and disables the field; under scanned-images e-Sign it's blank and required, and the site's own JS never re-enables it after disabling it on page load, so we force it enabled here."
         },
         {
           "field_id": "update_flag_name",
@@ -350,6 +376,76 @@
       "stop_message": "Contact details filled. Please verify and click Next.",
       "fields": [
         {
+          "field_id": "address_for_communication",
+          "type": "radio",
+          "selector": "#add_comm",
+          "value_source": "static",
+          "static_value": true,
+          "explanation": "Address for communication — Residence (default; individual applicants almost always choose this)."
+        },
+        {
+          "field_id": "current_address_flat",
+          "type": "text",
+          "selector": "#rFlat",
+          "value_source": "user.current_address_flat",
+          "explanation": "Flat/Door/Building of your current residence address."
+        },
+        {
+          "field_id": "current_address_street",
+          "type": "text",
+          "selector": "#rName",
+          "value_source": "user.current_address_street",
+          "explanation": "Road/Street/Block/Sector of your current residence address."
+        },
+        {
+          "field_id": "current_address_post_office",
+          "type": "text",
+          "selector": "#rRoad",
+          "value_source": "user.current_address_post_office",
+          "skip_when_empty": true,
+          "skip_reason": "Post Office is optional; left blank since you didn't provide one.",
+          "explanation": "Post office of your current residence address."
+        },
+        {
+          "field_id": "current_address_city",
+          "type": "text",
+          "selector": "#rArea",
+          "value_source": "user.current_address_city",
+          "explanation": "Area/Locality/Town/City of your current residence address."
+        },
+        {
+          "field_id": "current_address_district",
+          "type": "text",
+          "selector": "#rCountry",
+          "value_source": "user.current_address_district",
+          "explanation": "District of your current residence address."
+        },
+        {
+          "field_id": "current_address_country",
+          "type": "select",
+          "selector": "#country_name",
+          "value_source": "static",
+          "static_value": "91",
+          "match_by": "value",
+          "min_delay_ms": 1500,
+          "explanation": "Country — India. Delay lets the site's AJAX call repopulate the State dropdown before we select a state."
+        },
+        {
+          "field_id": "current_address_state",
+          "type": "select",
+          "selector": "#state",
+          "value_source": "user.current_address_state",
+          "match_by": "text",
+          "explanation": "State/Union Territory of your current residence address."
+        },
+        {
+          "field_id": "current_address_pin_code",
+          "type": "text",
+          "selector": "#res_pin_code",
+          "value_source": "user.current_address_pin_code",
+          "explanation": "PIN code of your current residence address."
+        },
+        {
           "field_id": "update_flag_contact",
           "type": "checkbox",
           "selector": "#checkBox_tele",
@@ -402,12 +498,28 @@
       "stop_message": "Declaration filled & saved. Now upload your documents.",
       "fields": [
         {
+          "field_id": "poid_code",
+          "type": "select",
+          "selector": "#poidCode",
+          "value_source": "user.proof_of_identity",
+          "match_by": "text",
+          "explanation": "Proof of identity — as selected in the panel. Needed because scanned-images e-Sign (unlike eKYC) doesn't auto-set this to Aadhaar and disable it."
+        },
+        {
+          "field_id": "poa_code",
+          "type": "select",
+          "selector": "#poaCode",
+          "value_source": "user.proof_of_address",
+          "match_by": "text",
+          "explanation": "Proof of address — for your current address, as selected in the panel."
+        },
+        {
           "field_id": "proof_dob_code",
           "type": "select",
           "selector": "#proof_dob_code",
           "value_source": "user.proof_of_dob",
           "match_by": "value",
-          "explanation": "Proof of date of birth — the document the applicant picked in the panel. Proof of identity and address are auto-set to Aadhaar and disabled by the page under eKYC, so they are not filled here."
+          "explanation": "Proof of date of birth — the document the applicant picked in the panel."
         },
         {
           "field_id": "proof_pan_code",
@@ -434,14 +546,6 @@
           "explanation": "Declaration capacity — Self."
         },
         {
-          "field_id": "no_of_docs",
-          "type": "text",
-          "selector": "#noOfDocs",
-          "value_source": "static",
-          "static_value": "2",
-          "explanation": "Number of documents enclosed in support of the proposed corrections. Single-digit field."
-        },
-        {
           "field_id": "place",
           "type": "text",
           "selector": "#verifierPlace",
@@ -462,8 +566,8 @@
         "subtitle": "Now upload your documents below",
         "manual_steps": [
           "Upload the documents supporting your <strong>corrections</strong>",
-          "Upload your <strong>proof of date of birth</strong>",
-          "Check the declaration says <strong>2 documents</strong> — change it if you attached a different number",
+          "Upload your <strong>proof of date of birth</strong>, <strong>proof of identity</strong>, and <strong>proof of address</strong>",
+          "Enter the <strong>number of documents</strong> you attached in the declaration — we leave this blank since we can't know it until you've uploaded",
           "Click <strong>Submit</strong> when done"
         ]
       }

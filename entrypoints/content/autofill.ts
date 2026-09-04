@@ -1,7 +1,9 @@
-import { BACKEND_URL } from "./constants";
+import { BACKEND_URL, PANEL_WIDTH } from "./constants";
+import { escapeHtml } from "./panel/shared";
 import { trackEvent } from "./telemetry";
 import panCardConfig from "../../public/configs/pan_card.json";
 import correctionPanCardConfig from "../../public/configs/correction_pan_card.json";
+import minorPanCardConfig from "../../public/configs/minor_pan_card.json";
 import {
   showFillingScreen,
   showVerifyScreen,
@@ -43,7 +45,7 @@ export const FIELD_LABELS: Record<string, string> = {
   mobile: "Mobile number",
   consent: "Consent",
   // Step 2-5
-  submission_mode_ekyc: "Submission mode (eKYC)",
+  submission_mode_scanned: "Submission mode (scanned + e-Sign)",
   ekyc_photo_consent: "Aadhaar photo consent",
   epan_option: "PAN delivery option",
   aadhaar_last_4: "Aadhaar (last 4)",
@@ -85,6 +87,33 @@ export const FIELD_LABELS: Record<string, string> = {
   verifier_name: "Declarant name (\"I, ___\")",
   declaration_name: "Declarant name",
   name_as_per_aadhaar: "Name as per Aadhaar",
+  eid_checkbox: "EID section tick",
+  // minor_pan_card. "Guardian" rather than "Representative Assessee" here too
+  // — this map is what the applicant reads in the progress list.
+  submission_mode_courier: "Submission mode (post the signed form)",
+  address_for_communication_residence: "Card goes to the applicant",
+  address_for_communication_guardian: "Card goes to the guardian",
+  email_id: "Email",
+  rep_assessee_yes: "Applying through a guardian",
+  rep_assessee_by_pan: "Identify guardian by PAN",
+  guardian_pan_manual: "Guardian's PAN (you type this)",
+  guardian_first_name: "Guardian's first name",
+  guardian_middle_name: "Guardian's middle name",
+  guardian_last_name: "Guardian's last name",
+  guardian_address_flat: "Guardian's Flat/Door/Building",
+  guardian_address_street: "Guardian's Road/Street/Block/Sector",
+  guardian_address_post_office: "Guardian's post office",
+  guardian_address_city: "Guardian's Area/Locality/Town/City",
+  guardian_address_district: "Guardian's district",
+  guardian_address_country: "Guardian's country",
+  guardian_address_state: "Guardian's state",
+  guardian_address_pin_code: "Guardian's PIN code",
+  guardian_isd_code: "Guardian's country code",
+  guardian_mobile: "Guardian's mobile number",
+  guardian_email: "Guardian's email",
+  guardian_poi_code: "Guardian's proof of identity",
+  guardian_poa_code: "Guardian's proof of address",
+  designation: "Designation",
   // correction_pan_card
   citizen_of_india: "Citizen of India",
   physical_pan_yes: "Physical PAN card",
@@ -100,7 +129,6 @@ export const FIELD_LABELS: Record<string, string> = {
   tin_num: "TIN",
   proof_dob_code: "Proof of date of birth",
   proof_pan_code: "Proof of PAN",
-  no_of_docs: "Documents enclosed",
   save_draft: "Save draft",
 };
 
@@ -235,6 +263,15 @@ async function runAutofillInner(form: string = "pan_card") {
     progress[i].status = "active";
     updateFillProgress([...progress]);
 
+    // One field the engine deliberately doesn't type. Hands the page back to
+    // the applicant, waits for them, then carries on down the same step.
+    if (field.type === "pause_for_user") {
+      await pauseForUser(field);
+      progress[i].status = "done";
+      updateFillProgress([...progress]);
+      continue;
+    }
+
     // Scroll the target field into view so the user can follow along
     const el = document.querySelector(field.selector);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -317,6 +354,10 @@ async function runAutofillInner(form: string = "pan_card") {
   if (FORMS_WITH_DOC_UPLOAD_PAGE.has(form) && isLastStep) {
     showUploadScreen({ markCompleted: true });
     celebrateTimeSaved(step.fields.length);
+    // No page_coach here on purpose: these steps end in a Save Draft click that
+    // navigates to fullFormSave.html and tears this script down, so anything
+    // drawn on this page is gone within the second. Coach marks for that page
+    // are raised from index.ts's isDocUploadPage branch, which runs there.
   } else if (step.auto_advance) {
     // Click Next and wait for stepy to actually change before running next step.
     // Handled here (not via index.ts click listener) to avoid infinite loops
@@ -363,9 +404,95 @@ async function runAutofillInner(form: string = "pan_card") {
   }
 }
 
-function showCoachMark(selector: string, message: string): void {
+// ── Handing one field back to the applicant ──────────────────────────
+// Some boxes we refuse to fill on purpose. The guardian's PAN on a minor's
+// application is the case this exists for: a PAN is the most sensitive
+// identifier on the form, so it is never asked for in the panel, never stored
+// and never sent anywhere — which leaves exactly one way for it to reach the
+// page, and that is the applicant typing it.
+//
+// A bottom sheet rather than a full-screen modal, because the field underneath
+// has to stay visible and usable while this is up. Mirrors pauseForUser() in
+// the Android engine's fill-engine.js; keep the two in step.
+function pauseForUser(field: FieldConfig): Promise<void> {
+  return new Promise((resolve) => {
+    const el = document.querySelector(field.selector) as HTMLInputElement | null;
+    const prevOutline = el?.style.outline ?? "";
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.style.outline = "3px solid #f59e0b";
+      el.style.outlineOffset = "3px";
+      try {
+        el.focus();
+      } catch {
+        /* focus is a nicety; a refusal here must not stall the fill */
+      }
+    }
+
+    const sheet = document.createElement("div");
+    sheet.id = "fy-pause-sheet";
+    sheet.style.cssText = `
+      position: fixed; left: 0; right: ${PANEL_WIDTH}px; bottom: 0;
+      z-index: 2147483645;
+      background: #fff; border-radius: 20px 20px 0 0; padding: 22px 24px;
+      box-shadow: 0 -12px 40px rgba(0,0,0,0.28);
+      font-family: 'DM Sans', -apple-system, sans-serif;
+    `;
+    sheet.innerHTML = `
+      <div style="font-size:17px;font-weight:800;color:#0a0a2e;margin-bottom:7px;">${escapeHtml(field.pause_title ?? "Your turn")}</div>
+      <div style="font-size:13px;color:#64748b;line-height:1.6;margin-bottom:8px;">${escapeHtml(field.pause_body ?? field.pause_message ?? "")}</div>
+      <div id="fy-pause-note" style="font-size:12px;color:#b45309;line-height:1.5;margin-bottom:14px;display:none;"></div>
+      <button id="fy-pause-continue" disabled style="width:100%;padding:14px;background:#cbd5e1;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;font-family:inherit;cursor:not-allowed;">Continue →</button>
+    `;
+    document.body.appendChild(sheet);
+
+    const btn = sheet.querySelector("#fy-pause-continue") as HTMLButtonElement;
+    const note = sheet.querySelector("#fy-pause-note") as HTMLElement;
+
+    // The button stays dead until the box has something in it. That isn't
+    // politeness: the site keeps the guardian's middle-name input disabled
+    // until a PAN is present, so resuming early silently loses that field
+    // further down the same step.
+    const refresh = () => {
+      const v = el ? el.value.trim() : "";
+      const ready = v.length > 0;
+      btn.disabled = !ready;
+      btn.style.background = ready ? "#305eff" : "#cbd5e1";
+      btn.style.cursor = ready ? "pointer" : "not-allowed";
+      // A PAN is always 10 characters. Say so, but never block on it — a wrong
+      // guess about the format shouldn't strand anyone mid-form.
+      const odd = ready && v.length !== 10;
+      note.style.display = odd ? "block" : "none";
+      if (odd)
+        note.textContent =
+          "That doesn't look like a PAN — they're 10 characters. Double-check before continuing.";
+    };
+    el?.addEventListener("input", refresh);
+    el?.addEventListener("change", refresh);
+    refresh();
+
+    btn.addEventListener("click", () => {
+      if (!el || !el.value.trim()) return;
+      el.removeEventListener("input", refresh);
+      el.removeEventListener("change", refresh);
+      el.style.outline = prevOutline;
+      el.style.outlineOffset = "";
+      sheet.remove();
+      resolve();
+    });
+  });
+}
+
+export function showCoachMark(selector: string, message: string): void {
   const target = document.querySelector(selector) as HTMLElement | null;
-  if (!target) return;
+  // Silent no-op is what made the #noOfDocs coach mark so hard to pin down —
+  // a selector that matches nothing looks identical to a coach mark that was
+  // never requested. Say so in dev.
+  if (!target) {
+    if (import.meta.env.DEV)
+      console.warn(`FormYaar: coach mark target not found — ${selector}`);
+    return;
+  }
 
   // Subtle pulse on the target button so it's clearly the thing to click
   const prevOutline = target.style.outline;
@@ -375,15 +502,16 @@ function showCoachMark(selector: string, message: string): void {
   const mark = document.createElement("div");
   mark.id = "fy-coach-mark";
 
-  const rect = target.getBoundingClientRect();
-  const top = rect.top + window.scrollY - 72;
-  const left = rect.left + window.scrollX + rect.width / 2;
-
+  // Fixed and measured off getBoundingClientRect on every paint, rather than
+  // absolute off window.scrollY. These pages scroll their content inside their
+  // own container, so window.scrollY stays 0 while the element's rect reflects
+  // where it actually is — document-space coordinates then put the bubble
+  // somewhere the viewport never shows. The outline still lands correctly
+  // (it's on the element), which is what makes that failure so confusing.
   mark.style.cssText = `
-    position: absolute;
-    top: ${top}px;
-    left: ${left}px;
-    transform: translateX(-50%);
+    position: fixed;
+    top: 0;
+    left: 0;
     background: #0a0a2e;
     color: #fff;
     font-family: 'DM Sans', -apple-system, sans-serif;
@@ -396,7 +524,7 @@ function showCoachMark(selector: string, message: string): void {
     box-shadow: 0 8px 24px rgba(0,0,0,0.35);
     pointer-events: none;
   `;
-  // Arrow pointing down toward the button
+  // Arrow pointing down toward the target
   mark.innerHTML = `
     ${message}
     <div style="
@@ -410,12 +538,41 @@ function showCoachMark(selector: string, message: string): void {
 
   document.body.appendChild(mark);
 
-  // Remove when user clicks the target button (page will navigate anyway)
+  const place = () => {
+    const rect = target.getBoundingClientRect();
+    // Target scrolled out of view — hide rather than strand the bubble at the
+    // top or bottom edge pointing at nothing.
+    if (rect.bottom < 0 || rect.top > window.innerHeight) {
+      mark.style.display = "none";
+      return;
+    }
+    mark.style.display = "block";
+    const half = mark.offsetWidth / 2;
+    // Clamp to the viewport so a long message can't run off either edge.
+    const centre = Math.min(
+      Math.max(rect.left + rect.width / 2, half + 8),
+      window.innerWidth - half - 8,
+    );
+    mark.style.top = `${rect.top - mark.offsetHeight - 10}px`;
+    mark.style.left = `${centre - half}px`;
+  };
+  place();
+
+  // capture:true so scrolling inside any nested container repositions it too,
+  // not just scrolling the window.
+  window.addEventListener("scroll", place, true);
+  window.addEventListener("resize", place);
+
+  // Remove once the user acts on the target — for a button that's the click
+  // that navigates; for an input it's them clicking in to type, by which point
+  // they've read it.
   const cleanup = () => {
     mark.remove();
     target.style.outline = prevOutline;
     target.style.outlineOffset = "";
     target.removeEventListener("click", cleanup);
+    window.removeEventListener("scroll", place, true);
+    window.removeEventListener("resize", place);
   };
   target.addEventListener("click", cleanup);
 }
@@ -469,6 +626,7 @@ export async function runAutofillFromSubmission(sub: any): Promise<void> {
 const BUNDLED_CONFIGS: Record<string, FormConfig> = {
   pan_card: panCardConfig as unknown as FormConfig,
   correction_pan_card: correctionPanCardConfig as unknown as FormConfig,
+  minor_pan_card: minorPanCardConfig as unknown as FormConfig,
 };
 
 // ─── Fetch config — backend first for live updates, bundled as fallback ─
@@ -544,6 +702,30 @@ function resolveValue(
   // Computed values — derived from more than one UserData field, so they
   // can't be expressed as a plain "user.<key>" lookup.
   if (field.value_source === "computed.full_name") {
+    return [userData.first_name, userData.middle_name, userData.last_name]
+      .filter(Boolean)
+      .join(" ");
+  }
+  // The name exactly as printed on Aadhaar, which the applicant now types in
+  // themselves. Falls back to the assembled name for drafts saved before that
+  // field existed — without the fallback those applicants would hit a blank
+  // required box on a form they'd already paid for.
+  // The guardian's name, for the declaration on a minor's application. The
+  // declaration is made by the guardian in the capacity of Representative
+  // Assessee — the child never signs it — so both name boxes on it are theirs,
+  // not the applicant's.
+  if (field.value_source === "computed.guardian_full_name") {
+    return [
+      userData.guardian_first_name,
+      userData.guardian_middle_name,
+      userData.guardian_last_name,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+  if (field.value_source === "computed.name_as_per_aadhaar") {
+    const typed = userData.name_as_per_aadhaar?.trim();
+    if (typed) return typed;
     return [userData.first_name, userData.middle_name, userData.last_name]
       .filter(Boolean)
       .join(" ");

@@ -18,7 +18,13 @@ export type FieldType =
   | "select"
   | "checkbox"
   | "radio"
-  | "button_click";
+  | "button_click"
+  // Stops the fill and hands the page back to the applicant for one field,
+  // then resumes when they say so. Used for the guardian's PAN on a minor's
+  // application: a PAN is the most sensitive identifier on the form, so it is
+  // never collected in the panel, stored, or sent anywhere — which means the
+  // engine cannot type it and has to wait instead.
+  | "pause_for_user";
 
 export interface FieldConfig {
   field_id: string;
@@ -41,6 +47,12 @@ export interface FieldConfig {
   // shown to the user, so it has to read as a reason, not a field name.
   skip_when_empty?: boolean;
   skip_reason?: string;
+  // `pause_for_user` only. What the applicant is asked to do, shown on the
+  // coach mark over the field (`pause_message`) and in the panel above the
+  // Continue button (`pause_title` / `pause_body`).
+  pause_title?: string;
+  pause_message?: string;
+  pause_body?: string;
   // Injected at fill time (not present in the config file itself).
   _step?: number;
 }

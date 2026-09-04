@@ -56,14 +56,14 @@ const PAN_OPTIONS: PanOption[] = [
     available: true,
   },
   {
-    slug: "",
+    slug: "minor_pan_card",
     title: "PAN for a minor",
     titleKey: "chooser.opt_minor_title",
     subtitle: "Applicant is under 18",
     subKey: "chooser.opt_minor_sub",
-    price: "",
+    price: "₹39",
     icon: ICON_PERSON,
-    available: false,
+    available: true,
   },
 ];
 
