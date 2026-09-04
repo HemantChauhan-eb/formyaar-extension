@@ -1,5 +1,16 @@
 # FormYaar Extension — Changelog
 
+## [0.30.4] — 2026-09-04
+
+### Fixed
+
+- **The home screen still said "never on our servers".** `home.trust1_html` — the first of the three trust rows, the most prominent privacy statement in the whole product — read "Your details are saved **only on this device** — never on our servers". The mobile number is posted to `/leads/capture` as soon as it is typed, so this was false, and it was false in the one place a cautious applicant looks first. Now "Your form details stay **on this device** — your mobile number is all we receive" (en + hi, plus the hardcoded markup default in `homeScreen.ts`).
+- This was missed in 0.30.3 because that pass grepped for the phrasings it had already found ("never sent to us", "Anonymous usage") rather than reading the rendered screen. `home.trust1_html` uses different wording and `data-i18n-html` rather than `data-i18n`, so it matched nothing. The 0.30.4 pass instead extracted every one of the 167 `en:` strings in `i18n.ts` and every visible text node in the built panel, then reviewed each claim-bearing line individually.
+
+### Notes
+
+Everything else that survived the audit was checked and is accurate: "We never see your card number, CVV or UPI PIN" (Razorpay handles them), "We only ask for the last 4 digits — never your full number. This stays on your device" (`aadhaar_last_4` is never posted), "Stays on your phone" (the attached document goes only into the government form's own upload field), and the mobile-number hint, which has always been honest about the call-back.
+
 ## [0.30.3] — 2026-09-04
 
 ### Fixed

@@ -33,7 +33,7 @@ export function renderHomeScreen(): string {
         <div style="display:flex;flex-direction:column;gap:9px;margin-top:26px;">
           <div class="fy-quietrow">
             ${icon('<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/>')}
-            <span data-i18n-html="home.trust1_html">Your details are saved <strong>only on this device</strong> — never on our servers</span>
+            <span data-i18n-html="home.trust1_html">Your form details stay <strong>on this device</strong> — your mobile number is all we receive</span>
           </div>
           <div class="fy-quietrow">
             ${icon('<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3.5V8h4.5"/>')}

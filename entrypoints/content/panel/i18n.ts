@@ -27,8 +27,8 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
     hi: "₹39 · भुगतान तभी करें जब आपकी जानकारी तैयार हो",
   },
   "home.trust1_html": {
-    en: "Your details are saved <strong>only on this device</strong> — never on our servers",
-    hi: "आपकी जानकारी <strong>सिर्फ इसी डिवाइस पर</strong> सेव होती है — कभी हमारे सर्वर पर नहीं",
+    en: "Your form details stay <strong>on this device</strong> — your mobile number is all we receive",
+    hi: "आपकी फ़ॉर्म जानकारी <strong>इसी डिवाइस पर</strong> रहती है — हमें सिर्फ आपका मोबाइल नंबर मिलता है",
   },
   "home.trust2_html": {
     en: "<strong>Full refund</strong> if the government rejects your form",
