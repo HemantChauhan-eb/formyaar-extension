@@ -1,4 +1,4 @@
-import { BACKEND_URL, PANEL_WIDTH } from "./constants";
+import { BACKEND_URL, NSDL_START_URL, PANEL_WIDTH } from "./constants";
 import { escapeHtml } from "./panel/shared";
 import { trackEvent } from "./telemetry";
 import panCardConfig from "../../public/configs/pan_card.json";
@@ -12,7 +12,14 @@ import {
   celebrateTimeSaved,
 } from "./panel";
 import { showUploadScreen } from "./uploadScreen";
-import { getUserData, type UserData } from "./userData";
+import { setView } from "./panel/router";
+import {
+  detectSiteError,
+  showBlocked,
+  showOffTrack,
+  showSiteError,
+} from "./panel/statusScreens";
+import { getUserData, restartAutofillFlow, type UserData } from "./userData";
 import {
   validateFormConfig,
   type FormConfig,
@@ -172,15 +179,45 @@ async function runAutofillInner(form: string = "pan_card") {
   const config = await fetchConfig(form);
   const userData = await getUserData();
   if (!config) {
-    updateFillProgress([
-      { label: "Could not load form config", status: "active" },
-    ]);
+    setView("blocked");
+    showBlocked({
+      title: "We couldn't load your form",
+      subtitle:
+        "Check your internet connection and reload this page. Nothing you've entered is lost.",
+    });
+    return;
+  }
+
+  // The government site's own error pages are served at URLs the config
+  // recognises — the session-expired screen lives at registerEndUser.html, the
+  // same address as the token step. So the URL matches, the step's one action
+  // finds nothing (the error page has no #submitForm), and the fill used to
+  // fall through to the completion screen: "Step complete!" over confetti, on
+  // a page that said "Your Session Has Expired". Check the content first.
+  const siteError = detectSiteError();
+  if (siteError) {
+    setView("siteerror");
+    showSiteError(siteError, () => {
+      void restartAutofillFlow().then(() => {
+        window.location.href = NSDL_START_URL;
+      });
+    });
+    trackEvent("site_error", form, {
+      reason: siteError.title,
+      url: window.location.pathname,
+    });
     return;
   }
 
   const step = matchStep(config);
   if (!step) {
-    updateFillProgress([{ label: "Page not recognized", status: "active" }]);
+    // Not part of the application. This used to write "Page not recognized"
+    // into the progress list of whatever screen happened to be up — so an
+    // applicant who clicked something unexpected saw the previous step's
+    // panel, confidently describing a step they had already left. It is a
+    // state of its own now, and saying so is the whole fix.
+    setView("offtrack");
+    showOffTrack();
     trackEvent("step_match_failed", form, {
       url: window.location.pathname + window.location.search,
     });
@@ -392,9 +429,30 @@ async function runAutofillInner(form: string = "pan_card") {
           return;
         }
       }
-      // Stepy didn't change — likely a validation error, show verify so user knows
-      showVerifyScreen({ title: "Review required", subtitle: "Fix any errors on the page, then click Next →" });
+      // The site rejected the step and stayed put. This used to reuse the
+      // verify screen — the one that celebrates a completed step — with
+      // different words on it, so a rejection and a success looked alike.
+      setView("blocked");
+      showBlocked({
+        title: "The form needs something from you",
+        subtitle:
+          "Something on this page needs fixing. Correct anything highlighted, then click Next.",
+      });
     }
+  } else if (progress.length > 0 && progress.every((p) => p.status === "skipped")) {
+    // Every single field failed. Something is wrong with the page, not with
+    // the applicant — and saying "Step complete!" here is the specific lie
+    // that put a celebration on top of a timed-out government session.
+    setView("blocked");
+    showBlocked({
+      title: "We couldn't fill this page",
+      subtitle:
+        "The page isn't what we expected. Reload it, or start again from the beginning — your details are saved.",
+    });
+    trackEvent("step_all_failed", form, {
+      step: step.step,
+      fields: progress.length,
+    });
   } else {
     showVerifyScreen(step.completion);
     celebrateTimeSaved(step.fields.length);

@@ -1,6 +1,7 @@
 import { getOperatorSession, signInWithToken } from "../../supabase";
 import { renderHeader } from "../shared";
 import { loadQueue } from "./queueScreen";
+import { setView } from "../router";
 
 export function renderOperatorLoginScreen(): string {
   return `
@@ -103,8 +104,7 @@ export function attachOperatorLoginHandlers() {
       }
 
       // Success — show queue
-      document.getElementById("fy-operator-login")!.style.display = "none";
-      document.getElementById("fy-operator-queue")!.style.display = "flex";
+      setView("operatorQueue");
       const session = await getOperatorSession();
       if (session) await loadQueue(session.id);
     });

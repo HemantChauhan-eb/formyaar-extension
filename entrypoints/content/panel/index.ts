@@ -8,12 +8,7 @@ import {
   attachClickOutsideHandler,
   removeTab,
 } from "./panelShell";
-import {
-  renderMaintenanceScreen,
-  startMaintenanceCountdown,
-  isVersionOutdated,
-  renderUpdateScreen,
-} from "./maintenance";
+import { isVersionOutdated, showMaintenance, showUpdateRequired } from "./maintenance";
 import { attachHomeScreenHandlers } from "./homeScreen";
 import { attachChooserHandlers } from "./chooserScreen";
 import { attachPaymentScreenHandlers } from "./paymentScreen";
@@ -37,9 +32,30 @@ export {
 } from "./fillingScreen";
 export { celebrateTimeSaved } from "./celebration";
 
-export async function showContextualBanner() {
+import { setView, type ViewId } from "./router";
+
+/**
+ * Build the panel and open it on `initialView`.
+ *
+ * The screen to open on is an argument because it is a decision, and it used
+ * to be a markup default: `fy-home` shipped with `display:flex`, so the panel
+ * always appeared on the home screen and whatever was supposed to be there
+ * switched it afterwards. On a page that resumes a fill, that meant the home
+ * screen sat visible for the second and a half before the fill began — every
+ * time the URL changed, on a form the applicant had already paid for and
+ * watched start.
+ *
+ * Every screen now starts hidden, so nothing is on display until someone says
+ * what should be.
+ */
+export async function showContextualBanner(initialView: ViewId = "home") {
   ensureFontsLoaded();
-  if (document.getElementById("formyaar-panel")) return;
+  if (document.getElementById("formyaar-panel")) {
+    // Already built. The caller still gets to say what should be showing —
+    // this runs on pages where more than one thing wants the panel.
+    setView(initialView, { keepCollapsed: true });
+    return;
+  }
 
   // Create panel immediately — autofill screen transitions depend on this existing at page load
   const panel = document.createElement("div");
@@ -63,6 +79,10 @@ export async function showContextualBanner() {
   panel.innerHTML = renderPanelHTML();
   document.body.appendChild(panel);
 
+  // keepCollapsed so the slide-in below still animates — setView would
+  // otherwise snap the panel open with no transition.
+  setView(initialView, { keepCollapsed: true });
+
   setTimeout(() => {
     panel.style.right = "0px";
   }, 100);
@@ -70,8 +90,12 @@ export async function showContextualBanner() {
   // The funnel's first step, and deliberately separate from banner_shown /
   // panel_opened: both of those have carried their own meaning since before
   // there was a funnel, and quietly repurposing either would change what
-  // every historical row means. The home screen is what the panel opens on.
-  trackEvent("home_screen_view");
+  // every historical row means.
+  //
+  // Only when home is actually what opened. It used to fire unconditionally
+  // because home was always what opened — which made the funnel count a home
+  // screen view on every resumed fill, where the applicant never saw one.
+  if (initialView === "home") trackEvent("home_screen_view");
   createTab();
   attachClickOutsideHandler();
   attachPanelEventHandlers();
@@ -86,17 +110,17 @@ export async function showContextualBanner() {
     clearTimeout(timer);
     if (res.ok) {
       const data = await res.json();
-      // Version check takes priority — outdated extension can't interact anyway
+      // Both of these used to be injected with `panel.innerHTML = …`, which
+      // destroyed every other screen and every handler attached to them — up
+      // to 2.5 seconds after the panel appeared, and possibly mid-fill. They
+      // are ordinary screens now, shown through the router.
+      //
+      // Version check takes priority: an outdated extension can't interact
+      // anyway, so telling it about maintenance would be the lesser problem.
       if (data.min_version && isVersionOutdated(VERSION, data.min_version)) {
-        panel.innerHTML = renderUpdateScreen(VERSION, data.min_version);
-        document
-          .getElementById("fy-update-btn")
-          ?.addEventListener("click", () => {
-            window.open(CWS_LISTING_URL || "https://formyaar.in", "_blank");
-          });
+        showUpdateRequired(VERSION, data.min_version);
       } else if (data.enabled) {
-        panel.innerHTML = renderMaintenanceScreen(data.back_at ?? null);
-        startMaintenanceCountdown(data.back_at ?? null);
+        showMaintenance(data.back_at ?? null);
       }
     }
   } catch {

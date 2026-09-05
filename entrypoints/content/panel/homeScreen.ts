@@ -9,13 +9,14 @@ import { runAutofill } from "../autofill";
 import { showChooser } from "./chooserScreen";
 import { showOperatorPanel } from "./operator/queueScreen";
 import { renderHeader } from "./shared";
+import { setView } from "./router";
 
 export function renderHomeScreen(): string {
   const icon = (path: string) =>
     `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
 
   return `
-    <div id="fy-home" class="fy-screen" style="display:flex;flex-direction:column;height:100%;position:relative;background:var(--fy-bg);">
+    <div id="fy-home" class="fy-screen" style="display:none;flex-direction:column;height:100%;position:relative;background:var(--fy-bg);">
       ${renderHeader({
         subtitle: `v${VERSION}`,
         rightHtml: `
@@ -285,8 +286,7 @@ export function attachHomeScreenHandlers() {
   document
     .getElementById("fy-recover-session")
     ?.addEventListener("click", () => {
-      document.getElementById("fy-home")!.style.display = "none";
-      document.getElementById("fy-recover")!.style.display = "flex";
+      setView("recover", { push: true });
     });
 
   document

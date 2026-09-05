@@ -1,6 +1,7 @@
 import { trackEvent } from "./telemetry";
 import { markSessionCompleted, markSessionActive } from "./userData";
 import { renderHeader, renderProgress } from "./panel/shared";
+import { setView } from "./panel/router";
 import {
   processImageToSpec,
   downloadBlob,
@@ -186,16 +187,7 @@ export function renderUploadScreen(): string {
 }
 
 export function showUploadScreen(opts?: { markCompleted?: boolean }): void {
-  const screens = ["fy-home", "fy-chooser", "fy-payment", "fy-filling", "fy-verify"];
-  screens.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = "none";
-  });
-  const upload = document.getElementById("fy-upload");
-  if (upload) upload.style.display = "flex";
-
-  const p = document.getElementById("formyaar-panel");
-  if (p) p.style.right = "0px";
+  setView("upload");
 
   trackEvent("upload_screen_shown", "pan_card");
 

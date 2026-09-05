@@ -17,6 +17,7 @@
 
 import { getCurrentStepyIndex, isFilling } from "./autofill";
 import { showStepReview, type ProgressItem } from "./panel";
+import { trackEvent } from "./telemetry";
 
 // Read the step's name from the page's own stepper, so the panel calls it
 // exactly what the site calls it. Falls back to a number if the markup differs
@@ -35,6 +36,30 @@ function stepTitle(idx: number): string {
     [idx]?.querySelector("legend")
     ?.textContent?.trim();
   return legend || `Step ${idx + 1}`;
+}
+
+/**
+ * Send the applicant back to the step the fill had reached.
+ *
+ * Driven through the site's own stepper rather than by showing/hiding its
+ * fieldsets ourselves: the widget keeps its own idea of which step is current,
+ * and moving the markup without telling it leaves the two disagreeing — the
+ * next Next button then goes somewhere neither of us expected.
+ *
+ * jQuery first for the same reason the auto-advance uses it: the widget binds
+ * through jQuery's event delegation and does not always answer a raw
+ * dispatchEvent.
+ */
+function jumpToStep(idx: number): void {
+  const header = document.querySelectorAll<HTMLElement>(".stepy-header li");
+  const target = header[idx];
+  if (!target) return;
+
+  const jq = (window as unknown as { $?: (el: Element) => { trigger: (e: string) => void } }).$;
+  if (jq) jq(target).trigger("click");
+  else target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+
+  trackEvent("step_review_continue", undefined, { from_step: idx });
 }
 
 async function historyFor(idx: number): Promise<ProgressItem[] | null> {
@@ -81,7 +106,7 @@ export function watchStepReview(restoreDefault?: () => void): void {
     void historyFor(idx).then((items) => {
       // No record for this step (never filled, or a fresh session) — leave the
       // panel as it is rather than blanking it.
-      if (items) showStepReview(stepTitle(idx), items);
+      if (items) showStepReview(stepTitle(idx), items, () => jumpToStep(homeIdx));
     });
   };
 

@@ -14,6 +14,12 @@ import { USERFORM_STYLES } from "./userForm";
 import { renderOperatorLoginScreen } from "./operator/loginScreen";
 import { renderOperatorQueueScreen } from "./operator/queueScreen";
 import { renderOperatorReviewScreen } from "./operator/reviewScreen";
+import { renderMaintenanceScreen, renderUpdateScreen } from "./maintenance";
+import {
+  renderBlockedScreen,
+  renderOffTrackScreen,
+  renderSiteErrorScreen,
+} from "./statusScreens";
 
 export function renderPanelHTML(): string {
   return `
@@ -138,6 +144,11 @@ export function renderPanelHTML(): string {
     ${renderOperatorLoginScreen()}
     ${renderOperatorQueueScreen()}
     ${renderOperatorReviewScreen()}
+    ${renderOffTrackScreen()}
+    ${renderBlockedScreen()}
+    ${renderSiteErrorScreen()}
+    ${renderMaintenanceScreen()}
+    ${renderUpdateScreen()}
   `;
 }
 

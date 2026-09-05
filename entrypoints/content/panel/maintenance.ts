@@ -1,7 +1,19 @@
+import { setView } from "./router";
+
 let maintenanceCountdownInterval: ReturnType<typeof setInterval> | null = null;
 
-export function renderMaintenanceScreen(backAt: string | null): string {
+// Both screens used to be injected with `panel.innerHTML = …` after an async
+// fetch — which destroyed every other screen and every handler attached to
+// them, up to 2.5 seconds after the panel had appeared and possibly in the
+// middle of a fill. They are ordinary screens now, rendered once with the
+// rest and shown through the router like anything else.
+//
+// `backAt` is deliberately not a render argument any more: nothing in the
+// markup interpolated it (the countdown fills itself in), and taking it here
+// forced the whole screen to be re-rendered to show it.
+export function renderMaintenanceScreen(): string {
   return `
+    <div id="fy-maintenance" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
     <style>
       .fy-maint-stripe {
         height: 5px;
@@ -43,7 +55,14 @@ export function renderMaintenanceScreen(backAt: string | null): string {
       </div>
     </div>
     <div class="fy-maint-stripe"></div>
+    </div>
   `;
+}
+
+/** Show it, and start the clock. The only way this screen appears. */
+export function showMaintenance(backAt: string | null): void {
+  setView("maintenance");
+  startMaintenanceCountdown(backAt);
 }
 
 // The date the panel comes back, phrased the way someone would say it out loud.
@@ -128,20 +147,28 @@ export function isVersionOutdated(current: string, required: string): boolean {
   return cPat < rPat;
 }
 
-export function renderUpdateScreen(
-  currentVersion: string,
-  minVersion: string,
-): string {
+export function renderUpdateScreen(): string {
   return `
+    <div id="fy-update" class="fy-screen" style="display:none;flex-direction:column;height:100%;">
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 28px;text-align:center;background:#f7f8fc;font-family:'DM Sans',-apple-system,sans-serif;">
       <div style="width:64px;height:64px;border-radius:18px;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:22px;">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#305eff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M4.5 19.5h15"/></svg>
       </div>
       <div style="font-size:10px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:#305eff;margin-bottom:10px;">Update available</div>
       <div style="font-size:19px;font-weight:800;color:#0c1322;line-height:1.3;margin-bottom:12px;letter-spacing:-0.3px;">FormYaar needs a quick update</div>
-      <div style="font-size:12.5px;color:#6c7689;line-height:1.7;max-width:272px;margin-bottom:28px;">You're on <strong style="color:#0c1322;">v${currentVersion}</strong>. Version <strong style="color:#0c1322;">v${minVersion}</strong> is required to continue — it takes less than a minute.</div>
+      <div style="font-size:12.5px;color:#6c7689;line-height:1.7;max-width:272px;margin-bottom:28px;">You're on <strong style="color:#0c1322;">v<span id="fy-update-current"></span></strong>. Version <strong style="color:#0c1322;">v<span id="fy-update-min"></span></strong> is required to continue — it takes less than a minute.</div>
       <button id="fy-update-btn" style="width:100%;padding:14px;background:#305eff;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:12px;box-shadow:0 6px 16px -6px rgba(48,94,255,0.55);">Update extension →</button>
       <div style="font-size:11px;color:#6c7689;line-height:1.6;">After updating, refresh this page and the panel will open normally.</div>
     </div>
+    </div>
   `;
+}
+
+/** Show it, with the two version numbers filled in. */
+export function showUpdateRequired(current: string, min: string): void {
+  const c = document.getElementById("fy-update-current");
+  const m = document.getElementById("fy-update-min");
+  if (c) c.textContent = current;
+  if (m) m.textContent = min;
+  setView("update");
 }

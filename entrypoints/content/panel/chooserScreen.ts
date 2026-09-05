@@ -13,6 +13,7 @@
 import { trackEvent } from "../telemetry";
 import { renderHeader } from "./shared";
 import { showUserForm } from "./userForm";
+import { setView } from "./router";
 
 interface PanOption {
   // Form config slug — must match a configs/<slug>.json on the backend.
@@ -153,30 +154,13 @@ export function renderChooserScreen(): string {
 }
 
 export function showChooser(): void {
-  const screens = ["fy-home", "fy-payment", "fy-filling", "fy-verify", "fy-recover"];
-  screens.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = "none";
-  });
-  // The wizard is appended dynamically rather than pre-rendered, so it needs
-  // removing (not hiding) when we come back to this screen.
-  document.getElementById("fy-userform-screen")?.remove();
-
-  const chooser = document.getElementById("fy-chooser");
-  if (chooser) chooser.style.display = "flex";
-
-  const panel = document.getElementById("formyaar-panel");
-  if (panel) panel.style.right = "0px";
-
+  setView("chooser", { push: true });
   trackEvent("chooser_shown");
 }
 
 export function attachChooserHandlers(): void {
   document.getElementById("fy-chooser-back")?.addEventListener("click", () => {
-    const chooser = document.getElementById("fy-chooser");
-    if (chooser) chooser.style.display = "none";
-    const home = document.getElementById("fy-home");
-    if (home) home.style.display = "flex";
+    setView("home");
   });
 
   document.querySelectorAll<HTMLElement>("#fy-chooser .fy-optrow").forEach((row) => {

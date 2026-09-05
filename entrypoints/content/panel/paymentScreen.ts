@@ -2,6 +2,7 @@ import { trackEvent } from "../telemetry";
 import { renderHeader, renderProgress } from "./shared";
 import { getUserData, resolveFormSlug } from "../userData";
 import { BACKEND_URL } from "../constants";
+import { setView } from "./router";
 
 // Price / coupon state for this screen. The panel is rendered once, so these
 // persist across shows — an applied code stays applied.
@@ -182,8 +183,7 @@ function applyCouponUI(code: string, free = false): void {
 
 export function attachPaymentScreenHandlers() {
   document.getElementById("fy-back-btn")?.addEventListener("click", () => {
-    document.getElementById("fy-payment")!.style.display = "none";
-    document.getElementById("fy-home")!.style.display = "flex";
+    setView("home");
   });
 
   // ── Coupon apply ──────────────────────────────────────────────────

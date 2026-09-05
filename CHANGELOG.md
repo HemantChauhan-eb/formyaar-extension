@@ -1,5 +1,127 @@
 # FormYaar Extension — Changelog
 
+## [0.33.3] — 2026-09-05
+
+### Fixed
+
+- **The home screen flashed on every page change before the real screen appeared.** `fy-home` shipped with `display:flex` in its markup, so the panel *always* opened on the home screen and whatever was supposed to be there switched it a moment later. On a resumed fill that meant the home screen sat visible for the full second and a half before typing began — on a form the applicant had already paid for and watched start. The document-upload page had the same flash, and so did the new site-error screen.
+
+  Every screen now starts hidden and `showContextualBanner(view)` takes the screen to open on, so what appears first is a decision rather than a markup default. Three callers name theirs: `filling` when resuming a fill, `upload` on the document page, `siteerror` when the government site has thrown us out. Everything else still opens on home, explicitly.
+
+  0.33.2 made this worse before it was noticed: adding `showContextualBanner()` ahead of the fill's 1.5s settle delay turned an occasional race into a reliable flash.
+
+- **`home_screen_view` fired even when the applicant never saw the home screen.** It was unconditional because home was always what opened — so the funnel counted a home-screen view on every resumed fill and every document page. It now fires only when home is genuinely the opening screen, which makes the number mean what its name says.
+
+## [0.33.2] — 2026-09-05
+
+### Fixed
+
+- **"Start again" opened the form but never filled it.** The button navigated correctly; the flow then refused to run. Resuming is gated on a `done` list of pathnames already filled, so a reload doesn't retype into a completed page — and `/paam/endUserRegisterContact.html` was already in that list from the run the government site had just killed. So the check found the first page of the form marked as done and did nothing at all: no start overlay, no fill, the panel sitting on the home screen beside a blank government form.
+
+  Starting again now clears where the dead run had got to (`done`, and the per-step `fillHistory` the review screen replays) while keeping everything about who the applicant is and that they paid. The paid session is explicitly marked active again, because they are mid-application rather than finished with one.
+
+- **No second confirmation after a restart.** The "ready to begin" overlay exists to catch the applicant's attention when a fill starts on a tab they might not be looking at. Someone who just pressed Start again is looking straight at it, so a restart carries a one-shot `skipOverlay` flag and fills immediately. The flag is consumed on that first page and applies to nothing else.
+
+## [0.33.1] — 2026-09-05
+
+### Fixed
+
+- **The session-expired check ran too late to catch most cases.** 0.33.0 put it inside the fill engine, which only covers pages that reach the fill engine. The government site serves its error page at any of its URLs — including `fullFormSave.html?ID=…`, where `index.ts` decides at load time that this is the document-upload page and shows upload instructions without the fill engine ever running. So a timed-out session there showed **"Upload your proof of DOB"** over a dead page.
+
+  The check now runs first in the content script, before any branch decides what to show, and returns. *"Is this page usable at all"* comes before *"which step is it"* — the earlier placement answered the second question inside a file that had already answered the first, six different ways. That six-way split is what Phase 2 removes; until then the check has to sit above all of them.
+
+- Detection falls back to `textContent` when `innerText` is empty. `innerText` needs layout, which the browser may not have done yet on a page that rendered nothing but an error — exactly the case this exists for.
+
+## [0.33.0] — 2026-09-05
+
+Three bugs found by testing 0.32.0, and the feature the third one exposed.
+
+### Fixed
+
+- **The panel said "Step complete!" over a timed-out government session.** The site serves its session-expired page at `registerEndUser.html` — the same URL as the token step — so the config matched it, the step's one action (click `#submitForm`) found nothing because the error page has no such button, and the fill fell through to the completion screen. Confetti, "Saved you ~25s", on a page whose only content was *"Your Session Has Expired. Please Login Again."* Two separate faults, both fixed:
+  - The site's error pages are now detected **by their text, not their URL**, because the URL is one the flow legitimately passes through. A new screen says what happened and offers **Start again**, with a note that they won't be charged twice.
+  - **A step where every field failed no longer celebrates.** That was the deeper bug: the panel congratulated the applicant regardless of outcome, so any unexpected page produced a false success rather than a warning. It now says the page wasn't what we expected.
+- **"Recover my session" stayed stuck on "Looking up…" the second time.** The button was reset on both failure branches but not on success — success navigates away, and the screen is hidden rather than destroyed, so returning to it found the button still disabled with no way to retry short of a page reload. The one path nobody reset was the one people hit twice. Now reset in a `finally`.
+
+### Added
+
+- **A "Continue filling" button on the step-review screen.** Applicants click back through the government form's own stepper to check what was filled — which is the point of showing them what FormYaar deliberately skipped, so a skipped field isn't mistaken for a failure. But arriving there was a dead end: the panel showed the step and nothing said how to get on with the application. The button returns them to where the fill had reached, driven through the site's own stepper so the widget's idea of the current step stays in sync with the markup.
+
+### Telemetry
+
+- `site_error`, `step_all_failed` and `step_review_continue` added (and allow-listed in the backend). There was previously no event for "the fill stopped without finishing" — every failure event described a single field, so a page where everything failed produced no signal at all. That is why the session-timeout case was invisible until it was seen on a screen.
+
+## [0.32.0] — 2026-09-05
+
+Phase 3 of the Architecture v2 work: one router, and two states the panel could
+not previously express. This is the change that addresses "the panel sometimes
+shows the wrong screen" — not as a fix to any one screen, but by removing the
+ways it was possible.
+
+### Added
+
+- **`panel/router.ts` — the only thing that changes a screen.** There were four
+  conventions before this and they disagreed: `showFillingScreen` and
+  `showVerifyScreen` hid every `.fy-screen` (correct); `showChooser` hid a
+  hardcoded list of 5; `showUserForm` hid a hardcoded list of 6; `showUploadScreen`
+  hid its own list of 5; and the operator screens toggled each other in pairs.
+  **None of the hardcoded lists included `fy-upload`**, so opening the chooser or
+  the intake wizard on the document page left the upload screen underneath — and
+  any screen added later would have been missed by all four. `setView()` selects
+  on the class, so two screens cannot be visible at once and a screen added
+  tomorrow is handled without touching the router. 27 transitions converted.
+- **An "off track" screen.** When the fill engine couldn't match the page to a
+  step it wrote "Page not recognized" into the progress list of whatever screen
+  happened to be up — so an applicant who clicked something unexpected saw the
+  *previous* step's panel, confidently describing a step they had already left.
+  That was never a bug in a particular screen; it was the absence of a state.
+  Now it says so, and says nothing is lost.
+- **A "blocked" screen.** When the government form rejected a step, auto-advance
+  reused the verify screen — the one that *celebrates* a completed step — with
+  different words on it, so a rejection and a success looked alike. Failing to
+  load a config did the same thing through the progress list. Both now show what
+  needs doing.
+
+### Fixed
+
+- **The maintenance and update screens no longer destroy the panel.** Both were
+  injected with `panel.innerHTML = …` after an async fetch, wiping every other
+  screen and every handler attached to them — up to 2.5 seconds after the panel
+  appeared, and possibly in the middle of a fill. They are ordinary screens now,
+  rendered once with the rest and shown through the router.
+- **The intake wizard no longer has its own lifecycle.** It was appended and
+  removed while every other screen was shown and hidden, so anything switching
+  screens had to remember it was special — and the hardcoded lists didn't. It is
+  still built on demand (it renders per flow and per applicant) but is then
+  hidden like anything else.
+
+### Notes
+
+- The Android panel picks up all four new screens automatically —
+  `prototype/build.mjs` re-run. They are inert there until Phase 4 gives the app
+  the same router; `app-shell.html` still has its own `showOnly`.
+
+## [0.31.1] — 2026-09-05
+
+### Changed
+
+- **Both support numbers on the recover screen, not one** (`entrypoints/content/constants.ts`). `SUPPORT` now carries both numbers, the shared email and the calling hours, mirroring what `formyaar-website/contact.html` publishes. WhatsApp leads on both numbers — it works at any hour, carries the pre-written message and leaves a thread that can be picked up later. Calling sits under it with **Mon–Sun · 10am–2:30pm IST** stated, because sending someone who has already paid to a phone that rings out at 11pm, with no warning it would, is worse than not offering the phone at all.
+
+## [0.31.0] — 2026-09-04
+
+### Changed
+
+- **Paid sessions stay recoverable for 14 days, not 2** (`entrypoints/content/constants.ts`, backend `src/routes/sessions.ts`). Two days assumed the applicant pays and fills the form in one sitting — but the people who need recovery are by definition the ones who didn't. They paid, hit something they couldn't get past, and came back, often after a weekend and often on a different machine. A window that closed before they returned turned a recoverable customer into a refund request. The number now lives in one constant on each side rather than being typed into the copy, so the screen can't tell the applicant one thing while the backend does another.
+
+### Added
+
+- **A way out when automatic recovery fails** (`entrypoints/content/panel/recoverScreen.ts`). Everyone on that screen has already paid; if the number they typed doesn't bring their session back, the old screen offered a generic "Message us" link to the contact page — asking a worried person to go and explain themselves from scratch. It now shows WhatsApp, call and email buttons with the message pre-written: *"I've paid but couldn't finish my application — I want to resume."* The WhatsApp and email links carry that text and a prompt for the number they paid with, so the first message we receive already contains what's needed to find their session by hand.
+- **`SUPPORT_CONTACTS` in `constants.ts`** — one place for the numbers and addresses. A phone number that's right on one screen and stale on another is worse than none: someone who has paid and can't continue rings it, gets nothing, and now has a payment and no way through.
+
+### Notes
+
+- The Android panel picks all of this up automatically — `formyaar-android/prototype/build.mjs` was re-run, so `app/src/main/assets/panel.html` carries the same recover screen.
+
 ## [0.30.4] — 2026-09-04
 
 ### Fixed

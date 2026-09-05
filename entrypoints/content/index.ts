@@ -1,12 +1,23 @@
-import { SITE_CONFIGS, BANNER_DELAY_MS, BACKEND_URL } from "./constants";
+import {
+  SITE_CONFIGS,
+  BANNER_DELAY_MS,
+  BACKEND_URL,
+  NSDL_START_URL,
+} from "./constants";
 import { showContextualBanner, showVerifyScreen } from "./panel";
+import { detectSiteError, showSiteError } from "./panel/statusScreens";
 import { showUploadScreen } from "./uploadScreen";
 import { watchStepReview } from "./stepReview";
 import { runAutofill, showCoachMark } from "./autofill";
-import { getUserData, resolveFormSlug, getActiveSession } from "./userData";
+import {
+  getUserData,
+  resolveFormSlug,
+  getActiveSession,
+  restartAutofillFlow,
+  type AutofillActive,
+} from "./userData";
 import { trackEvent } from "./telemetry";
 
-const NSDL_START_URL = "https://onlineservices.proteantech.in/paam/endUserRegisterContact.html";
 export default defineContentScript({
   matches: [
     "*://*.proteantech.in/*",
@@ -21,6 +32,38 @@ export default defineContentScript({
       console.log("FormYaar loaded on:", window.location.href);
 
     const hostname = window.location.hostname;
+
+    // Before anything else decides what to show.
+    //
+    // The government site can serve an error page at *any* of its URLs — the
+    // session-expired screen appears at registerEndUser.html, at
+    // fullFormSave.html?ID=…, anywhere. So every branch below is reached with
+    // a URL that looks right and a page that is dead, and each one confidently
+    // shows its own screen: the document branch shows upload instructions, the
+    // fill shows "Step complete!". Checking inside the fill engine only fixed
+    // the branch that goes through the fill engine.
+    //
+    // This has to be first, and it has to return, because the question "is
+    // this page usable at all" comes before "which step is it".
+    if (SITE_CONFIGS[hostname]) {
+      const siteError = detectSiteError();
+      if (siteError) {
+        await showContextualBanner("siteerror");
+        showSiteError(siteError, () => {
+          // Clear where the dead run had got to, keep who they are and that
+          // they paid, then go back to the first page.
+          void restartAutofillFlow().then(() => {
+            window.location.href = NSDL_START_URL;
+          });
+        });
+        const session = await getActiveSession();
+        trackEvent("site_error", session?.form, {
+          reason: siteError.title,
+          url: window.location.pathname,
+        });
+        return;
+      }
+    }
 
     // NSDL document-upload flow. After "Save draft" the user lands on
     // fullFormSave.html (the review + document-upload page); each uploaded file
@@ -194,9 +237,11 @@ export default defineContentScript({
     // Document-upload page: open the panel straight to the upload guidance
     // screen on every load (survives the self-reloads with changing ?ID=).
     if (isDocUploadPage) {
-      // showContextualBanner creates the panel div synchronously before its
-      // first await, so showUploadScreen can find the screen nodes right after.
-      showContextualBanner();
+      // Opened directly on the upload screen. Naming it here rather than
+      // letting the panel appear on home and switch a moment later is the
+      // difference between "FormYaar knows where I am" and a flash of a
+      // screen the applicant left several steps ago.
+      showContextualBanner("upload");
       // ...but not for a minor's application, which uploads nothing at all:
       // it is printed, signed and posted to Protean. This page is only a
       // review-and-pay stop on that flow, so upload guidance here would be
@@ -281,7 +326,7 @@ export default defineContentScript({
     if (SITE_CONFIGS[hostname] && !isDocUploadPage) {
       try {
         const result = await browser.storage.session.get("autofillActive");
-        const active = result.autofillActive as { form: string; done: string[] } | undefined;
+        const active = result.autofillActive as AutofillActive | undefined;
         if (active) {
           const pageKey = window.location.pathname;
           const isTokenPage = !!document.querySelector("input.tokenButton");
@@ -289,21 +334,32 @@ export default defineContentScript({
           if (isTokenPage || !done.includes(pageKey)) {
             if (!isTokenPage) {
               await browser.storage.session.set({
-                autofillActive: { ...active, done: [...done, pageKey] },
+                // skipOverlay is consumed here: it applies to the first page
+                // after a restart and to nothing else.
+                autofillActive: { ...active, done: [...done, pageKey], skipOverlay: false },
               });
             }
 
             // First page of the flow (done was empty) → show start overlay
             // so the user knows to switch to this tab and confirm before autofill starts.
             // Subsequent pages (mid-flow) run directly — don't interrupt mid-fill.
+            //
+            // A restart is the exception: the applicant pressed "Start again"
+            // a moment ago and is looking straight at the tab, so asking them
+            // to confirm they meant it is a second click for nothing.
             const isFirstPage = done.length === 0 && !isTokenPage;
-            if (isFirstPage) {
+            if (isFirstPage && !active.skipOverlay) {
               // Panel must exist before showStartOverlay — showFillingScreen crashes otherwise.
               // showContextualBanner creates the panel div synchronously before its first await,
               // so calling it here (fire-and-forget) guarantees the panel is in the DOM.
               showContextualBanner();
               showStartOverlay(active.form);
             } else {
+              // Open straight onto the filling screen. The fill itself waits
+              // 1.5s for the page to settle, and the applicant should be
+              // looking at "we're typing" for that second and a half rather
+              // than at a home screen they have long since moved past.
+              showContextualBanner("filling");
               setTimeout(() => runAutofill(active.form), 1500);
             }
           }

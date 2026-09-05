@@ -10,6 +10,7 @@ import { trackEvent } from "../telemetry";
 // Only used by syncDocChecklist, which builds list rows at runtime rather than
 // in markup — so a data-i18n attribute alone can't give them their first text.
 import { t, getLang } from "./i18n";
+import { setView } from "./router";
 
 export const USERFORM_STYLES = `
       /* ===== Details wizard — one small step at a time ===== */
@@ -1164,25 +1165,18 @@ export function renderUserFormScreen(form: string, data: UserData): string {
 }
 
 export function showUserForm(form: string): void {
-  // Hide all other screens
-  const screens = [
-    "fy-home",
-    "fy-chooser",
-    "fy-payment",
-    "fy-filling",
-    "fy-verify",
-    "fy-recover",
-  ];
-  screens.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = "none";
-  });
-
-  // Remove any existing form (in case user clicks again)
+  // The wizard is the one screen not in the panel's initial markup: it renders
+  // per flow and per applicant, so baking it into the shell would mean
+  // re-rendering and re-binding it on every change anyway.
+  //
+  // That used to make it the odd one out in a second way — it was appended and
+  // removed while every other screen was shown and hidden, so it had to be
+  // remembered separately by anything switching screens, and wasn't. Now it is
+  // built on demand and then hidden like anything else; the router does not
+  // need to know it is special.
   const existing = document.getElementById("fy-userform-screen");
   if (existing) existing.remove();
 
-  // Render the form
   getUserData().then((data) => {
     const panel = document.getElementById("formyaar-panel");
     if (!panel) return;
@@ -1191,29 +1185,25 @@ export function showUserForm(form: string): void {
     wrapper.id = "fy-userform-screen";
     wrapper.className = "fy-screen";
     wrapper.style.cssText =
-      "display:flex;flex-direction:column;height:100%;animation:fy-fadeIn 0.2s ease;";
+      "display:none;flex-direction:column;height:100%;animation:fy-fadeIn 0.2s ease;";
     wrapper.innerHTML = renderUserFormScreen(form, data);
     panel.appendChild(wrapper);
+    setView("userform", { push: true });
 
     attachUserFormHandlers(
       form,
       // onSubmit: data is saved, now go to payment
       () => {
-        wrapper.remove();
         trackEvent("payment_screen_view", form);
-        document.getElementById("fy-payment")!.style.display = "flex";
+        setView("payment");
       },
       // onBack: return to the chooser the user came in through, so backing out
       // of the wizard lands on the application list rather than skipping past
       // it to the home screen.
       () => {
-        wrapper.remove();
-        document.getElementById("fy-chooser")!.style.display = "flex";
+        setView("chooser");
       },
     );
-
-    // Open panel if collapsed
-    panel.style.right = "0px";
   });
 }
 

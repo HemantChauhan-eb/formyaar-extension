@@ -1,4 +1,5 @@
 import { renderHeader, renderProgress } from "./shared";
+import { setView } from "./router";
 
 export function renderFillingScreen(): string {
   return `
@@ -16,6 +17,18 @@ export function renderFillingScreen(): string {
           <div id="fy-fill-progress-label" style="font-size:10px;color:var(--fy-muted);font-weight:800;margin-bottom:12px;letter-spacing:1.2px;text-transform:uppercase;">Progress</div>
           <div id="fy-fill-progress-list" style="display:flex;flex-direction:column;gap:10px;">
             <div style="font-size:13px;color:var(--fy-faint);">Preparing…</div>
+          </div>
+
+          <!-- Review mode only. An applicant who clicks back through the
+               government form's own stepper to check what was filled has, up
+               to now, arrived at a dead end: the panel showed the step, and
+               nothing said how to get on with the application. This takes them
+               back to where the fill had reached. -->
+          <button id="fy-fill-continue" class="fy-btn fy-btn-primary fy-btn-block" style="display:none;margin-top:26px;">
+            Continue filling →
+          </button>
+          <div id="fy-fill-continue-note" style="display:none;font-size:11px;color:var(--fy-faint);text-align:center;margin-top:9px;line-height:1.55;">
+            Takes you back to where FormYaar had reached.
           </div>
         </div>
       </div>
@@ -41,16 +54,7 @@ export function renderVerifyScreen(): string {
 }
 
 export function showFillingScreen() {
-  // Hide every screen rather than a hardcoded list. The list version missed
-  // fy-upload, so opening this on the document page stacked two screens on top
-  // of each other — and would have missed the next screen anyone adds too.
-  document.querySelectorAll<HTMLElement>(".fy-screen").forEach((el) => {
-    el.style.display = el.id === "fy-filling" ? "flex" : "none";
-  });
-
-  // Open the panel if it's collapsed
-  const p = document.getElementById("formyaar-panel");
-  if (p) p.style.right = "0px";
+  setView("filling");
 }
 
 export function showVerifyScreen(completion?: {
@@ -59,14 +63,7 @@ export function showVerifyScreen(completion?: {
   manual_steps?: string[];
   info?: string;
 }) {
-  // Same reason as showFillingScreen: hide everything, not a named few, so
-  // this can't land on top of an already-visible screen.
-  document.querySelectorAll<HTMLElement>(".fy-screen").forEach((el) => {
-    el.style.display = el.id === "fy-verify" ? "flex" : "none";
-  });
-
-  const p = document.getElementById("formyaar-panel");
-  if (p) p.style.right = "0px";
+  setView("verify");
 
   const title = completion?.title ?? "Step complete!";
   const subtitle = completion?.subtitle ?? "";
@@ -124,7 +121,11 @@ export type ProgressItem = {
 // filled — only the heading changes, because "we're typing" is a lie once it's
 // done. Live filling and review share one screen deliberately: two screens
 // showing the same rows would drift apart.
-export function showStepReview(title: string, items: ProgressItem[]) {
+export function showStepReview(
+  title: string,
+  items: ProgressItem[],
+  onContinue?: () => void,
+) {
   showFillingScreen();
 
   // Mark this as review, not a live fill. The click-outside-to-close handler
@@ -145,6 +146,24 @@ export function showStepReview(title: string, items: ProgressItem[]) {
 
   const label = document.getElementById("fy-fill-progress-label");
   if (label) label.textContent = "Fields";
+
+  // Replaced rather than added to: this screen is shown again every time the
+  // applicant clicks another step, and stacking listeners would fire the jump
+  // once per step they had looked at.
+  const btn = document.getElementById("fy-fill-continue");
+  const note = document.getElementById("fy-fill-continue-note");
+  if (btn && note) {
+    const fresh = btn.cloneNode(true) as HTMLElement;
+    btn.replaceWith(fresh);
+    if (onContinue) {
+      fresh.style.display = "flex";
+      note.style.display = "block";
+      fresh.addEventListener("click", onContinue);
+    } else {
+      fresh.style.display = "none";
+      note.style.display = "none";
+    }
+  }
 
   updateFillProgress(items);
 }
@@ -167,6 +186,12 @@ export function resetFillingScreenChrome() {
 
   const label = document.getElementById("fy-fill-progress-label");
   if (label) label.textContent = "Progress";
+
+  // Live filling has nowhere to continue to — it is already going.
+  const btn = document.getElementById("fy-fill-continue");
+  if (btn) btn.style.display = "none";
+  const note = document.getElementById("fy-fill-continue-note");
+  if (note) note.style.display = "none";
 }
 
 export function updateFillProgress(

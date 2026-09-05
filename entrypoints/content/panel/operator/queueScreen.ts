@@ -7,6 +7,7 @@ import {
 import { prepareOperatorSubmission } from "../../autofill";
 import { escapeHtml } from "../shared";
 import { showReviewScreen } from "./reviewScreen";
+import { setView } from "../router";
 
 export function renderOperatorQueueScreen(): string {
   return `
@@ -98,13 +99,12 @@ export async function showOperatorPanel(): Promise<void> {
   });
 
   if (!session) {
-    document.getElementById("fy-operator-login")!.style.display = "flex";
+    setView("operatorLogin");
     return;
   }
 
   // Has session — show queue
-  document.getElementById("fy-operator-login")!.style.display = "none";
-  document.getElementById("fy-operator-queue")!.style.display = "flex";
+  setView("operatorQueue");
   const emailEl = document.getElementById("fy-op-email");
   if (emailEl && session.email) emailEl.textContent = session.email;
   await loadQueue(session.id);
@@ -116,8 +116,7 @@ export async function loadQueue(operatorId: string): Promise<void> {
 
   const session = await getOperatorSession();
   if (!session) {
-    document.getElementById("fy-operator-login")!.style.display = "flex";
-    document.getElementById("fy-operator-queue")!.style.display = "none";
+    setView("operatorLogin");
     return;
   }
 
@@ -332,16 +331,14 @@ export async function loadQueue(operatorId: string): Promise<void> {
 
 export function attachOperatorQueueHandlers() {
   document.getElementById("fy-queue-back")?.addEventListener("click", () => {
-    document.getElementById("fy-operator-queue")!.style.display = "none";
-    document.getElementById("fy-home")!.style.display = "flex";
+    setView("home");
   });
 
   document
     .getElementById("fy-operator-signout")
     ?.addEventListener("click", async () => {
       await signOut();
-      document.getElementById("fy-operator-queue")!.style.display = "none";
-      document.getElementById("fy-operator-login")!.style.display = "flex";
+      setView("operatorLogin");
     });
 
   document

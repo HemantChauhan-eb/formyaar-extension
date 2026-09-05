@@ -510,6 +510,65 @@ export async function clearActiveSession(): Promise<void> {
   await browser.storage.local.remove(SESSION_KEY);
 }
 
+/**
+ * What the fill engine remembers about a run in progress.
+ *
+ * `done` is the list of pathnames already filled, so a reload doesn't retype
+ * into a page that's already complete. `skipOverlay` is set only by a restart:
+ * the "ready to begin" overlay exists to get the applicant's attention when a
+ * fill starts on a tab they may not be looking at, and someone who just
+ * pressed Start again is already looking at it.
+ */
+export interface AutofillActive {
+  form: string;
+  done: string[];
+  skipOverlay?: boolean;
+  submission_id?: string;
+}
+
+/**
+ * Begin the government application again from the top.
+ *
+ * The government site can end a session at any point, and the only way back is
+ * to start its form over. That means throwing away everything the fill engine
+ * remembers about *where it had got to* — while keeping everything about *who
+ * the applicant is and that they paid*.
+ *
+ * Clearing `done` is the part that was missing. Without it, "Start again"
+ * navigated to the first page of the form, found that pathname already in
+ * `done` from the run that had just died, and did nothing at all: no overlay,
+ * no fill, the panel sitting on the home screen next to a blank form. The
+ * button worked — the flow simply refused to run twice.
+ *
+ * Returns the form to restart, or null if there's nothing to restart.
+ */
+export async function restartAutofillFlow(): Promise<string | null> {
+  const [sessionResult, active] = await Promise.all([
+    getActiveSession(),
+    browser.storage.session
+      .get("autofillActive")
+      .then((r) => r.autofillActive as AutofillActive | undefined),
+  ]);
+
+  const form = active?.form ?? sessionResult?.form ?? null;
+  if (!form) return null;
+
+  await Promise.all([
+    browser.storage.session.set({
+      autofillActive: { form, done: [], skipOverlay: true },
+    }),
+    // The per-step record the review screen replays. Keeping it would show the
+    // applicant what a previous, abandoned attempt filled.
+    browser.storage.session.remove("fillHistory"),
+  ]);
+
+  // The paid session is untouched and must not look finished — the applicant
+  // is mid-application, not done with one.
+  await markSessionActive();
+
+  return form;
+}
+
 const OPERATOR_SUB_KEY = "fy_operator_submission";
 
 export async function setOperatorSubmission(

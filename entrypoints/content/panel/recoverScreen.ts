@@ -1,7 +1,8 @@
-import { BACKEND_URL } from "../constants";
+import { BACKEND_URL, SESSION_RECOVERY_DAYS, SUPPORT, formatPhone } from "../constants";
 import { setActiveSession } from "../userData";
 import { refreshPendingSessions } from "./homeScreen";
 import { renderHeader } from "./shared";
+import { setView } from "./router";
 
 export function renderRecoverScreen(): string {
   return `
@@ -37,8 +38,64 @@ export function renderRecoverScreen(): string {
         </div>
 
         <div style="margin-top:22px;text-align:center;font-size:10.5px;color:var(--fy-faint);line-height:1.6;">
-          Sessions stay recoverable for 48 hours after payment.<br/>
-          Stuck? <a href="https://formyaar.in/contact" target="_blank" style="color:var(--fy-muted);font-weight:600;">Message us</a> — a real person will help.
+          Sessions stay recoverable for ${SESSION_RECOVERY_DAYS} days after payment.
+        </div>
+
+        <!-- The way out when the automatic path fails.
+             Someone on this screen has already paid, and the number they typed
+             did not bring their session back — so pointing them at a generic
+             "contact us" page is asking a worried person to go and explain
+             themselves from scratch. This tells them exactly what to say, so
+             the first message we get already contains the number that paid and
+             what went wrong. -->
+        <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--fy-line);max-width:290px;margin-left:auto;margin-right:auto;">
+          <div style="font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--fy-muted);margin-bottom:9px;text-align:center;">
+            Didn't work? Talk to us
+          </div>
+          <div style="font-size:12px;color:var(--fy-body);line-height:1.6;margin-bottom:13px;text-align:center;">
+            Tell us: <strong style="color:var(--fy-ink);">"I've paid but couldn't finish my application — I want to resume."</strong>
+            Include the mobile number you paid with. We'll get you back in.
+          </div>
+          <!-- WhatsApp first, on both numbers: it works at any hour, carries
+               the pre-written message, and leaves a thread we can pick up
+               later. Calling is offered under it with the hours stated, so
+               nobody rings a phone at 11pm expecting an answer. -->
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            ${SUPPORT.phones
+              .map(
+                (phone) => `
+              <a href="https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                "I've paid but couldn't finish my application — I want to resume. The mobile number I paid with is ",
+              )}" target="_blank" class="fy-btn fy-btn-ghost fy-btn-block" style="text-decoration:none;font-size:12.5px;padding:11px;gap:7px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.8 14.16c-.25.69-1.24 1.26-1.79 1.32-.46.05-1.04.07-1.68-.11-.39-.12-.88-.29-1.52-.56-2.67-1.15-4.42-3.84-4.55-4.02-.13-.18-1.09-1.45-1.09-2.77s.69-1.97.94-2.24c.25-.27.54-.34.72-.34.18 0 .36 0 .52.01.17.01.39-.06.61.47.23.55.77 1.9.84 2.04.07.14.11.3.02.48-.09.18-.14.29-.27.45-.14.16-.29.35-.41.47-.14.14-.28.28-.12.55.16.27.71 1.17 1.52 1.9 1.04.93 1.92 1.21 2.19 1.35.27.14.43.11.59-.07.16-.18.68-.79.86-1.07.18-.27.36-.23.61-.14.25.09 1.6.75 1.87.89.27.14.46.2.52.32.07.11.07.64-.18 1.33z"/></svg>
+                WhatsApp ${formatPhone(phone)}
+              </a>`,
+              )
+              .join("")}
+
+            <div style="display:flex;gap:7px;margin-top:3px;">
+              ${SUPPORT.phones
+                .map(
+                  (phone) => `
+                <a href="tel:${phone}" class="fy-btn fy-btn-ghost" style="flex:1;text-decoration:none;font-size:11.5px;padding:9px;gap:5px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.7a2 2 0 0 1-.5 2.1L8.1 9.6a16 16 0 0 0 6 6l1.1-1.1a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.7.6a2 2 0 0 1 1.7 2z"/></svg>
+                  Call
+                </a>`,
+                )
+                .join("")}
+            </div>
+            <div style="font-size:10.5px;color:var(--fy-faint);text-align:center;">
+              Calls: ${SUPPORT.callHours}
+            </div>
+
+            <a href="mailto:${SUPPORT.email}?subject=${encodeURIComponent(
+              "Paid but couldn't finish my application",
+            )}&body=${encodeURIComponent(
+              "I've paid but couldn't finish my application — I want to resume.\n\nThe mobile number I paid with: \n",
+            )}" style="font-size:11.5px;color:var(--fy-muted);text-decoration:none;text-align:center;font-weight:600;margin-top:4px;">
+              ${SUPPORT.email}
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -47,8 +104,7 @@ export function renderRecoverScreen(): string {
 
 export function attachRecoverScreenHandlers() {
   document.getElementById("fy-recover-back")?.addEventListener("click", () => {
-    document.getElementById("fy-recover")!.style.display = "none";
-    document.getElementById("fy-home")!.style.display = "flex";
+    setView("home");
   });
 
   document
@@ -80,7 +136,7 @@ export function attachRecoverScreenHandlers() {
         if (!res.ok) {
           errorEl.style.display = "block";
           errorEl.textContent =
-            "No active session found for this number. Sessions expire after 48 hours.";
+            `No active session found for this number. Sessions stay recoverable for ${SESSION_RECOVERY_DAYS} days after payment.`;
           btn.textContent = "Recover my session";
           btn.disabled = false;
           return;
@@ -95,12 +151,20 @@ export function attachRecoverScreenHandlers() {
           completed: false,
         });
 
-        document.getElementById("fy-recover")!.style.display = "none";
-        document.getElementById("fy-home")!.style.display = "flex";
+        setView("home");
         refreshPendingSessions();
       } catch {
         errorEl.style.display = "block";
         errorEl.textContent = "Network error. Please check your connection.";
+      } finally {
+        // Always put the button back, including on the success path.
+        //
+        // It used to be reset only on the two failure branches, because
+        // success navigates away and the button is off-screen — but the screen
+        // is not destroyed, it is hidden. Coming back to it a second time
+        // found the button still reading "Looking up…" and still disabled,
+        // with no way to try again short of reloading the page. The one path
+        // nobody thought to reset was the one people hit twice.
         btn.textContent = "Recover my session";
         btn.disabled = false;
       }

@@ -6,6 +6,7 @@ import {
 } from "../../autofill";
 import { escapeHtml } from "../shared";
 import { addInProgressSubmission } from "./queueScreen";
+import { setView } from "../router";
 
 export function renderOperatorReviewScreen(): string {
   return `
@@ -182,9 +183,7 @@ function renderEditForm(sub: any): string {
 }
 
 export function showReviewScreen(sub: any): void {
-  document.getElementById("fy-operator-queue")!.style.display = "none";
-  const review = document.getElementById("fy-operator-review")!;
-  review.style.display = "flex";
+  setView("operatorReview", { push: true });
 
   // Always restore the view-mode footer — edit mode replaces it with
   // Cancel/Save buttons, so re-entering view mode must reset it.
@@ -302,8 +301,7 @@ export function showReviewScreen(sub: any): void {
   acceptBtn.onclick = async () => {
     const session = await getOperatorSession();
     if (!session) {
-      document.getElementById("fy-operator-review")!.style.display = "none";
-      document.getElementById("fy-operator-login")!.style.display = "flex";
+      setView("operatorLogin");
       return;
     }
     const authHeaders = await getOperatorAuthHeaders();
@@ -317,7 +315,7 @@ export function showReviewScreen(sub: any): void {
     });
     await addInProgressSubmission(session.id, sub);
     if (window.location.hostname === "onlineservices.proteantech.in") {
-      document.getElementById("fy-operator-review")!.style.display = "none";
+      // runAutofillFromSubmission opens the filling screen itself.
       runAutofillFromSubmission(sub);
     } else {
       await prepareOperatorSubmission(sub);
@@ -353,8 +351,7 @@ export function showReviewScreen(sub: any): void {
       /* best effort — remove from view regardless */
     }
 
-    document.getElementById("fy-operator-review")!.style.display = "none";
-    document.getElementById("fy-operator-queue")!.style.display = "flex";
+    setView("operatorQueue");
   };
 
   // Edit button — toggle edit mode
@@ -433,7 +430,6 @@ export function showReviewScreen(sub: any): void {
 
 export function attachOperatorReviewHandlers() {
   document.getElementById("fy-review-back")?.addEventListener("click", () => {
-    document.getElementById("fy-operator-review")!.style.display = "none";
-    document.getElementById("fy-operator-queue")!.style.display = "flex";
+    setView("operatorQueue");
   });
 }
